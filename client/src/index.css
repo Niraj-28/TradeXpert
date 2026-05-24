@@ -1,0 +1,26 @@
+@import "@fontsource/poppins";
+@import "@fontsource/inter";
+
+@import "tailwindcss";
+
+:root {
+  --primary: #58E6B3;
+  --secondary: #1FA37A;
+
+  --bg: #F8FAFC;
+  --card: #FFFFFF;
+
+  --text-primary: #111827;
+  --text-secondary: #6B7280;
+
+  --border: #E5E7EB;
+
+  --success: #22C55E;
+  --danger: #EF4444;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  background-color: var(--bg);
+  color: var(--text-primary);
+}
