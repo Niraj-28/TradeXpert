@@ -1,9 +1,12 @@
 import React from "react";
+
 import ReactDOM from "react-dom/client";
 
 import App from "./App";
 
 import "./index.css";
+
+import { BrowserRouter } from "react-router-dom";
 
 import { AuthProvider } from "./context/AuthContext";
 
@@ -16,13 +19,18 @@ ReactDOM.createRoot(
 
   <React.StrictMode>
 
-    <AuthProvider>
+    <BrowserRouter>
 
-      <Toaster position="top-right" />
+      <AuthProvider>
 
-      <App />
+        <Toaster position="top-right" />
 
-    </AuthProvider>
+        <App />
+
+      </AuthProvider>
+
+    </BrowserRouter>
 
   </React.StrictMode>
+
 );

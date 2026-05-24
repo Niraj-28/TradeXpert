@@ -1,5 +1,4 @@
 import {
-  BrowserRouter,
   Routes,
   Route,
 } from "react-router-dom";
@@ -12,28 +11,43 @@ import Register from "../pages/Register/Register";
 
 import Dashboard from "../pages/Dashboard/Dashboard";
 
+import ProtectedRoute from "./ProtectedRoute";
+
 
 const AppRoutes = () => {
 
   return (
-    <BrowserRouter>
 
-      <Routes>
+    <Routes>
 
-        <Route path="/" element={<Home />} />
+      <Route
+        path="/"
+        element={<Home />}
+      />
 
-        <Route path="/login" element={<Login />} />
+      <Route
+        path="/login"
+        element={<Login />}
+      />
 
-        <Route path="/register" element={<Register />} />
+      <Route
+        path="/register"
+        element={<Register />}
+      />
 
-        <Route
-          path="/dashboard"
-          element={<Dashboard />}
-        />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
 
-      </Routes>
+            <Dashboard />
 
-    </BrowserRouter>
+          </ProtectedRoute>
+        }
+      />
+
+    </Routes>
+
   );
 };
 

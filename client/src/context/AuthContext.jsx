@@ -1,39 +1,40 @@
 import {
   createContext,
   useContext,
-  useState,
   useEffect,
+  useState,
 } from "react";
 
-
-// Create Context
 
 const AuthContext = createContext();
 
 
-// Provider Component
-
-export const AuthProvider = ({ children }) => {
+export const AuthProvider = ({
+  children,
+}) => {
 
   const [user, setUser] = useState(null);
 
 
-  // Load user from localStorage
+  // Load User
 
   useEffect(() => {
 
-    const storedUser = localStorage.getItem("user");
+    const storedUser =
+      localStorage.getItem("user");
 
     if (storedUser) {
 
-      setUser(JSON.parse(storedUser));
+      setUser(
+        JSON.parse(storedUser)
+      );
 
     }
 
   }, []);
 
 
-  // Login Function
+  // Login
 
   const login = (userData) => {
 
@@ -47,7 +48,7 @@ export const AuthProvider = ({ children }) => {
   };
 
 
-  // Logout Function
+  // Logout
 
   const logout = () => {
 
@@ -75,8 +76,6 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-
-// Custom Hook
 
 export const useAuth = () => {
 

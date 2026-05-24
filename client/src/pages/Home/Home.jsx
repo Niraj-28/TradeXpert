@@ -6,45 +6,8 @@ const Home = () => {
 
   const navigate = useNavigate();
 
-
-  // Button Handlers
-
-  const handleMarkets = () => {
-    navigate("/markets");
-  };
-
-  const handlePortfolio = () => {
-    navigate("/portfolio");
-  };
-
-  const handleTrading = () => {
-    navigate("/trading");
-  };
-
-  const handleNews = () => {
-    navigate("/news");
-  };
-
-  const handleLogin = () => {
-    navigate("/login");
-  };
-
-  const handleRegister = () => {
-    navigate("/register");
-  };
-
-  const handleExplore = () => {
-    alert("Explore Market Clicked");
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    alert("Account Created");
-  };
-
-
   return (
+
     <div className="min-h-screen bg-[#F8FAFC]">
 
       {/* Navbar */}
@@ -63,19 +26,19 @@ const Home = () => {
 
         <div className="flex items-center gap-10 font-medium">
 
-          <button onClick={handleMarkets}>
+          <button>
             Markets
           </button>
 
-          <button onClick={handlePortfolio}>
+          <button>
             Portfolio
           </button>
 
-          <button onClick={handleTrading}>
+          <button>
             Trading
           </button>
 
-          <button onClick={handleNews}>
+          <button>
             News
           </button>
 
@@ -84,15 +47,15 @@ const Home = () => {
         <div className="flex items-center gap-5">
 
           <button
+            onClick={() => navigate("/login")}
             className="font-medium"
-            onClick={handleLogin}
           >
             Sign In
           </button>
 
           <button
+            onClick={() => navigate("/register")}
             className="bg-[#58E6B3] px-6 py-3 rounded-2xl font-semibold hover:opacity-90 transition-all"
-            onClick={handleRegister}
           >
             Get Started
           </button>
@@ -134,8 +97,8 @@ const Home = () => {
           <div className="flex gap-5 mt-5">
 
             <button
+              onClick={() => navigate("/register")}
               className="bg-[#58E6B3] px-8 py-4 rounded-2xl font-semibold text-lg hover:opacity-90 transition-all shadow-sm"
-              onClick={handleRegister}
             >
 
               Start Trading
@@ -144,7 +107,6 @@ const Home = () => {
 
             <button
               className="border border-gray-300 px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-gray-100 transition-all"
-              onClick={handleExplore}
             >
 
               Explore Market
@@ -159,10 +121,7 @@ const Home = () => {
 
         <div className="flex justify-center">
 
-          <form
-            onSubmit={handleSubmit}
-            className="bg-white w-full max-w-xl rounded-[32px] p-10 border border-gray-200 shadow-sm"
-          >
+          <div className="bg-white w-full max-w-xl rounded-[32px] p-10 border border-gray-200 shadow-sm">
 
             <h2 className="text-[30px] font-bold mb-2">
               Create Account
@@ -208,7 +167,7 @@ const Home = () => {
               </div>
 
               <button
-                type="submit"
+                onClick={() => navigate("/register")}
                 className="w-full h-16 bg-[#58E6B3] rounded-2xl text-lg font-semibold hover:opacity-90 transition-all"
               >
 
@@ -218,7 +177,7 @@ const Home = () => {
 
             </div>
 
-          </form>
+          </div>
 
         </div>
 

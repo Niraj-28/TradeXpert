@@ -4,11 +4,11 @@ import { useNavigate } from "react-router-dom";
 
 import toast from "react-hot-toast";
 
+import logo from "../../assets/logo.png";
+
 import { registerUser } from "../../services/authService";
 
 import { useAuth } from "../../context/AuthContext";
-
-import logo from "../../assets/logo.png";
 
 
 const Register = () => {
@@ -18,18 +18,24 @@ const Register = () => {
   const { login } = useAuth();
 
   const [formData, setFormData] = useState({
+
     name: "",
     email: "",
     password: "",
     phone: "",
+
   });
 
 
   const handleChange = (e) => {
 
     setFormData({
+
       ...formData,
-      [e.target.name]: e.target.value,
+
+      [e.target.name]:
+      e.target.value,
+
     });
 
   };
@@ -41,19 +47,25 @@ const Register = () => {
 
     try {
 
-      const data = await registerUser(formData);
+      const data =
+        await registerUser(formData);
 
       login(data);
 
-      toast.success("Account Created");
+      toast.success(
+        "Account Created"
+      );
 
       navigate("/dashboard");
 
     } catch (error) {
 
       toast.error(
+
         error.response?.data?.message ||
+
         "Registration Failed"
+
       );
 
     }
@@ -72,7 +84,7 @@ const Register = () => {
 
         {/* Logo */}
 
-        <div className="flex justify-center mb-2">
+        <div className="flex justify-center mb-6">
 
           <img
             src={logo}
@@ -82,9 +94,17 @@ const Register = () => {
 
         </div>
 
-        <h1 className="text-3xl font-bold mb-5 text-center">
+        <h1 className="text-4xl font-bold mb-2 text-center">
+
           Create Account
+
         </h1>
+
+        <p className="text-gray-500 mb-8 text-center">
+
+          Start your trading journey
+
+        </p>
 
         <div className="space-y-5">
 
@@ -125,6 +145,27 @@ const Register = () => {
             Register
 
           </button>
+
+        </div>
+
+        {/* Login Option */}
+
+        <div className="text-center mt-5">
+
+          <p className="text-gray-500">
+
+            Already registered?{" "}
+
+            <span
+              onClick={() => navigate("/login")}
+              className="text-[#58E6B3] font-semibold cursor-pointer"
+            >
+
+              Sign In
+
+            </span>
+
+          </p>
 
         </div>
 

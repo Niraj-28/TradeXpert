@@ -1,10 +1,30 @@
+import MainLayout from "../../layouts/MainLayout";
+
+
 const Dashboard = () => {
+
   return (
-    <div className="p-10">
-      <h1 className="text-5xl font-bold">
-        Welcome to Dashboard
-      </h1>
-    </div>
+
+    <MainLayout>
+
+      <div>
+
+        <h1 className="text-5xl font-bold mb-4">
+
+          Welcome to TradeXpert
+
+        </h1>
+
+        <p className="text-gray-500 text-xl">
+
+          Your trading dashboard is ready.
+
+        </p>
+
+      </div>
+
+    </MainLayout>
+
   );
 };
 

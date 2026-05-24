@@ -4,11 +4,11 @@ import { useNavigate } from "react-router-dom";
 
 import toast from "react-hot-toast";
 
+import logo from "../../assets/logo.png";
+
 import { loginUser } from "../../services/authService";
 
 import { useAuth } from "../../context/AuthContext";
-
-import logo from "../../assets/logo.png";
 
 
 const Login = () => {
@@ -18,16 +18,22 @@ const Login = () => {
   const { login } = useAuth();
 
   const [formData, setFormData] = useState({
+
     email: "",
     password: "",
+
   });
 
 
   const handleChange = (e) => {
 
     setFormData({
+
       ...formData,
-      [e.target.name]: e.target.value,
+
+      [e.target.name]:
+      e.target.value,
+
     });
 
   };
@@ -39,19 +45,25 @@ const Login = () => {
 
     try {
 
-      const data = await loginUser(formData);
+      const data =
+        await loginUser(formData);
 
       login(data);
 
-      toast.success("Login Successful");
+      toast.success(
+        "Login Successful"
+      );
 
       navigate("/dashboard");
 
     } catch (error) {
 
       toast.error(
+
         error.response?.data?.message ||
+
         "Login Failed"
+
       );
 
     }
@@ -70,7 +82,7 @@ const Login = () => {
 
         {/* Logo */}
 
-        <div className="flex justify-center mb-2">
+        <div className="flex justify-center mb-6">
 
           <img
             src={logo}
@@ -80,9 +92,17 @@ const Login = () => {
 
         </div>
 
-        <h1 className="text-3xl font-bold mb-6 text-center">
+        <h1 className="text-4xl font-bold mb-2 text-center">
+
           Welcome Back
+
         </h1>
+
+        <p className="text-gray-500 mb-8 text-center">
+
+          Login to TradeXpert
+
+        </p>
 
         <div className="space-y-5">
 
@@ -107,6 +127,27 @@ const Login = () => {
             Login
 
           </button>
+
+        </div>
+
+        {/* Register Option */}
+
+        <div className="text-center mt-5">
+
+          <p className="text-gray-500">
+
+            Don't have an account?{" "}
+
+            <span
+              onClick={() => navigate("/register")}
+              className="text-[#58E6B3] font-semibold cursor-pointer"
+            >
+
+              Create Account
+
+            </span>
+
+          </p>
 
         </div>
 

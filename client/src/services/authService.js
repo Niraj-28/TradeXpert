@@ -1,7 +1,7 @@
 import API from "./api";
 
 
-// Register
+// Register User
 
 export const registerUser = async (userData) => {
 
@@ -14,7 +14,7 @@ export const registerUser = async (userData) => {
 };
 
 
-// Login
+// Login User
 
 export const loginUser = async (userData) => {
 

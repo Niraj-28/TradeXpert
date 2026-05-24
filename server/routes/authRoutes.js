@@ -10,10 +10,18 @@ const {
 
 // Register
 
-router.post("/register", registerUser);
+router.post(
+  "/register",
+  registerUser
+);
+
 
 // Login
 
-router.post("/login", loginUser);
+router.post(
+  "/login",
+  loginUser
+);
+
 
 module.exports = router;
