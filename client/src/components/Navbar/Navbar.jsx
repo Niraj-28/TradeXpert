@@ -4,12 +4,14 @@ import {
 } from "react-router-dom";
 
 import {
-  ChartCandlestick,
-  Newspaper,
-  Wallet,
+  ChevronDown,
   User,
   LogOut,
 } from "lucide-react";
+
+import {
+  useState,
+} from "react";
 
 import { useAuth } from "../../context/AuthContext";
 
@@ -21,6 +23,8 @@ const Navbar = () => {
   const { user, logout } = useAuth();
 
   const navigate = useNavigate();
+
+  const [open, setOpen] = useState(false);
 
 
   const handleLogout = () => {
@@ -34,104 +38,96 @@ const Navbar = () => {
 
   return (
 
-    <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-12">
+    <header className="h-18 bg-white border-b border-gray-200 px-10 flex items-center justify-between">
 
       {/* LEFT */}
 
-      <div className="flex items-center gap-16">
-
-        {/* Logo */}
+      <div className="w-[220px]">
 
         <Link to="/dashboard">
 
           <img
             src={logo}
             alt="TradeXpert"
-            className="h-12"
+            className="h-11"
           />
 
         </Link>
 
-
-        {/* Navigation */}
-
-        <div className="flex items-center gap-10">
-
-          <Link
-            to="/markets"
-            className="flex items-center gap-2 font-medium hover:text-[#58E6B3]"
-          >
-
-            <ChartCandlestick size={20} />
-
-            Markets
-
-          </Link>
-
-
-          <Link
-            to="/portfolio"
-            className="flex items-center gap-2 font-medium hover:text-[#58E6B3]"
-          >
-
-            <Wallet size={20} />
-
-            Portfolio
-
-          </Link>
-
-
-          <Link
-            to="/news"
-            className="flex items-center gap-2 font-medium hover:text-[#58E6B3]"
-          >
-
-            <Newspaper size={20} />
-
-            News
-
-          </Link>
-
-
-          <Link
-            to="/profile"
-            className="flex items-center gap-2 font-medium hover:text-[#58E6B3]"
-          >
-
-            <User size={20} />
-
-            Profile
-
-          </Link>
-
-        </div>
-
       </div>
+
+
+      {/* CENTER */}
+
+      <nav className="flex items-center gap-12">
+
+        <Link
+          to="/markets"
+          className="text-[15px] font-medium hover:text-[#58E6B3] transition-all"
+        >
+
+          Markets
+
+        </Link>
+
+
+        <Link
+          to="/portfolio"
+          className="text-[15px] font-medium hover:text-[#58E6B3] transition-all"
+        >
+
+          Portfolio
+
+        </Link>
+
+
+        <Link
+          to="/trading"
+          className="text-[15px] font-medium hover:text-[#58E6B3] transition-all"
+        >
+
+          Trading
+
+        </Link>
+
+
+        <Link
+          to="/news"
+          className="text-[15px] font-medium hover:text-[#58E6B3] transition-all"
+        >
+
+          News
+
+        </Link>
+
+      </nav>
 
 
       {/* RIGHT */}
 
-      <div className="flex items-center gap-5">
+      <div className="w-[220px] flex justify-end relative">
 
-        {/* User Name */}
+        <button
+          onClick={() => setOpen(!open)}
+          className="flex items-center gap-3"
+        >
 
-        <div className="flex items-center gap-3">
-
-          <div className="w-11 h-11 rounded-full bg-[#58E6B3] text-white flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-full bg-[#58E6B3] flex items-center justify-center text-white font-bold text-lg">
 
             {user?.name?.charAt(0)}
 
           </div>
 
-          <div>
 
-            <h3 className="font-semibold">
+          <div className="text-left">
+
+            <h3 className="font-semibold text-[15px] leading-5">
 
               {user?.name}
 
             </h3>
 
-            <p className="text-sm text-gray-500">
+            <p className="text-gray-500 text-[13px]">
 
               Trader
 
@@ -139,21 +135,44 @@ const Navbar = () => {
 
           </div>
 
-        </div>
 
-
-        {/* Logout */}
-
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 bg-red-50 text-red-500 px-5 py-3 rounded-2xl hover:bg-red-100 transition-all"
-        >
-
-          <LogOut size={18} />
-
-          Logout
+          <ChevronDown size={18} />
 
         </button>
+
+
+        {/* Dropdown */}
+
+        {open && (
+
+          <div className="absolute top-14 right-0 w-48 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50">
+
+            <button
+              onClick={() => navigate("/profile")}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-100 transition-all text-[14px]"
+            >
+
+              <User size={16} />
+
+              Profile
+
+            </button>
+
+
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-red-500 transition-all text-[14px]"
+            >
+
+              <LogOut size={16} />
+
+              Logout
+
+            </button>
+
+          </div>
+
+        )}
 
       </div>
 

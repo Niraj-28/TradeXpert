@@ -6,13 +6,13 @@ const MainLayout = ({ children }) => {
 
     <div className="min-h-screen bg-[#F8FAFC]">
 
-      {/* Top Navbar */}
+      {/* Navbar */}
 
       <Navbar />
 
-      {/* Main Content */}
+      {/* Content */}
 
-      <main className="p-8">
+      <main className="p-6">
 
         {children}
 

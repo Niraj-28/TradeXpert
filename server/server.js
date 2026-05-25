@@ -36,6 +36,12 @@ app.use(
   require("./routes/authRoutes")
 );
 
+app.use(
+  "/api/upstox",
+  require("./routes/upstoxRoutes")
+);
+
+
 
 // Test Route
 
@@ -44,6 +50,7 @@ app.get("/", (req, res) => {
   res.send("TradeXpert API Running");
 
 });
+
 
 
 // Server
