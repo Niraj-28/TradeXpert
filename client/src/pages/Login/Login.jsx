@@ -31,8 +31,7 @@ const Login = () => {
 
       ...formData,
 
-      [e.target.name]:
-      e.target.value,
+      [e.target.name]: e.target.value,
 
     });
 
@@ -45,14 +44,11 @@ const Login = () => {
 
     try {
 
-      const data =
-        await loginUser(formData);
+      const data = await loginUser(formData);
 
       login(data);
 
-      toast.success(
-        "Login Successful"
-      );
+      toast.success("Login Successful");
 
       navigate("/dashboard");
 
@@ -73,16 +69,43 @@ const Login = () => {
 
   return (
 
-    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#F8FAFC] via-[#F0FFF8] to-[#ECFDF5] px-6">
+
+      {/* BACKGROUND GLOW */}
+
+      <div className="absolute top-[-120px] left-[-120px] w-[320px] h-[320px] bg-[#58E6B3]/20 rounded-full blur-[120px]"></div>
+
+      <div className="absolute bottom-[-120px] right-[-120px] w-[320px] h-[320px] bg-[#34D399]/20 rounded-full blur-[120px]"></div>
+
+      <div className="absolute top-[40%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-[#58E6B3]/10 rounded-full blur-[140px]"></div>
+
+
+      {/* GRID EFFECT */}
+
+      <div className="absolute inset-0 opacity-[0.03]">
+
+        <div
+          className="w-full h-full"
+          style={{
+            backgroundImage:
+              "linear-gradient(#0F172A 1px, transparent 1px), linear-gradient(to right, #0F172A 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
+          }}
+        ></div>
+
+      </div>
+
+
+      {/* LOGIN CARD */}
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-10 rounded-3xl shadow-sm border border-gray-200 w-full max-w-md"
+        className="relative z-10 bg-white/80 backdrop-blur-xl p-8 md:p-10 rounded-[32px] shadow-[0_20px_60px_rgba(52,211,153,0.10)] border border-white/60 w-full max-w-md"
       >
 
-        {/* Logo */}
+        {/* LOGO */}
 
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-3">
 
           <img
             src={logo}
@@ -92,26 +115,26 @@ const Login = () => {
 
         </div>
 
-        <h1 className="text-4xl font-bold mb-2 text-center">
+
+        {/* TITLE */}
+
+        <h1 className="text-[30px] font-bold mb-4 text-center text-[#0F172A]">
 
           Welcome Back
 
         </h1>
 
-        <p className="text-gray-500 mb-8 text-center">
 
-          Login to TradeXpert
+        {/* INPUTS */}
 
-        </p>
-
-        <div className="space-y-5">
+        <div className="space-y-4">
 
           <input
             type="email"
             name="email"
             placeholder="Email"
             onChange={handleChange}
-            className="w-full h-14 border border-gray-300 rounded-2xl px-5 outline-none focus:border-[#58E6B3]"
+            className="w-full h-14 border border-[#E2E8F0] rounded-2xl px-5 outline-none focus:border-[#58E6B3] bg-white"
           />
 
           <input
@@ -119,10 +142,10 @@ const Login = () => {
             name="password"
             placeholder="Password"
             onChange={handleChange}
-            className="w-full h-14 border border-gray-300 rounded-2xl px-5 outline-none focus:border-[#58E6B3]"
+            className="w-full h-14 border border-[#E2E8F0] rounded-2xl px-5 outline-none focus:border-[#58E6B3] bg-white"
           />
 
-          <button className="w-full h-14 bg-[#58E6B3] rounded-2xl font-semibold">
+          <button className="w-full h-14 bg-gradient-to-r from-[#58E6B3] to-[#34D399] rounded-2xl font-semibold text-black hover:opacity-90 transition-all shadow-[0_10px_30px_rgba(52,211,153,0.20)]">
 
             Login
 
@@ -130,17 +153,18 @@ const Login = () => {
 
         </div>
 
-        {/* Register Option */}
 
-        <div className="text-center mt-5">
+        {/* REGISTER OPTION */}
 
-          <p className="text-gray-500">
+        <div className="text-center mt-4">
+
+          <p className="text-[#64748B]">
 
             Don't have an account?{" "}
 
             <span
               onClick={() => navigate("/register")}
-              className="text-[#58E6B3] font-semibold cursor-pointer"
+              className="text-[#34D399] font-semibold cursor-pointer hover:underline"
             >
 
               Create Account

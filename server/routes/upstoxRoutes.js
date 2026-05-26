@@ -2,27 +2,7 @@ const express = require("express");
 
 const axios = require("axios");
 
-const qs = require("qs");
-
 const router = express.Router();
-
-
-// STEP 1
-// LOGIN URL
-
-router.get("/login", (req, res) => {
-
-  const authUrl =
-
-    `https://api.upstox.com/v2/login/authorization/dialog?response_type=code&client_id=${process.env.UPSTOX_API_KEY}&redirect_uri=${process.env.UPSTOX_REDIRECT_URI}`;
-
-  res.redirect(authUrl);
-
-});
-
-
-// STEP 2
-// CALLBACK
 
 router.get("/callback", async (req, res) => {
 
@@ -30,26 +10,23 @@ router.get("/callback", async (req, res) => {
 
     const code = req.query.code;
 
+    console.log("AUTH CODE:", code);
 
     const response = await axios.post(
 
       "https://api.upstox.com/v2/login/authorization/token",
 
-      qs.stringify({
+      new URLSearchParams({
 
         code,
 
-        client_id:
-          process.env.UPSTOX_API_KEY,
+        client_id: process.env.UPSTOX_API_KEY,
 
-        client_secret:
-          process.env.UPSTOX_API_SECRET,
+        client_secret: process.env.UPSTOX_API_SECRET,
 
-        redirect_uri:
-          process.env.UPSTOX_REDIRECT_URI,
+        redirect_uri: process.env.UPSTOX_REDIRECT_URI,
 
-        grant_type:
-          "authorization_code",
+        grant_type: "authorization_code",
 
       }),
 
@@ -57,7 +34,12 @@ router.get("/callback", async (req, res) => {
 
         headers: {
 
+          accept: "application/json",
+
+          "Api-Version": "2.0",
+
           "Content-Type":
+
             "application/x-www-form-urlencoded",
 
         },
@@ -66,14 +48,13 @@ router.get("/callback", async (req, res) => {
 
     );
 
+    console.log(
 
-    const accessToken =
-      response.data.access_token;
+      "ACCESS TOKEN:\n",
 
+      response.data.access_token
 
-    global.upstoxToken =
-      accessToken;
-
+    );
 
     res.send(
 
@@ -83,60 +64,22 @@ router.get("/callback", async (req, res) => {
 
   } catch (error) {
 
-    console.log(error.response?.data);
+    console.log(
 
-    res.status(500).send(
+      error.response?.data ||
+
+      error.message
+
+    );
+
+    res.send(
+
       "Authentication Failed"
+
     );
 
   }
 
 });
-
-
-// STEP 3
-// GET MARKET QUOTE
-
-router.get("/market/:symbol", async (req, res) => {
-
-  try {
-
-    const symbol = req.params.symbol;
-
-
-    const response = await axios.get(
-
-      `https://api.upstox.com/v2/market-quote/quotes?instrument_key=${symbol}`,
-
-      {
-
-        headers: {
-
-          Authorization:
-            `Bearer ${global.upstoxToken}`,
-
-        },
-
-      }
-
-    );
-
-
-    res.json(response.data);
-
-  } catch (error) {
-
-    console.log(error.response?.data);
-
-    res.status(500).json({
-
-      message: "Market Data Error",
-
-    });
-
-  }
-
-});
-
 
 module.exports = router;

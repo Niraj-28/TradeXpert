@@ -1,22 +1,16 @@
-import {
-  Link,
-  useNavigate,
-} from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 
 import {
-  ChevronDown,
   User,
   LogOut,
+  Bell,
 } from "lucide-react";
 
-import {
-  useState,
-} from "react";
+import { useState } from "react";
 
 import { useAuth } from "../../context/AuthContext";
 
 import logo from "../../assets/logo.png";
-
 
 const Navbar = () => {
 
@@ -26,7 +20,6 @@ const Navbar = () => {
 
   const [open, setOpen] = useState(false);
 
-
   const handleLogout = () => {
 
     logout();
@@ -35,99 +28,114 @@ const Navbar = () => {
 
   };
 
+  const navLinkStyle = ({ isActive }) =>
+    `text-[14px] font-medium transition-all duration-200 ${
+      isActive
+        ? "text-[#58E6B3]"
+        : "text-gray-700 hover:text-[#58E6B3]"
+    }`;
 
   return (
 
-    <header className="h-18 bg-white border-b border-gray-200 px-10 flex items-center justify-between">
+    <header className="sticky top-0 z-50 h-16 bg-white border-b border-gray-200 px-4 md:px-10 flex items-center justify-between">
 
       {/* LEFT */}
 
-      <div className="w-[220px]">
+      <div className="w-[180px] md:w-[220px]">
 
         <Link to="/dashboard">
 
           <img
             src={logo}
             alt="TradeXpert"
-            className="h-11"
+            className="h-10 md:h-11"
           />
 
         </Link>
 
       </div>
 
-
       {/* CENTER */}
 
-      <nav className="flex items-center gap-12">
+      <nav className="hidden md:flex items-center gap-8 lg:gap-12">
 
-        <Link
+        <NavLink
           to="/markets"
-          className="text-[15px] font-medium hover:text-[#58E6B3] transition-all"
+          className={navLinkStyle}
         >
-
           Markets
+        </NavLink>
 
-        </Link>
-
-
-        <Link
+        <NavLink
           to="/portfolio"
-          className="text-[15px] font-medium hover:text-[#58E6B3] transition-all"
+          className={navLinkStyle}
         >
-
           Portfolio
+        </NavLink>
 
-        </Link>
+        <NavLink
+          to="/watchlist"
+          className={navLinkStyle}
+        >
+          Watchlist
+        </NavLink>
 
-
-        <Link
+        <NavLink
           to="/trading"
-          className="text-[15px] font-medium hover:text-[#58E6B3] transition-all"
+          className={navLinkStyle}
         >
-
           Trading
+        </NavLink>
 
-        </Link>
-
-
-        <Link
+        <NavLink
           to="/news"
-          className="text-[15px] font-medium hover:text-[#58E6B3] transition-all"
+          className={navLinkStyle}
         >
-
           News
-
-        </Link>
+        </NavLink>
 
       </nav>
 
-
       {/* RIGHT */}
 
-      <div className="w-[220px] flex justify-end relative">
+      <div className="w-[180px] md:w-[220px] flex items-center justify-end gap-3 md:gap-4 relative">
+
+        {/* Notification Bell */}
+
+        <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-all">
+
+          <Bell size={20} />
+
+          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+
+        </button>
+
+        {/* Profile Button */}
 
         <button
           onClick={() => setOpen(!open)}
-          className="flex items-center gap-3"
+          className="flex items-center gap-3 bg-[#F8FAFC] px-3 md:px-4 py-2 rounded-lg hover:bg-gray-100 transition-all"
         >
 
-          <div className="w-10 h-10 rounded-full bg-[#58E6B3] flex items-center justify-center text-white font-bold text-lg">
+          {/* Avatar */}
+
+          <div className="w-8 h-8 rounded-full bg-[#58E6B3] flex items-center justify-center text-white font-bold text-lg">
 
             {user?.name?.charAt(0)}
 
           </div>
 
+          {/* User Info */}
 
-          <div className="text-left">
+          <div className="hidden sm:block text-left">
 
-            <h3 className="font-semibold text-[15px] leading-5">
+            <h3 className="font-semibold text-[13px] leading-5">
 
               {user?.name}
 
             </h3>
 
-            <p className="text-gray-500 text-[13px]">
+            <p className="text-gray-500 text-[11px]">
 
               Trader
 
@@ -135,11 +143,7 @@ const Navbar = () => {
 
           </div>
 
-
-          <ChevronDown size={18} />
-
         </button>
-
 
         {/* Dropdown */}
 
@@ -157,7 +161,6 @@ const Navbar = () => {
               Profile
 
             </button>
-
 
             <button
               onClick={handleLogout}

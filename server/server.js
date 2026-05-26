@@ -4,63 +4,128 @@ const cors = require("cors");
 
 const dotenv = require("dotenv");
 
+const http = require("http");
+
+const { Server } = require("socket.io");
+
 const connectDB = require("./config/db");
 
+const marketSocket = require(
 
-// Config
+  "./socket/marketSocket"
+
+);
+
+// CONFIG
 
 dotenv.config();
 
-
-// Database Connection
+// DATABASE
 
 connectDB();
 
-
-// App
+// EXPRESS APP
 
 const app = express();
 
+// HTTP SERVER
 
-// Middleware
+const server = http.createServer(app);
+
+// SOCKET.IO
+
+const io = new Server(server, {
+
+  cors: {
+
+    origin: "http://localhost:5173",
+
+    methods: ["GET", "POST"],
+
+  },
+
+});
+
+// MARKET SOCKET
+
+marketSocket(io);
+
+// MIDDLEWARE
 
 app.use(cors());
 
 app.use(express.json());
 
-
-// Routes
+// ROUTES
 
 app.use(
+
   "/api/auth",
+
   require("./routes/authRoutes")
+
 );
 
 app.use(
+
   "/api/upstox",
+
   require("./routes/upstoxRoutes")
+
 );
 
-
-
-// Test Route
+// TEST ROUTE
 
 app.get("/", (req, res) => {
 
-  res.send("TradeXpert API Running");
+  res.send(
+
+    "TradeXpert API Running"
+
+  );
 
 });
 
+// TEST UPSTOX ROUTE
 
+const {
 
-// Server
+  getLiveMarketData,
 
-const PORT = process.env.PORT || 5000;
+} = require(
 
-app.listen(PORT, () => {
+  "./services/upstoxMarketService"
+
+);
+
+app.get(
+
+  "/test-upstox",
+
+  async (req, res) => {
+
+    const data =
+
+      await getLiveMarketData();
+
+    res.json(data);
+
+  }
+
+);
+
+// START SERVER
+
+const PORT =
+
+  process.env.PORT || 5000;
+
+server.listen(PORT, () => {
 
   console.log(
+
     `Server running on port ${PORT}`
+
   );
 
 });
