@@ -74,6 +74,14 @@ app.use(
 
 );
 
+app.use(
+
+  "/api/trade",
+
+  require("./routes/tradeRoutes")
+
+);
+
 // TEST ROUTE
 
 app.get("/", (req, res) => {

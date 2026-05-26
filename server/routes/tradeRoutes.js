@@ -2,63 +2,45 @@ const express = require("express");
 
 const router = express.Router();
 
-const tradeController = require(
+const {
+
+  placeTrade,
+
+  getTrades,
+
+} = require(
+
   "../controllers/tradeController"
+
 );
 
 const authMiddleware = require(
+
   "../middleware/authMiddleware"
+
 );
 
-
-// BUY
+// PLACE TRADE
 
 router.post(
 
-  "/buy",
+  "/place",
 
   authMiddleware,
 
-  tradeController.buyStock
+  placeTrade
 
 );
 
-
-// SELL
-
-router.post(
-
-  "/sell",
-
-  authMiddleware,
-
-  tradeController.sellStock
-
-);
-
-
-// PORTFOLIO
+// GET TRADES
 
 router.get(
 
-  "/portfolio",
+  "/history",
 
   authMiddleware,
 
-  tradeController.getPortfolio
-
-);
-
-
-// TRANSACTIONS
-
-router.get(
-
-  "/transactions",
-
-  authMiddleware,
-
-  tradeController.getTransactions
+  getTrades
 
 );
 

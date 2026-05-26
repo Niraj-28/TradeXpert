@@ -12,19 +12,27 @@ const authMiddleware = async (
 
   try {
 
-    let token =
-
-      req.headers.authorization;
+    let token;
 
     if (
 
-      token &&
+      req.headers.authorization &&
 
-      token.startsWith("Bearer")
+      req.headers.authorization.startsWith(
+
+        "Bearer"
+
+      )
 
     ) {
 
-      token = token.split(" ")[1];
+      token =
+
+        req.headers.authorization.split(
+
+          " "
+
+        )[1];
 
       const decoded = jwt.verify(
 
@@ -44,17 +52,19 @@ const authMiddleware = async (
 
     } else {
 
-      return res.status(401).json({
+      res.status(401);
 
-        message: "Not Authorized",
+      throw new Error(
 
-      });
+        "Not Authorized"
+
+      );
 
     }
 
   } catch (error) {
 
-    return res.status(401).json({
+    res.status(401).json({
 
       message: "Token Failed",
 

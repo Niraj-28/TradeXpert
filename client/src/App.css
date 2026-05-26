@@ -182,3 +182,37 @@
     border-right-color: var(--border);
   }
 }
+
+.ticker-wrapper {
+
+  width: 100%;
+
+  overflow: hidden;
+
+}
+
+.ticker-track {
+
+  display: flex;
+
+  width: max-content;
+
+  animation: tickerMove 25s linear infinite;
+
+}
+
+@keyframes tickerMove {
+
+  0% {
+
+    transform: translateX(0);
+
+  }
+
+  100% {
+
+    transform: translateX(-50%);
+
+  }
+
+}

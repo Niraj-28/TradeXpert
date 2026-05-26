@@ -4,62 +4,79 @@ const bcrypt = require("bcryptjs");
 
 const jwt = require("jsonwebtoken");
 
-
-// Generate JWT Token
+// GENERATE JWT
 
 const generateToken = (id) => {
 
   return jwt.sign(
+
     { id },
+
     process.env.JWT_SECRET,
+
     {
-      expiresIn: "7d",
+
+      expiresIn: "30d",
+
     }
+
   );
 
 };
 
-
 // REGISTER USER
 
-const registerUser = async (req, res) => {
+const registerUser = async (
+
+  req,
+  res
+
+) => {
 
   try {
 
     const {
+
       name,
       email,
       password,
       phone,
+
     } = req.body;
 
-
-    // Check Existing User
+    // CHECK USER EXISTS
 
     const userExists = await User.findOne({
+
       email,
+
     });
 
     if (userExists) {
 
       return res.status(400).json({
+
         message: "User already exists",
+
       });
 
     }
 
-
-    // Hash Password
+    // HASH PASSWORD
 
     const salt = await bcrypt.genSalt(10);
 
-    const hashedPassword = await bcrypt.hash(
-      password,
-      salt
-    );
+    const hashedPassword =
 
+      await bcrypt.hash(
 
-    // Create User
+        password,
+
+        salt
+
+      );
+
+    // CREATE USER
 
     const user = await User.create({
 
@@ -70,8 +87,7 @@ const registerUser = async (req, res) => {
 
     });
 
-
-    // Response
+    // RESPONSE
 
     res.status(201).json({
 
@@ -90,41 +106,55 @@ const registerUser = async (req, res) => {
   } catch (error) {
 
     res.status(500).json({
+
       message: error.message,
+
     });
 
   }
 
 };
 
-
 // LOGIN USER
 
-const loginUser = async (req, res) => {
+const loginUser = async (
+
+  req,
+  res
+
+) => {
 
   try {
 
     const {
+
       email,
       password,
+
     } = req.body;
 
-
-    // Find User
+    // FIND USER
 
     const user = await User.findOne({
+
       email,
+
     });
 
-
-    // Check Password
+    // CHECK PASSWORD
 
     if (
+
       user &&
+
       (await bcrypt.compare(
+
         password,
+
         user.password
+
       ))
+
     ) {
 
       res.status(200).json({
@@ -144,7 +174,9 @@ const loginUser = async (req, res) => {
     } else {
 
       res.status(401).json({
+
         message: "Invalid email or password",
+
       });
 
     }
@@ -152,15 +184,19 @@ const loginUser = async (req, res) => {
   } catch (error) {
 
     res.status(500).json({
+
       message: error.message,
+
     });
 
   }
 
 };
 
-
 module.exports = {
+
   registerUser,
+
   loginUser,
+
 };

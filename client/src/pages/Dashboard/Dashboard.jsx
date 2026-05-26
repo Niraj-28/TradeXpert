@@ -4,6 +4,26 @@ import Navbar from "../../components/Navbar/Navbar";
 
 import socket from "../../socket/socket";
 
+import LiveTicker from "../../components/Dashboard/LiveTicker";
+
+import MarketOverview from "../../components/Dashboard/MarketOverview";
+
+import TopMovers from "../../components/Dashboard/TopMovers";
+
+import TradingChart from "../../components/Dashboard/TradingChart";
+
+import WatchlistPanel from "../../components/Dashboard/WatchlistPanel";
+
+import PortfolioAnalytics from "../../components/Dashboard/PortfolioAnalytics";
+
+import TradingPanel from "../../components/Dashboard/TradingPanel";
+
+import TradeHistory from "../../components/Dashboard/TradeHistory";
+
+import PortfolioSummary from "../../components/Dashboard/PortfolioSummary";
+
+import Holdings from "../../components/Dashboard/Holdings";
+
 const Dashboard = () => {
 
   const [marketData, setMarketData] = useState({});
@@ -38,156 +58,223 @@ const Dashboard = () => {
 
   return (
 
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F4F7FB]">
+
+      {/* NAVBAR */}
 
       <Navbar />
 
-      <div className="p-6 md:p-10">
+      {/* MAIN */}
 
-        {/* PAGE TITLE */}
+      <main className="max-w-[1600px] mx-auto px-4 md:px-5 xl:px-6 py-3">
 
-        <div className="mb-8">
+        
 
-          <h1 className="text-3xl font-bold text-[#0F172A]">
+        {/* TICKER */}
 
-            Live Market Dashboard
+        <LiveTicker />
 
-          </h1>
+        {/* MARKET + PORTFOLIO */}
 
-          <p className="text-gray-500 mt-2">
+        <section className="mt-3 space-y-2">
 
-            Real-time stock prices powered by Upstox
+          <MarketOverview />
 
-          </p>
+          {/* LIVE STOCKS */}
 
-        </div>
+        <section className="mt-5">
 
-        {/* LIVE STOCK GRID */}
+          <div className="grid grid-cols-1 sm:grid-cols-6 xl:grid-cols-3 2xl:grid-cols-4 gap-2">
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-
-          {stocks.map((stock, index) => (
-
-            <div
-              key={index}
-              className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm"
-            >
-
-              {/* STOCK NAME */}
-
-              <div className="flex items-center justify-between mb-4">
-
-                <h2 className="text-xl font-bold text-[#0F172A]">
-
-                  {stock.symbol}
-
-                </h2>
-
-                <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
-
-              </div>
-
-              {/* LIVE PRICE */}
-
-              <h1 className="text-4xl font-bold text-[#0F172A] mb-3">
-
-                ₹{stock.last_price}
-
-              </h1>
-
-              {/* CHANGE */}
+            {stocks.map((stock, index) => (
 
               <div
-                className={`inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold ${
-                  stock.net_change >= 0
-                    ? "bg-green-100 text-green-600"
-                    : "bg-red-100 text-red-600"
-                }`}
+                key={index}
+                className="bg-white rounded-[14px] p-3 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-all duration-300"
               >
 
-                {stock.net_change >= 0 ? "+" : ""}
+                {/* TOP */}
 
-                {stock.net_change}
+                <div className="flex items-start justify-between mb-2">
+
+                  <div>
+
+                    <h2 className="text-[12px] font-bold text-[#0F172A]">
+
+                      {stock.symbol || "STOCK"}
+
+                    </h2>
+
+                    <p className="text-[10px] text-[#64748B] mt-0.5">
+
+                      NSE Market
+
+                    </p>
+
+                  </div>
+
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+
+                </div>
+
+                {/* PRICE */}
+
+                <h1 className="text-[18px] font-bold tracking-tight text-[#0F172A] mb-2">
+
+                  ₹{stock.last_price || "--"}
+
+                </h1>
+
+                {/* CHANGE */}
+
+                <div
+                  className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold ${
+                    stock.net_change >= 0
+
+                      ? "bg-green-100 text-green-700"
+
+                      : "bg-red-100 text-red-700"
+
+                  }`}
+                >
+
+                  {stock.net_change >= 0 ? "+" : ""}
+
+                  {stock.net_change || 0}
+
+                </div>
+
+                {/* STATS */}
+
+                <div className="mt-2 space-y-1.5">
+
+                  <div className="flex items-center justify-between text-[10px]">
+
+                    <span className="text-[#64748B]">
+
+                      Open
+
+                    </span>
+
+                    <span className="font-semibold text-[10px] text-[#0F172A]">
+
+                      ₹{stock.ohlc?.open || "--"}
+
+                    </span>
+
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px]">
+
+                    <span className="text-[#64748B]">
+
+                      High
+
+                    </span>
+
+                    <span className="font-semibold text-[10px] text-green-600">
+
+                      ₹{stock.ohlc?.high || "--"}
+
+                    </span>
+
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px]">
+
+                    <span className="text-[#64748B]">
+
+                      Low
+
+                    </span>
+
+                    <span className="font-semibold text-[10px] text-red-600">
+
+                      ₹{stock.ohlc?.low || "--"}
+
+                    </span>
+
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px]">
+
+                    <span className="text-[#64748B]">
+
+                      Close
+
+                    </span>
+
+                    <span className="font-semibold text-[10px] text-[#0F172A]">
+
+                      ₹{stock.ohlc?.close || "--"}
+
+                    </span>
+
+                  </div>
+
+                </div>
 
               </div>
 
-              {/* EXTRA DATA */}
+            ))}
 
-              <div className="mt-6 space-y-3 text-sm">
+          </div>
 
-                <div className="flex justify-between">
+        </section>
 
-                  <span className="text-gray-500">
 
-                    Open
+          <PortfolioSummary />
 
-                  </span>
+        </section>
 
-                  <span className="font-semibold">
+        {/* MAIN GRID */}
 
-                    ₹{stock.ohlc?.open}
+        {/* HOLDINGS + TRADE HISTORY */}
 
-                  </span>
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-3">
 
-                </div>
+          <Holdings />
 
-                <div className="flex justify-between">
+          <TradeHistory />
 
-                  <span className="text-gray-500">
+        </section>
 
-                    High
+        {/* TOP MOVERS */}
 
-                  </span>
+        <section className="mt-3">
 
-                  <span className="font-semibold text-green-600">
+          <TopMovers />
 
-                    ₹{stock.ohlc?.high}
+        </section>
 
-                  </span>
+        {/* PORTFOLIO GROWTH + PORTFOLIO ALLOCATION */}
 
-                </div>
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-3">
 
-                <div className="flex justify-between">
+          <TradingChart />
 
-                  <span className="text-gray-500">
+          <PortfolioAnalytics />
 
-                    Low
+        </section>
 
-                  </span>
+        {/* WATCHLIST */}
 
-                  <span className="font-semibold text-red-600">
+        <section className="mt-3">
 
-                    ₹{stock.ohlc?.low}
+          <WatchlistPanel />
 
-                  </span>
+        </section>
 
-                </div>
+        
+        {/* TRADING PANEL */}
 
-                <div className="flex justify-between">
+        <section className="mt-2 pb-4">
 
-                  <span className="text-gray-500">
+          <TradingPanel />
 
-                    Close
+        </section>
 
-                  </span>
-
-                  <span className="font-semibold">
-
-                    ₹{stock.ohlc?.close}
-
-                  </span>
-
-                </div>
-
-              </div>
-
-            </div>
-
-          ))}
-
-        </div>
-
-      </div>
+      </main>
 
     </div>
 

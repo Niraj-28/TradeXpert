@@ -1,79 +1,40 @@
-const Portfolio = require("../models/Portfolio");
+const Trade = require("../models/Trade");
 
-const Transaction = require("../models/Transaction");
+// PLACE TRADE
 
+const placeTrade = async (
 
-// BUY STOCK
+  req,
 
-const buyStock = async (req, res) => {
+  res
+
+) => {
 
   try {
 
     const {
 
-      stockSymbol,
-      stockName,
+      symbol,
+
+      type,
+
       quantity,
+
       price,
 
     } = req.body;
 
-    const userId = req.user.id;
+    const total =
 
-    const total = quantity * price;
+      quantity * price;
 
-    let portfolio =
+    const trade = await Trade.create({
 
-      await Portfolio.findOne({
+      userId: req.user.id,
 
-        userId,
-        stockSymbol,
+      symbol,
 
-      });
-
-    if (portfolio) {
-
-      portfolio.quantity += quantity;
-
-      portfolio.investedAmount += total;
-
-      portfolio.averagePrice =
-
-        portfolio.investedAmount /
-
-        portfolio.quantity;
-
-      await portfolio.save();
-
-    } else {
-
-      portfolio = await Portfolio.create({
-
-        userId,
-
-        stockSymbol,
-
-        stockName,
-
-        quantity,
-
-        averagePrice: price,
-
-        investedAmount: total,
-
-      });
-
-    }
-
-    await Transaction.create({
-
-      userId,
-
-      stockSymbol,
-
-      stockName,
-
-      type: "BUY",
+      type,
 
       quantity,
 
@@ -83,17 +44,19 @@ const buyStock = async (req, res) => {
 
     });
 
-    res.status(200).json({
+    res.status(201).json({
 
-      message: "Stock Bought",
+      success: true,
 
-      portfolio,
+      trade,
 
     });
 
   } catch (error) {
 
     res.status(500).json({
+
+      success: false,
 
       message: error.message,
 
@@ -103,81 +66,33 @@ const buyStock = async (req, res) => {
 
 };
 
+// GET USER TRADES
 
-// SELL STOCK
+const getTrades = async (
 
-const sellStock = async (req, res) => {
+  req,
+
+  res
+
+) => {
 
   try {
 
-    const {
+    const trades = await Trade.find({
 
-      stockSymbol,
-      quantity,
-      price,
+      userId: req.user.id,
 
-    } = req.body;
+    }).sort({
 
-    const userId = req.user.id;
-
-    const portfolio =
-
-      await Portfolio.findOne({
-
-        userId,
-        stockSymbol,
-
-      });
-
-    if (!portfolio) {
-
-      return res.status(400).json({
-
-        message: "Stock not found",
-
-      });
-
-    }
-
-    if (portfolio.quantity < quantity) {
-
-      return res.status(400).json({
-
-        message: "Insufficient quantity",
-
-      });
-
-    }
-
-    portfolio.quantity -= quantity;
-
-    portfolio.investedAmount -=
-
-      quantity * portfolio.averagePrice;
-
-    await portfolio.save();
-
-    await Transaction.create({
-
-      userId,
-
-      stockSymbol,
-
-      stockName: portfolio.stockName,
-
-      type: "SELL",
-
-      quantity,
-
-      price,
-
-      total: quantity * price,
+      createdAt: -1,
 
     });
 
     res.status(200).json({
 
-      message: "Stock Sold",
+      success: true,
+
+      trades,
 
     });
 
@@ -185,67 +100,7 @@ const sellStock = async (req, res) => {
 
     res.status(500).json({
 
-      message: error.message,
-
-    });
-
-  }
-
-};
-
-
-// GET PORTFOLIO
-
-const getPortfolio = async (req, res) => {
-
-  try {
-
-    const portfolio =
-
-      await Portfolio.find({
-
-        userId: req.user.id,
-
-      });
-
-    res.status(200).json(portfolio);
-
-  } catch (error) {
-
-    res.status(500).json({
-
-      message: error.message,
-
-    });
-
-  }
-
-};
-
-
-// GET TRANSACTIONS
-
-const getTransactions = async (req, res) => {
-
-  try {
-
-    const transactions =
-
-      await Transaction.find({
-
-        userId: req.user.id,
-
-      }).sort({
-
-        createdAt: -1,
-
-      });
-
-    res.status(200).json(transactions);
-
-  } catch (error) {
-
-    res.status(500).json({
+      success: false,
 
       message: error.message,
 
@@ -257,9 +112,8 @@ const getTransactions = async (req, res) => {
 
 module.exports = {
 
-  buyStock,
-  sellStock,
-  getPortfolio,
-  getTransactions,
+  placeTrade,
+
+  getTrades,
 
 };

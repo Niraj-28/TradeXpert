@@ -1,98 +1,109 @@
-import {
-  useEffect,
-  useState,
-} from "react";
+const stocks = [
 
-import {
-  getMarketQuote,
-} from "../../services/upstoxService";
+  {
+    symbol: "RELIANCE",
+    price: "₹2,985",
+    change: "+2.45%",
+    positive: true,
+  },
 
+  {
+    symbol: "TCS",
+    price: "₹3,850",
+    change: "-0.92%",
+    positive: false,
+  },
+
+  {
+    symbol: "INFY",
+    price: "₹1,620",
+    change: "+1.82%",
+    positive: true,
+  },
+
+  {
+    symbol: "HDFCBANK",
+    price: "₹1,785",
+    change: "+3.11%",
+    positive: true,
+  },
+
+  {
+    symbol: "SBIN",
+    price: "₹812",
+    change: "-1.25%",
+    positive: false,
+  },
+
+];
 
 const LiveMarket = () => {
 
-  const [marketData, setMarketData] =
-    useState(null);
-
-
-  useEffect(() => {
-
-    fetchData();
-
-  }, []);
-
-
-  const fetchData = async () => {
-
-    try {
-
-      const data =
-        await getMarketQuote(
-          "NSE_EQ|INE002A01018"
-        );
-
-      setMarketData(data);
-
-    } catch (error) {
-
-      console.log(error);
-
-    }
-
-  };
-
-
   return (
 
-    <div className="bg-white rounded-xl p-5 border border-gray-200">
+    <div className="bg-[#081028] rounded-[18px] py-3 px-5 overflow-hidden">
 
-      <div className="mb-5">
+      <div className="flex items-center gap-10 whitespace-nowrap overflow-x-auto scrollbar-hide">
 
-        <h2 className="text-[20px] font-bold">
+        {/* LIVE */}
 
-          Live Market
+        <div className="flex items-center gap-3 bg-[#0F1A3A] px-5 py-2 rounded-2xl flex-shrink-0">
 
-        </h2>
+          <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
 
-        <p className="text-gray-500 text-[13px] mt-1">
+          <span className="text-white font-semibold text-sm">
 
-          Real-time NSE market data
+            LIVE
 
-        </p>
-
-      </div>
-
-
-      {marketData ? (
-
-        <div>
-
-          <h1 className="text-[30px] font-bold mb-2">
-
-            Reliance
-
-          </h1>
-
-          <p className="text-[24px] font-bold">
-
-            ₹{
-              marketData.data[
-                "NSE_EQ|INE002A01018"
-              ]?.last_price
-            }
-
-          </p>
+          </span>
 
         </div>
 
-      ) : (
+        {/* STOCKS */}
 
-        <p>Loading...</p>
+        {stocks.map((stock, index) => (
 
-      )}
+          <div
+            key={index}
+            className="flex items-center gap-4 flex-shrink-0"
+          >
+
+            <h3 className="text-white font-bold text-lg">
+
+              {stock.symbol}
+
+            </h3>
+
+            <p className="text-white text-lg">
+
+              {stock.price}
+
+            </p>
+
+            <span
+              className={`font-bold text-lg ${
+                stock.positive
+
+                  ? "text-[#00E676]"
+
+                  : "text-[#FF5252]"
+              }`}
+            >
+
+              {stock.change}
+
+            </span>
+
+          </div>
+
+        ))}
+
+      </div>
 
     </div>
 
   );
+
 };
 
 export default LiveMarket;
