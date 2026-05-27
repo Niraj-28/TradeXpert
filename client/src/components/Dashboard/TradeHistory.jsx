@@ -5,82 +5,100 @@ import {
 
 } from "react";
 
-import toast from "react-hot-toast";
-
 import {
 
-  TrendingUp,
-  TrendingDown,
+  ArrowUp,
+  ArrowDown,
+  Clock3,
 
 } from "lucide-react";
 
 import {
 
-  getTradeHistory,
+  getOrders,
 
-} from "../../services/tradeService";
+} from "../../services/orderService";
 
 const TradeHistory = () => {
 
   const [trades, setTrades] =
-
     useState([]);
 
   const [loading, setLoading] =
-
     useState(true);
+
+  // FETCH TRADES
+
+  const fetchTrades =
+    async () => {
+
+      try {
+
+        const data =
+          await getOrders();
+
+        const executedTrades =
+
+          (data.orders || []).filter(
+
+            (trade) =>
+
+              trade.status ===
+              "EXECUTED"
+
+          );
+
+        setTrades(
+          executedTrades
+        );
+
+      } catch (error) {
+
+        console.log(error);
+
+      } finally {
+
+        setLoading(false);
+
+      }
+
+    };
+
+  // AUTO REFRESH
 
   useEffect(() => {
 
     fetchTrades();
 
+    const interval =
+      setInterval(() => {
+
+        fetchTrades();
+
+      }, 3000);
+
+    return () =>
+      clearInterval(interval);
+
   }, []);
-
-  const fetchTrades = async () => {
-
-    try {
-
-      const token = localStorage.getItem(
-
-        "token"
-
-      );
-
-      const data = await getTradeHistory(
-
-        token
-
-      );
-
-      setTrades(data.trades);
-
-    } catch (error) {
-
-      toast.error(
-
-        "Failed to load trades"
-
-      );
-
-    } finally {
-
-      setLoading(false);
-
-    }
-
-  };
 
   return (
 
-    <div className="bg-white border border-[#E2E8F0] rounded-[30px] p-6 shadow-sm mt-5">
+    <div className="bg-white rounded-[30px] border border-[#E8ECF2] p-6 shadow-[0_6px_24px_rgba(15,23,42,0.06)]">
 
       {/* HEADER */}
 
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-start justify-between">
 
         <div>
 
-          <h2 className="text-xl font-bold text-[#0F172A] mt-2">
+          <p className="text-[13px] text-[#64748B] font-medium">
+
+            Trading Activity
+
+          </p>
+
+          <h2 className="mt-2 text-[30px] font-bold tracking-tight text-[#0F172A]">
 
             Trade History
 
@@ -88,199 +106,232 @@ const TradeHistory = () => {
 
         </div>
 
+        <div className="h-12 w-12 rounded-2xl bg-[#0F172A] text-white flex items-center justify-center">
+
+          <Clock3 size={22} />
+
+        </div>
+
       </div>
 
-      {/* TABLE */}
+      {/* LOADING */}
 
-      <div className="overflow-x-auto">
+      {loading && (
 
-        <table className="w-full min-w-[800px]">
+        <div className="py-14 text-center">
 
-          <thead>
+          <p className="text-[14px] text-[#64748B]">
 
-            <tr className="border-b border-[#E2E8F0]">
+            Loading trades...
 
-              <th className="text-left py-4 text-xs font-semibold text-[#64748B]">
+          </p>
 
-                Symbol
+        </div>
 
-              </th>
+      )}
 
-              <th className="text-left py-4 text-xs font-semibold text-[#64748B]">
+      {/* EMPTY */}
 
-                Type
+      {!loading &&
+        trades.length === 0 && (
 
-              </th>
+          <div className="py-14 text-center">
 
-              <th className="text-left py-4 text-xs font-semibold text-[#64748B]">
+            <p className="text-[14px] text-[#64748B]">
 
-                Quantity
+              No executed trades
 
-              </th>
+            </p>
 
-              <th className="text-left py-4 text-xs font-semibold text-[#64748B]">
+          </div>
 
-                Price
+        )}
 
-              </th>
+      {/* TRADE LIST */}
 
-              <th className="text-left py-4 text-xs font-semibold text-[#64748B]">
+      {trades.length > 0 && (
 
-                Total
+        <div className="mt-8 space-y-5">
 
-              </th>
+          {trades.map((trade) => {
 
-              <th className="text-left py-4 text-xs font-semibold text-[#64748B]">
+            const buy =
+              trade.type ===
+              "BUY";
 
-                Date
+            const totalValue =
 
-              </th>
+              (
+                trade.price *
 
-            </tr>
+                trade.quantity
+              ).toFixed(2);
 
-          </thead>
+            return (
 
-          <tbody>
+              <div
+                key={trade._id}
+                className="relative rounded-[26px] border border-[#EEF2F7] p-5 hover:bg-[#FAFBFC] transition-all"
+              >
 
-            {loading ? (
+                {/* TIMELINE DOT */}
 
-              <tr>
+                <div
+                  className={`absolute left-[-8px] top-8 h-4 w-4 rounded-full border-4 border-white ${
+                    buy
 
-                <td
-                  colSpan="6"
-                  className="py-10 text-center text-[#64748B]"
-                >
+                      ? "bg-green-500"
 
-                  Loading trades...
+                      : "bg-red-500"
+                  }`}
+                />
 
-                </td>
+                {/* CONTENT */}
 
-              </tr>
+                <div className="flex items-start justify-between">
 
-            ) : trades.length === 0 ? (
+                  {/* LEFT */}
 
-              <tr>
+                  <div className="flex items-start gap-4">
 
-                <td
-                  colSpan="6"
-                  className="py-10 text-center text-[#64748B]"
-                >
-
-                  No trades found
-
-                </td>
-
-              </tr>
-
-            ) : (
-
-              trades.map((trade) => (
-
-                <tr
-                  key={trade._id}
-                  className="border-b border-[#F1F5F9] hover:bg-[#F8FAFC] transition-all"
-                >
-
-                  {/* SYMBOL */}
-
-                  <td className="py-5 text-sm">
-
-                    <div>
-
-                      <h3 className="font-bold text-[#0F172A] ">
-
-                        {trade.symbol}
-
-                      </h3>
-
-                      <p className="text-sm text-[#64748B] text-xs">
-
-                        NSE Equity
-
-                      </p>
-
-                    </div>
-
-                  </td>
-
-                  {/* TYPE */}
-
-                  <td className="py-5 text-sm">
+                    {/* ICON */}
 
                     <div
-                      className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-xl text-xs font-semibold ${
-                        trade.type === "BUY"
+                      className={`h-14 w-14 rounded-2xl flex items-center justify-center ${
+                        buy
 
-                          ? "bg-green-100 text-green-700"
+                          ? "bg-green-100 text-green-600"
 
-                          : "bg-red-100 text-red-700"
-
+                          : "bg-red-100 text-red-600"
                       }`}
                     >
 
-                      {trade.type === "BUY" ? (
+                      {buy ? (
 
-                        <TrendingUp size={16} />
+                        <ArrowUp
+                          size={24}
+                        />
 
                       ) : (
 
-                        <TrendingDown size={16} />
+                        <ArrowDown
+                          size={24}
+                        />
 
                       )}
 
-                      {trade.type}
+                    </div>
+
+                    {/* DETAILS */}
+
+                    <div>
+
+                      <div className="flex items-center gap-3">
+
+                        <h3 className="text-[24px] font-bold tracking-tight text-[#0F172A]">
+
+                          {
+                            trade.symbol
+                          }
+
+                        </h3>
+
+                        <div
+                          className={`px-3 py-1 rounded-xl text-[11px] font-bold ${
+                            buy
+
+                              ? "bg-green-100 text-green-700"
+
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+
+                          {
+                            trade.type
+                          }
+
+                        </div>
+
+                      </div>
+
+                      <p className="mt-2 text-[14px] text-[#64748B]">
+
+                        Quantity{" "}
+                        <span className="font-bold text-[#0F172A]">
+
+                          {
+                            trade.quantity
+                          }
+
+                        </span>
+
+                        {" • "}
+
+                        Price ₹
+                        <span className="font-bold text-[#0F172A]">
+
+                          {
+                            trade.price
+                          }
+
+                        </span>
+
+                      </p>
+
+                      {/* TIME */}
+
+                      <div className="mt-4 flex items-center gap-2 text-[12px] text-[#64748B]">
+
+                        <Clock3
+                          size={14}
+                        />
+
+                        {new Date(
+                          trade.executedAt
+                        ).toLocaleDateString()}
+
+                        {" • "}
+
+                        {new Date(
+                          trade.executedAt
+                        ).toLocaleTimeString()}
+
+                      </div>
 
                     </div>
 
-                  </td>
+                  </div>
 
-                  {/* QUANTITY */}
+                  {/* RIGHT */}
 
-                  <td className="py-5 font-semibold text-[#0F172A] text-sm">
+                  <div className="text-right">
 
-                    {trade.quantity}
+                    <p className="text-[12px] text-[#64748B]">
 
-                  </td>
+                      Trade Value
 
-                  {/* PRICE */}
+                    </p>
 
-                  <td className="py-5 font-semibold text-[#0F172A] text-sm">
+                    <h2 className="mt-2 text-[30px] font-bold tracking-tight text-[#0F172A]">
 
-                    ₹{trade.price}
+                      ₹
+                      {totalValue}
 
-                  </td>
+                    </h2>
 
-                  {/* TOTAL */}
+                  </div>
 
-                  <td className="py-5 font-bold text-[#0F172A] text-sm">
+                </div>
 
-                    ₹{trade.total}
+              </div>
 
-                  </td>
+            );
 
-                  {/* DATE */}
+          })}
 
-                  <td className="py-5 text-[#64748B] text-sm">
+        </div>
 
-                    {new Date(
-
-                      trade.createdAt
-
-                    ).toLocaleString()}
-
-                  </td>
-
-                </tr>
-
-              ))
-
-            )}
-
-          </tbody>
-
-        </table>
-
-      </div>
+      )}
 
     </div>
 

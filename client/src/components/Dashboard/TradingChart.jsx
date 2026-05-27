@@ -1,138 +1,197 @@
 import {
 
+  ResponsiveContainer,
   AreaChart,
   Area,
   XAxis,
   YAxis,
   Tooltip,
-  ResponsiveContainer,
+  CartesianGrid,
 
 } from "recharts";
 
-const data = [
+import {
 
-  {
-    day: "Mon",
-    value: 12000,
-  },
+  TrendingUp,
 
-  {
-    day: "Tue",
-    value: 14500,
-  },
+} from "lucide-react";
 
-  {
-    day: "Wed",
-    value: 13200,
-  },
+const TradingChart = ({
 
-  {
-    day: "Thu",
-    value: 16800,
-  },
+  marketData = [],
 
-  {
-    day: "Fri",
-    value: 19200,
-  },
+}) => {
 
-  {
-    day: "Sat",
-    value: 17500,
-  },
+  const fallbackData = [
 
-  {
-    day: "Sun",
-    value: 22400,
-  },
+    {
 
-];
+      time: "09:15",
 
-const TradingChart = () => {
+      value: 24500,
+
+    },
+
+    {
+
+      time: "10:00",
+
+      value: 24620,
+
+    },
+
+    {
+
+      time: "11:00",
+
+      value: 24580,
+
+    },
+
+    {
+
+      time: "12:00",
+
+      value: 24710,
+
+    },
+
+    {
+
+      time: "01:00",
+
+      value: 24840,
+
+    },
+
+    {
+
+      time: "02:00",
+
+      value: 24790,
+
+    },
+
+    {
+
+      time: "03:00",
+
+      value: 24890,
+
+    },
+
+  ];
+
+  // CREATE DYNAMIC CHART DATA
+
+  const chartData =
+
+    marketData.length > 0
+
+      ? marketData
+          .slice(0, 7)
+          .map(
+
+            (
+              stock,
+              index
+            ) => ({
+
+              time: `${9 + index}:15`,
+
+              value:
+                Number(
+                  stock.price
+                ) || 0,
+
+            })
+
+          )
+
+      : fallbackData;
+
+  // PERFORMANCE
+
+  const firstValue =
+    chartData[0]?.value || 0;
+
+  const lastValue =
+    chartData[
+      chartData.length - 1
+    ]?.value || 0;
+
+  const difference =
+    lastValue - firstValue;
+
+  const positive =
+    difference >= 0;
 
   return (
 
-    <div className="bg-white border border-[#E2E8F0] rounded-[30px] p-6 shadow-sm mt-5">
+    <div className="relative overflow-hidden bg-white rounded-[30px] border border-[#E8ECF2] p-6 shadow-[0_6px_24px_rgba(15,23,42,0.06)]">
+
+      {/* GLOW */}
+
+      <div className="absolute top-0 right-0 h-[250px] w-[250px] bg-green-100 blur-[120px] opacity-30 rounded-full" />
 
       {/* HEADER */}
 
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-5">
+      <div className="relative z-10 flex items-start justify-between">
+
+        {/* LEFT */}
 
         <div>
 
-          <h2 className="text-lg font-bold text-[#0F172A] mt-1">
+          <p className="text-[13px] font-medium text-[#64748B]">
 
-            Portfolio Growth
+            Market Performance
+
+          </p>
+
+          <h2 className="mt-2 text-[34px] font-bold tracking-tight text-[#0F172A]">
+
+            NIFTY Trend
 
           </h2>
 
         </div>
 
-        {/* TIME FILTERS */}
+        {/* PERFORMANCE */}
 
-        <div className="flex items-center gap-3 flex-wrap">
+        <div
+          className={`flex items-center gap-2 px-5 py-3 rounded-2xl ${
+            positive
 
-          <button className="px-2.5 py-1 rounded-xl bg-[#58E6B3] text-[#0F172A] text-xs font-semibold">
+              ? "bg-green-100 text-green-700"
 
-            1D
+              : "bg-red-100 text-red-700"
+          }`}
+        >
 
-          </button>
+          <TrendingUp
+            size={20}
+          />
 
-          <button className="px-2.5 py-1 rounded-xl bg-[#F1F5F9] hover:bg-[#E2E8F0] transition-all text-[#0F172A] text-xs font-semibold">
+          <div>
 
-            1W
+            <p className="text-[11px] font-medium">
 
-          </button>
+              Today
 
-          <button className="px-2.5 py-1 rounded-xl bg-[#F1F5F9] hover:bg-[#E2E8F0] transition-all text-[#0F172A] text-xs font-semibold">
+            </p>
 
-            1M
+            <h3 className="text-[18px] font-bold">
 
-          </button>
+              {positive
+                ? "+"
+                : ""}
+              {difference.toFixed(
+                2
+              )}
 
-          <button className="px-2.5 py-1 rounded-xl bg-[#F1F5F9] hover:bg-[#E2E8F0] transition-all text-[#0F172A] text-xs font-semibold">
+            </h3>
 
-            1Y
-
-          </button>
-
-        </div>
-
-      </div>
-
-      {/* STATS */}
-
-      <div className="flex flex-col md:flex-row md:items-center gap-8 mb-5">
-
-        <div>
-
-          <p className="text-sm text-[#64748B]">
-
-            Total Portfolio Value
-
-          </p>
-
-          <h1 className="text-xl font-bold text-[#0F172A] mt-1">
-
-            ₹22,400
-
-          </h1>
-
-        </div>
-
-        <div>
-
-          <p className="text-sm text-[#64748B]">
-
-            Today's Profit
-
-          </p>
-
-          <h2 className="text-xl font-bold text-green-600 mt-1">
-
-            +₹2,420 (+4.8%)
-
-          </h2>
+          </div>
 
         </div>
 
@@ -140,11 +199,18 @@ const TradingChart = () => {
 
       {/* CHART */}
 
-      <div className="w-full h-[250px] text-xs">
+      <div className="relative z-10 mt-10 h-[420px] min-h-[420px]">
 
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+        >
 
-          <AreaChart data={data}>
+          <AreaChart
+            data={chartData}
+          >
+
+            {/* GRADIENT */}
 
             <defs>
 
@@ -157,40 +223,86 @@ const TradingChart = () => {
               >
 
                 <stop
-                  offset="5%"
-                  stopColor="#58E6B3"
-                  stopOpacity={0.4}
+                  offset="0%"
+                  stopColor="#10B981"
+                  stopOpacity={
+                    0.4
+                  }
                 />
 
                 <stop
-                  offset="95%"
-                  stopColor="#58E6B3"
-                  stopOpacity={0}
+                  offset="100%"
+                  stopColor="#10B981"
+                  stopOpacity={
+                    0
+                  }
                 />
 
               </linearGradient>
 
             </defs>
 
-            <XAxis
-              dataKey="day"
-              tickLine={false}
-              axisLine={false}
+            {/* GRID */}
+
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="#EEF2F7"
+              vertical={false}
             />
+
+            {/* X AXIS */}
+
+            <XAxis
+              dataKey="time"
+              tick={{
+
+                fontSize: 12,
+
+                fill: "#64748B",
+
+              }}
+              axisLine={false}
+              tickLine={false}
+            />
+
+            {/* Y AXIS */}
 
             <YAxis
-              tickLine={false}
+              tick={{
+
+                fontSize: 12,
+
+                fill: "#64748B",
+
+              }}
               axisLine={false}
+              tickLine={false}
             />
 
-            <Tooltip />
+            {/* TOOLTIP */}
+
+            <Tooltip
+              contentStyle={{
+
+                borderRadius:
+                  "18px",
+
+                border:
+                  "1px solid #E8ECF2",
+
+                boxShadow:
+                  "0 6px 20px rgba(15,23,42,0.08)",
+
+              }}
+            />
+
+            {/* AREA */}
 
             <Area
               type="monotone"
               dataKey="value"
-              stroke="#58E6B3"
+              stroke="#10B981"
               strokeWidth={4}
-              fillOpacity={1}
               fill="url(#colorValue)"
             />
 

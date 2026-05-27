@@ -4,419 +4,341 @@ import {
 
 } from "react";
 
-import toast from "react-hot-toast";
-
 import {
 
-  ArrowUpRight,
-  ArrowDownRight,
-  IndianRupee,
+  ArrowUp,
+  ArrowDown,
+  Activity,
 
 } from "lucide-react";
 
 import {
 
-  placeTrade,
+  placeOrder,
 
-} from "../../services/tradeService";
+} from "../../services/orderService";
 
-const TradingPanel = () => {
+const TradingPanel = ({
 
-  const [orderType, setOrderType] =
+  marketData = [],
 
-    useState("BUY");
+}) => {
+
+  const [symbol, setSymbol] =
+    useState("RELIANCE");
 
   const [quantity, setQuantity] =
-
     useState(1);
 
-  const [price, setPrice] =
-
-    useState(2985);
+  const [type, setType] =
+    useState("BUY");
 
   const [loading, setLoading] =
-
     useState(false);
 
-  const total = quantity * price;
+  // LIVE STOCK
 
-  const handleTrade = async () => {
+  const liveStock =
 
-    try {
+    marketData.find(
 
-      setLoading(true);
+      (stock) =>
 
-      const token = localStorage.getItem(
+        stock.symbol ===
+        symbol
 
-        "token"
+    ) || {
 
-      );
+      price: 0,
 
-      const tradeData = {
+      change: 0,
 
-        symbol: "RELIANCE",
+    };
 
-        type: orderType,
+  const positive =
 
-        quantity,
+    Number(
+      liveStock.change
+    ) >= 0;
 
-        price,
+  // ORDER VALUE
 
-      };
+  const totalValue =
 
-      await placeTrade(
+    (
+      Number(quantity) *
 
-        tradeData,
+      Number(
+        liveStock.price || 0
+      )
+    ).toFixed(2);
 
-        token
+  // EXECUTE ORDER
 
-      );
+  const handleOrder =
+    async () => {
 
-      toast.success(
+      try {
 
-        `${orderType} Order Executed`
+        setLoading(true);
 
-      );
+        await placeOrder({
 
-    } catch (error) {
+          symbol,
 
-      toast.error(
+          quantity:
+            Number(quantity),
 
-        error.response?.data?.message ||
+          type,
 
-        "Trade Failed"
+          price: Number(
+            liveStock.price
+          ),
 
-      );
+        });
 
-    } finally {
+        alert(
+          `${type} order executed`
+        );
 
-      setLoading(false);
+      } catch (error) {
 
-    }
+        console.log(error);
 
-  };
+      } finally {
+
+        setLoading(false);
+
+      }
+
+    };
 
   return (
 
-    <div className="bg-white border border-[#E2E8F0] rounded-[30px] p-6 shadow-sm mt-8">
+    <div className="sticky top-5 bg-white rounded-[30px] border border-[#E8ECF2] p-6 shadow-[0_6px_24px_rgba(15,23,42,0.06)]">
 
       {/* HEADER */}
 
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-8">
+      <div className="flex items-start justify-between">
 
         <div>
 
-          <p className="text-sm text-[#64748B] font-medium">
+          <p className="text-[13px] text-[#64748B] font-medium">
 
-            Live Trading
+            Trading Terminal
 
           </p>
 
-          <h2 className="text-3xl font-bold text-[#0F172A] mt-1">
+          <h2 className="mt-2 text-[30px] font-bold tracking-tight text-[#0F172A]">
 
-            Trading Panel
+            Quick Trade
 
           </h2>
 
         </div>
 
-        {/* BUY / SELL */}
+        <div className="h-12 w-12 rounded-2xl bg-[#0F172A] text-white flex items-center justify-center">
 
-        <div className="flex items-center gap-3">
-
-          <button
-            onClick={() => setOrderType("BUY")}
-            className={`px-6 py-3 rounded-2xl font-semibold transition-all ${
-              orderType === "BUY"
-
-                ? "bg-green-500 text-white"
-
-                : "bg-[#F1F5F9] text-[#0F172A]"
-
-            }`}
-          >
-
-            Buy
-
-          </button>
-
-          <button
-            onClick={() => setOrderType("SELL")}
-            className={`px-6 py-3 rounded-2xl font-semibold transition-all ${
-              orderType === "SELL"
-
-                ? "bg-red-500 text-white"
-
-                : "bg-[#F1F5F9] text-[#0F172A]"
-
-            }`}
-          >
-
-            Sell
-
-          </button>
+          <Activity size={22} />
 
         </div>
 
       </div>
 
-      {/* GRID */}
+      {/* BUY SELL */}
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+      <div className="grid grid-cols-2 gap-4 mt-8">
 
-        {/* LEFT */}
+        <button
+          onClick={() =>
+            setType("BUY")
+          }
+          className={`h-14 rounded-2xl text-[15px] font-bold flex items-center justify-center gap-2 transition-all ${
+            type === "BUY"
 
-        <div className="space-y-6">
+              ? "bg-green-500 text-white"
 
-          {/* STOCK */}
+              : "bg-[#F8FAFC] text-[#0F172A]"
+          }`}
+        >
 
-          <div>
+          <ArrowUp size={18} />
 
-            <label className="text-sm font-medium text-[#64748B]">
+          BUY
 
-              Stock Symbol
+        </button>
 
-            </label>
+        <button
+          onClick={() =>
+            setType("SELL")
+          }
+          className={`h-14 rounded-2xl text-[15px] font-bold flex items-center justify-center gap-2 transition-all ${
+            type === "SELL"
 
-            <input
-              type="text"
-              value="RELIANCE"
-              readOnly
-              className="w-full h-14 mt-2 px-5 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] outline-none"
-            />
+              ? "bg-red-500 text-white"
 
-          </div>
+              : "bg-[#F8FAFC] text-[#0F172A]"
+          }`}
+        >
 
-          {/* QUANTITY */}
+          <ArrowDown
+            size={18}
+          />
 
-          <div>
+          SELL
 
-            <label className="text-sm font-medium text-[#64748B]">
+        </button>
 
-              Quantity
+      </div>
 
-            </label>
+      {/* STOCK SELECT */}
 
-            <input
-              type="number"
-              value={quantity}
-              onChange={(e) =>
-                setQuantity(Number(e.target.value))
-              }
-              className="w-full h-14 mt-2 px-5 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] outline-none focus:border-[#58E6B3]"
-            />
+      <div className="mt-6">
 
-          </div>
+        <label className="text-[12px] font-semibold text-[#64748B]">
 
-          {/* PRICE */}
+          Select Stock
 
-          <div>
+        </label>
 
-            <label className="text-sm font-medium text-[#64748B]">
+        <select
+          value={symbol}
+          onChange={(e) =>
+            setSymbol(
+              e.target.value
+            )
+          }
+          className="mt-2 w-full h-14 px-5 rounded-2xl border border-[#E8ECF2] bg-[#F8FAFC] outline-none focus:border-[#10B981]"
+        >
 
-              Price
+          {marketData.map(
+            (stock) => (
 
-            </label>
-
-            <div className="relative">
-
-              <IndianRupee
-                size={18}
-                className="absolute left-5 top-1/2 -translate-y-1/2 text-[#64748B]"
-              />
-
-              <input
-                type="number"
-                value={price}
-                onChange={(e) =>
-                  setPrice(Number(e.target.value))
+              <option
+                key={
+                  stock.symbol
                 }
-                className="w-full h-14 mt-2 pl-12 pr-5 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] outline-none focus:border-[#58E6B3]"
-              />
+                value={
+                  stock.symbol
+                }
+              >
 
-            </div>
-
-          </div>
-
-          {/* ORDER TYPE */}
-
-          <div>
-
-            <label className="text-sm font-medium text-[#64748B]">
-
-              Order Type
-
-            </label>
-
-            <select className="w-full h-14 mt-2 px-5 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] outline-none focus:border-[#58E6B3]">
-
-              <option>
-
-                Market Order
+                {stock.symbol}
 
               </option>
 
-              <option>
+            )
 
-                Limit Order
+          )}
 
-              </option>
+        </select>
 
-            </select>
+      </div>
 
-          </div>
+      {/* LIVE PRICE */}
 
-        </div>
+      <div className="mt-6 p-5 rounded-[24px] bg-[#F8FAFC] border border-[#EEF2F7]">
 
-        {/* RIGHT */}
+        <p className="text-[12px] text-[#64748B] font-medium">
 
-        <div className="bg-[#F8FAFC] rounded-[30px] p-6 border border-[#E2E8F0]">
+          Live Market Price
 
-          <div className="flex items-center justify-between mb-8">
+        </p>
 
-            <div>
+        <div className="mt-3 flex items-end justify-between">
 
-              <p className="text-sm text-[#64748B]">
+          <h1 className="text-[42px] font-bold tracking-tight text-[#0F172A]">
 
-                Order Summary
+            ₹
+            {liveStock.price ||
+              "--"}
 
-              </p>
+          </h1>
 
-              <h3 className="text-2xl font-bold text-[#0F172A] mt-1">
+          <div
+            className={`px-4 py-2 rounded-2xl text-[13px] font-bold ${
+              positive
 
-                {orderType} RELIANCE
+                ? "bg-green-100 text-green-700"
 
-              </h3>
-
-            </div>
-
-            <div
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
-                orderType === "BUY"
-
-                  ? "bg-green-100"
-
-                  : "bg-red-100"
-
-              }`}
-            >
-
-              {orderType === "BUY" ? (
-
-                <ArrowUpRight
-                  size={28}
-                  className="text-green-600"
-                />
-
-              ) : (
-
-                <ArrowDownRight
-                  size={28}
-                  className="text-red-600"
-                />
-
-              )}
-
-            </div>
-
-          </div>
-
-          {/* DETAILS */}
-
-          <div className="space-y-5">
-
-            <div className="flex justify-between">
-
-              <span className="text-[#64748B]">
-
-                Quantity
-
-              </span>
-
-              <span className="font-semibold text-[#0F172A]">
-
-                {quantity}
-
-              </span>
-
-            </div>
-
-            <div className="flex justify-between">
-
-              <span className="text-[#64748B]">
-
-                Price
-
-              </span>
-
-              <span className="font-semibold text-[#0F172A]">
-
-                ₹{price}
-
-              </span>
-
-            </div>
-
-            <div className="flex justify-between">
-
-              <span className="text-[#64748B]">
-
-                Brokerage
-
-              </span>
-
-              <span className="font-semibold text-[#0F172A]">
-
-                ₹20
-
-              </span>
-
-            </div>
-
-            <div className="border-t border-[#E2E8F0] pt-5 flex justify-between">
-
-              <span className="text-lg font-semibold text-[#0F172A]">
-
-                Total
-
-              </span>
-
-              <span className="text-2xl font-bold text-[#0F172A]">
-
-                ₹{total}
-
-              </span>
-
-            </div>
-
-          </div>
-
-          {/* BUTTON */}
-
-          <button
-            onClick={handleTrade}
-            disabled={loading}
-            className={`w-full h-14 rounded-2xl font-semibold mt-8 transition-all ${
-              orderType === "BUY"
-
-                ? "bg-green-500 hover:bg-green-600 text-white"
-
-                : "bg-red-500 hover:bg-red-600 text-white"
-
+                : "bg-red-100 text-red-700"
             }`}
           >
 
-            {loading
+            {positive
+              ? "+"
+              : ""}
+            {liveStock.change}%
 
-              ? "Processing..."
-
-              : `Confirm ${orderType}`}
-
-          </button>
+          </div>
 
         </div>
 
       </div>
+
+      {/* QUANTITY */}
+
+      <div className="mt-6">
+
+        <label className="text-[12px] font-semibold text-[#64748B]">
+
+          Quantity
+
+        </label>
+
+        <input
+          type="number"
+          min="1"
+          value={quantity}
+          onChange={(e) =>
+            setQuantity(
+              e.target.value
+            )
+          }
+          className="mt-2 w-full h-14 px-5 rounded-2xl border border-[#E8ECF2] bg-[#F8FAFC] outline-none focus:border-[#10B981]"
+        />
+
+      </div>
+
+      {/* ORDER VALUE */}
+
+      <div className="mt-6 p-5 rounded-[24px] bg-[#0F172A] text-white">
+
+        <p className="text-[12px] text-gray-300">
+
+          Estimated Order Value
+
+        </p>
+
+        <h2 className="mt-2 text-[36px] font-bold tracking-tight">
+
+          ₹
+          {totalValue}
+        </h2>
+
+      </div>
+
+      {/* BUTTON */}
+
+      <button
+        onClick={handleOrder}
+        disabled={loading}
+        className={`mt-6 w-full h-14 rounded-2xl text-[15px] font-bold text-white transition-all ${
+          type === "BUY"
+
+            ? "bg-green-500 hover:bg-green-600"
+
+            : "bg-red-500 hover:bg-red-600"
+        }`}
+      >
+
+        {loading
+
+          ? "Processing..."
+
+          : `${type} STOCK`}
+
+      </button>
 
     </div>
 

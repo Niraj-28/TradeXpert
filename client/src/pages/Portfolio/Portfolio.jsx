@@ -1,367 +1,340 @@
 import { useEffect, useState } from "react";
 
-import Navbar from "../../components/Navbar/Navbar";
-
 import {
-
-  Wallet,
   TrendingUp,
-  BarChart3,
-
+  TrendingDown,
+  Wallet,
+  PieChart,
 } from "lucide-react";
 
+import Holdings from "../../components/Dashboard/Holdings";
+
+import socket from "../../socket/socket";
+
 import {
-
-  getPortfolio,
-
-} from "../../services/tradeService";
+  getHoldings,
+} from "../../services/holdingService";
 
 const Portfolio = () => {
 
-  const [portfolio, setPortfolio] = useState([]);
+  const [holdings, setHoldings] =
+    useState([]);
 
-  const [loading, setLoading] = useState(true);
+  const [marketData, setMarketData] =
+    useState([]);
+
+  // FETCH HOLDINGS
 
   useEffect(() => {
 
-    fetchPortfolio();
+    fetchHoldings();
 
   }, []);
 
-  const fetchPortfolio = async () => {
+  const fetchHoldings =
+    async () => {
 
-    try {
+      try {
 
-      const data = await getPortfolio();
+        const data =
+          await getHoldings();
 
-      setPortfolio(data);
+        setHoldings(
+          data.holdings || []
+        );
 
-    } catch (error) {
+      } catch (error) {
 
-      console.log(error);
+        console.log(error);
 
-    } finally {
+      }
 
-      setLoading(false);
+    };
 
-    }
+  // SOCKET
 
-  };
+  useEffect(() => {
 
+    socket.connect();
 
-  // TOTAL VALUE
+    socket.on(
+      "marketData",
+      (data) => {
 
-  const totalInvested = portfolio.reduce(
+        if (
+          Array.isArray(data)
+        ) {
 
-    (acc, item) =>
+          setMarketData(data);
 
-      acc + item.investedAmount,
+        }
 
-    0
+      }
+    );
 
-  );
+    return () => {
 
-  const totalCurrent = portfolio.reduce(
+      socket.off(
+        "marketData"
+      );
 
-    (acc, item) =>
+    };
 
-      acc +
+  }, []);
 
-      item.quantity *
+  // MAP
 
-      (item.averagePrice * 1.08),
+  const marketMap =
 
-    0
+    marketData.reduce(
+      (acc, stock) => {
 
-  );
+        acc[stock.symbol] =
+          stock;
 
-  const totalProfit =
+        return acc;
 
-    totalCurrent - totalInvested;
+      },
+      {}
+    );
+
+  // LIVE HOLDINGS
+
+  const liveHoldings =
+    holdings.map((item) => {
+
+      const live =
+        marketMap[
+          item.symbol
+        ] || {};
+
+      return {
+
+        ...item,
+
+        currentPrice:
+          Number(
+            live.price || 0
+          ),
+
+      };
+
+    });
+
+  // TOTALS
+
+  const totalInvestment =
+
+    liveHoldings.reduce(
+
+      (acc, item) =>
+
+        acc +
+
+        item.avgPrice *
+          item.quantity,
+
+      0
+
+    );
+
+  const currentValue =
+
+    liveHoldings.reduce(
+
+      (acc, item) =>
+
+        acc +
+
+        item.currentPrice *
+          item.quantity,
+
+      0
+
+    );
+
+  const totalPnL =
+
+    currentValue -
+    totalInvestment;
+
+  const positive =
+    totalPnL >= 0;
 
   return (
 
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F4F7FB] px-5 lg:px-8 py-6">
 
-      <Navbar />
+      {/* HEADER */}
 
-      <div className="pt-24 px-5 lg:px-10 pb-10">
+      <div className="flex items-center justify-between mb-8">
 
-        {/* HEADER */}
+        <div>
 
-        <div className="mb-10">
+          <p className="text-[14px] text-[#64748B] font-medium">
 
-          <h1 className="text-4xl font-bold text-[#0F172A]">
+            Investment Overview
+
+          </p>
+
+          <h1 className="mt-2 text-[42px] font-bold tracking-tight text-[#0F172A]">
 
             Portfolio
 
           </h1>
 
-          <p className="text-[#64748B] mt-2">
-
-            Track your holdings and investments
-
-          </p>
-
-        </div>
-
-
-        {/* STATS */}
-
-        <div className="grid lg:grid-cols-3 gap-6 mb-8">
-
-          {/* INVESTED */}
-
-          <div className="bg-white rounded-[28px] border border-[#E2E8F0] p-6 shadow-sm">
-
-            <div className="flex items-center justify-between mb-5">
-
-              <div className="w-12 h-12 rounded-2xl bg-[#DCFCE7] flex items-center justify-center">
-
-                <Wallet
-                  className="text-[#16A34A]"
-                  size={22}
-                />
-
-              </div>
-
-            </div>
-
-            <p className="text-[#64748B] text-sm mb-2">
-
-              Total Invested
-
-            </p>
-
-            <h1 className="text-4xl font-bold text-[#0F172A]">
-
-              ₹{totalInvested.toFixed(2)}
-
-            </h1>
-
-          </div>
-
-
-          {/* CURRENT VALUE */}
-
-          <div className="bg-white rounded-[28px] border border-[#E2E8F0] p-6 shadow-sm">
-
-            <div className="flex items-center justify-between mb-5">
-
-              <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] flex items-center justify-center">
-
-                <BarChart3
-                  className="text-[#4F46E5]"
-                  size={22}
-                />
-
-              </div>
-
-            </div>
-
-            <p className="text-[#64748B] text-sm mb-2">
-
-              Current Value
-
-            </p>
-
-            <h1 className="text-4xl font-bold text-[#0F172A]">
-
-              ₹{totalCurrent.toFixed(2)}
-
-            </h1>
-
-          </div>
-
-
-          {/* PROFIT */}
-
-          <div className="bg-white rounded-[28px] border border-[#E2E8F0] p-6 shadow-sm">
-
-            <div className="flex items-center justify-between mb-5">
-
-              <div className="w-12 h-12 rounded-2xl bg-[#FEF3C7] flex items-center justify-center">
-
-                <TrendingUp
-                  className="text-[#D97706]"
-                  size={22}
-                />
-
-              </div>
-
-            </div>
-
-            <p className="text-[#64748B] text-sm mb-2">
-
-              Total Profit
-
-            </p>
-
-            <h1
-              className={`text-4xl font-bold ${
-                totalProfit >= 0
-                  ? "text-green-500"
-                  : "text-red-500"
-              }`}
-            >
-
-              ₹{totalProfit.toFixed(2)}
-
-            </h1>
-
-          </div>
-
-        </div>
-
-
-        {/* HOLDINGS */}
-
-        <div className="bg-white rounded-[32px] border border-[#E2E8F0] shadow-sm overflow-hidden">
-
-          {/* TABLE HEADER */}
-
-          <div className="grid grid-cols-6 gap-4 px-6 py-5 border-b border-[#E2E8F0] bg-[#F8FAFC] font-semibold text-[#64748B] text-sm">
-
-            <div>Stock</div>
-
-            <div>Quantity</div>
-
-            <div>Avg Price</div>
-
-            <div>Invested</div>
-
-            <div>Current</div>
-
-            <div>P/L</div>
-
-          </div>
-
-
-          {/* TABLE BODY */}
-
-          {loading ? (
-
-            <div className="p-10 text-center text-[#64748B]">
-
-              Loading Portfolio...
-
-            </div>
-
-          ) : portfolio.length === 0 ? (
-
-            <div className="p-10 text-center text-[#64748B]">
-
-              No Holdings Found
-
-            </div>
-
-          ) : (
-
-            portfolio.map((item, index) => {
-
-              const currentPrice =
-
-                item.averagePrice * 1.08;
-
-              const currentValue =
-
-                currentPrice *
-
-                item.quantity;
-
-              const profit =
-
-                currentValue -
-
-                item.investedAmount;
-
-              return (
-
-                <div
-                  key={index}
-                  className="grid grid-cols-6 gap-4 px-6 py-5 border-b border-[#F1F5F9] items-center hover:bg-[#FAFAFA] transition-all"
-                >
-
-                  {/* STOCK */}
-
-                  <div>
-
-                    <h2 className="font-bold text-[#0F172A]">
-
-                      {item.stockName}
-
-                    </h2>
-
-                    <p className="text-sm text-[#94A3B8]">
-
-                      {item.stockSymbol}
-
-                    </p>
-
-                  </div>
-
-
-                  {/* QTY */}
-
-                  <div className="font-semibold">
-
-                    {item.quantity}
-
-                  </div>
-
-
-                  {/* AVG */}
-
-                  <div>
-
-                    ₹{item.averagePrice.toFixed(2)}
-
-                  </div>
-
-
-                  {/* INVESTED */}
-
-                  <div>
-
-                    ₹{item.investedAmount.toFixed(2)}
-
-                  </div>
-
-
-                  {/* CURRENT */}
-
-                  <div className="font-semibold text-[#0F172A]">
-
-                    ₹{currentValue.toFixed(2)}
-
-                  </div>
-
-
-                  {/* PROFIT */}
-
-                  <div
-                    className={`font-bold ${
-                      profit >= 0
-                        ? "text-green-500"
-                        : "text-red-500"
-                    }`}
-                  >
-
-                    ₹{profit.toFixed(2)}
-
-                  </div>
-
-                </div>
-
-              );
-
-            })
-
-          )}
-
         </div>
 
       </div>
+
+      {/* STATS */}
+
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
+        {/* VALUE */}
+
+        <div className="bg-white rounded-[30px] border border-[#E8ECF2] p-6 shadow-[0_6px_24px_rgba(15,23,42,0.06)]">
+
+          <div className="flex items-center justify-between">
+
+            <div>
+
+              <p className="text-[13px] text-[#64748B]">
+
+                Current Value
+
+              </p>
+
+              <h2 className="mt-3 text-[38px] font-bold tracking-tight text-[#0F172A]">
+
+                ₹
+                {currentValue.toFixed(
+                  2
+                )}
+
+              </h2>
+
+            </div>
+
+            <div className="h-14 w-14 rounded-2xl bg-[#0F172A] text-white flex items-center justify-center">
+
+              <Wallet size={24} />
+
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* INVESTMENT */}
+
+        <div className="bg-white rounded-[30px] border border-[#E8ECF2] p-6 shadow-[0_6px_24px_rgba(15,23,42,0.06)]">
+
+          <div className="flex items-center justify-between">
+
+            <div>
+
+              <p className="text-[13px] text-[#64748B]">
+
+                Total Investment
+
+              </p>
+
+              <h2 className="mt-3 text-[38px] font-bold tracking-tight text-[#0F172A]">
+
+                ₹
+                {totalInvestment.toFixed(
+                  2
+                )}
+
+              </h2>
+
+            </div>
+
+            <div className="h-14 w-14 rounded-2xl bg-blue-500 text-white flex items-center justify-center">
+
+              <PieChart size={24} />
+
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* PNL */}
+
+        <div className="bg-white rounded-[30px] border border-[#E8ECF2] p-6 shadow-[0_6px_24px_rgba(15,23,42,0.06)]">
+
+          <div className="flex items-center justify-between">
+
+            <div>
+
+              <p className="text-[13px] text-[#64748B]">
+
+                Total Profit/Loss
+
+              </p>
+
+              <h2
+                className={`mt-3 text-[38px] font-bold tracking-tight ${
+                  positive
+
+                    ? "text-green-600"
+
+                    : "text-red-600"
+                }`}
+              >
+
+                {positive
+                  ? "+"
+                  : "-"}
+
+                ₹
+                {Math.abs(
+                  totalPnL
+                ).toFixed(2)}
+
+              </h2>
+
+            </div>
+
+            <div
+              className={`h-14 w-14 rounded-2xl text-white flex items-center justify-center ${
+                positive
+
+                  ? "bg-green-500"
+
+                  : "bg-red-500"
+              }`}
+            >
+
+              {positive ? (
+
+                <TrendingUp
+                  size={24}
+                />
+
+              ) : (
+
+                <TrendingDown
+                  size={24}
+                />
+
+              )}
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      {/* HOLDINGS */}
+
+      <Holdings
+        holdings={liveHoldings}
+      />
 
     </div>
 

@@ -1,13 +1,30 @@
 import {
 
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+
+} from "recharts";
+
+import {
+
   TrendingUp,
   TrendingDown,
+  Wallet,
 
 } from "lucide-react";
 
-const Holdings = () => {
+const Holdings = ({
 
-  const holdings = [
+  holdings = [],
+
+}) => {
+
+  // FALLBACK DATA
+
+  const fallbackHoldings = [
 
     {
 
@@ -15,7 +32,7 @@ const Holdings = () => {
 
       quantity: 10,
 
-      avgPrice: 2500,
+      avgPrice: 2800,
 
       currentPrice: 2985,
 
@@ -23,41 +40,118 @@ const Holdings = () => {
 
     {
 
-      symbol: "INFY",
-
-      quantity: 15,
-
-      avgPrice: 1420,
-
-      currentPrice: 1620,
-
-    },
-
-    {
-
       symbol: "TCS",
 
-      quantity: 8,
+      quantity: 5,
 
-      avgPrice: 3950,
+      avgPrice: 3700,
 
       currentPrice: 3850,
 
     },
 
+    {
+
+      symbol: "INFY",
+
+      quantity: 12,
+
+      avgPrice: 1500,
+
+      currentPrice: 1620,
+
+    },
+
+  ];
+
+  const portfolio =
+
+    holdings.length > 0
+
+      ? holdings
+
+      : fallbackHoldings;
+
+  // TOTALS
+
+  const totalInvestment =
+
+    portfolio.reduce(
+
+      (acc, item) =>
+
+        acc +
+
+        item.avgPrice *
+          item.quantity,
+
+      0
+
+    );
+
+  const currentValue =
+
+    portfolio.reduce(
+
+      (acc, item) =>
+
+        acc +
+
+        item.currentPrice *
+          item.quantity,
+
+      0
+
+    );
+
+  const totalPnL =
+
+    currentValue -
+    totalInvestment;
+
+  const positive =
+    totalPnL >= 0;
+
+  // CHART DATA
+
+  const chartData =
+    portfolio.map((item) => ({
+
+      name: item.symbol,
+
+      value:
+        item.currentPrice *
+        item.quantity,
+
+    }));
+
+  const COLORS = [
+
+    "#10B981",
+    "#3B82F6",
+    "#F59E0B",
+    "#EF4444",
+    "#8B5CF6",
+
   ];
 
   return (
 
-    <div className="bg-white border border-[#E2E8F0] rounded-[22px] p-5 shadow-sm mt-5">
+    <div className="bg-white rounded-[30px] border border-[#E8ECF2] p-6 shadow-[0_6px_24px_rgba(15,23,42,0.06)]">
 
       {/* HEADER */}
 
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-start justify-between">
 
         <div>
 
-          <h2 className="text-xl font-bold text-[#0F172A] mt-2">
+          <p className="text-[13px] text-[#64748B] font-medium">
+
+            Portfolio Overview
+
+          </p>
+
+          <h2 className="mt-2 text-[30px] font-bold tracking-tight text-[#0F172A]">
 
             Holdings
 
@@ -65,148 +159,236 @@ const Holdings = () => {
 
         </div>
 
+        <div className="h-12 w-12 rounded-2xl bg-[#0F172A] text-white flex items-center justify-center">
+
+          <Wallet size={22} />
+
+        </div>
+
       </div>
 
-      {/* TABLE */}
+      {/* TOTAL VALUE */}
 
-      <div className="overflow-x-auto">
+      <div className="mt-8 p-6 rounded-[28px] bg-[#0F172A] text-white">
 
-        <table className="w-full min-w-[700px]">
+        <p className="text-[13px] text-gray-300">
 
-          <thead>
+          Current Portfolio Value
 
-            <tr className="border-b border-[#E2E8F0]">
+        </p>
 
-              <th className="text-left py-3 text-xs text-[#64748B]">
+        <h1 className="mt-3 text-[44px] font-bold tracking-tight">
 
-                Stock
+          ₹
+          {currentValue.toLocaleString()}
+        </h1>
 
-              </th>
+        <div className="mt-5 flex items-center gap-3">
 
-              <th className="text-left py-3 text-xs text-[#64748B]">
+          <div
+            className={`px-4 py-2 rounded-2xl text-[13px] font-bold flex items-center gap-2 ${
+              positive
 
-                Qty
+                ? "bg-green-500"
 
-              </th>
+                : "bg-red-500"
+            }`}
+          >
 
-              <th className="text-left py-3 text-xs text-[#64748B]">
+            {positive ? (
 
-                Avg
+              <TrendingUp
+                size={18}
+              />
 
-              </th>
+            ) : (
 
-              <th className="text-left py-3 text-xs text-[#64748B]">
+              <TrendingDown
+                size={18}
+              />
 
-                LTP
+            )}
 
-              </th>
+            ₹
+            {Math.abs(
+              totalPnL
+            ).toFixed(2)}
 
-              <th className="text-left py-3 text-xs text-[#64748B]">
+          </div>
 
-                P&L
+          <p className="text-[13px] text-gray-300">
 
-              </th>
+            Total P&L
 
-            </tr>
+          </p>
 
-          </thead>
+        </div>
 
-          <tbody>
+      </div>
 
-            {holdings.map((holding, index) => {
+      {/* ALLOCATION */}
 
-              const pnl =
+      <div className="mt-10">
 
-                (holding.currentPrice -
+        <div className="flex items-center justify-between mb-5">
 
-                  holding.avgPrice) *
+          <h3 className="text-[22px] font-bold text-[#0F172A]">
 
-                holding.quantity;
+            Portfolio Allocation
 
-              const positive = pnl >= 0;
+          </h3>
 
-              return (
+        </div>
 
-                <tr
-                  key={index}
-                  className="border-b border-[#F1F5F9]"
-                >
+        {/* CHART */}
 
-                  <td className="py-4 text-sm">
+        <div className="h-[320px]">
 
-                    <div>
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+          >
 
-                      <h3 className="font-bold text-[#0F172A]">
+            <PieChart>
 
-                        {holding.symbol}
+              <Pie
+                data={chartData}
+                dataKey="value"
+                innerRadius={70}
+                outerRadius={110}
+                paddingAngle={4}
+              >
 
-                      </h3>
+                {chartData.map(
+                  (
+                    entry,
+                    index
+                  ) => (
 
-                      <p className="text-xs text-[#64748B]">
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={
+                        COLORS[
+                          index %
+                            COLORS.length
+                        ]
+                      }
+                    />
 
-                        NSE
+                  )
 
-                      </p>
+                )}
 
-                    </div>
+              </Pie>
 
-                  </td>
+              <Tooltip />
 
-                  <td className="py-4 font-semibold text-sm">
+            </PieChart>
 
-                    {holding.quantity}
+          </ResponsiveContainer>
 
-                  </td>
+        </div>
 
-                  <td className="py-4 font-semibold text-sm">
+      </div>
 
-                    ₹{holding.avgPrice}
+      {/* HOLDINGS LIST */}
 
-                  </td>
+      <div className="mt-10 space-y-4">
 
-                  <td className="py-4 font-bold text-sm">
+        {portfolio.map(
+          (stock) => {
 
-                    ₹{holding.currentPrice}
+            const invested =
 
-                  </td>
+              stock.avgPrice *
+              stock.quantity;
 
-                  <td className="py-4 text-sm">
+            const current =
 
-                    <div
-                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold ${
-                        positive
+              stock.currentPrice *
+              stock.quantity;
 
-                          ? "bg-green-100 text-green-700"
+            const pnl =
+              current -
+              invested;
 
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
+            const gain =
+              pnl >= 0;
 
-                      {positive ? (
+            return (
 
-                        <TrendingUp size={15} />
+              <div
+                key={stock.symbol}
+                className="flex items-center justify-between p-5 rounded-[24px] border border-[#EEF2F7] hover:bg-[#FAFBFC] transition-all"
+              >
 
-                      ) : (
+                {/* LEFT */}
 
-                        <TrendingDown size={15} />
+                <div>
 
-                      )}
+                  <h3 className="text-[22px] font-bold text-[#0F172A]">
 
-                      ₹{pnl.toLocaleString()}
+                    {stock.symbol}
 
-                    </div>
+                  </h3>
 
-                  </td>
+                  <p className="mt-1 text-[13px] text-[#64748B]">
 
-                </tr>
+                    Qty{" "}
+                    {
+                      stock.quantity
+                    }{" "}
+                    • Avg ₹
+                    {
+                      stock.avgPrice
+                    }
 
-              );
+                  </p>
 
-            })}
+                </div>
 
-          </tbody>
+                {/* RIGHT */}
 
-        </table>
+                <div className="text-right">
+
+                  <h2 className="text-[28px] font-bold text-[#0F172A]">
+
+                    ₹
+                    {current.toFixed(
+                      2
+                    )}
+
+                  </h2>
+
+                  <div
+                    className={`mt-2 inline-flex px-4 py-2 rounded-2xl text-[13px] font-bold ${
+                      gain
+
+                        ? "bg-green-100 text-green-700"
+
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+
+                    {gain
+                      ? "+"
+                      : "-"}
+                    ₹
+                    {Math.abs(
+                      pnl
+                    ).toFixed(2)}
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            );
+
+          }
+
+        )}
 
       </div>
 

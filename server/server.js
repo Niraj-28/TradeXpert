@@ -122,6 +122,36 @@ app.get(
 
 );
 
+const holdingRoutes =
+  require(
+    "./routes/holdingRoutes"
+  );
+
+  app.use(
+  "/api/holdings",
+  holdingRoutes
+);
+
+const orderRoutes =
+  require(
+    "./routes/orderRoutes"
+  );
+
+  app.use(
+  "/api/orders",
+  orderRoutes
+);
+
+const watchlistRoutes =
+  require(
+    "./routes/watchlistRoutes"
+  );
+
+  app.use(
+  "/api/watchlist",
+  watchlistRoutes
+);
+
 // START SERVER
 
 const PORT =

@@ -1,93 +1,301 @@
-const axios = require("axios");
+const WebSocket = require("ws");
 
-const instruments = [
+const protobuf = require("protobufjs");
 
-  {
-    name: "RELIANCE",
-    key: "NSE_EQ|INE002A01018",
-  },
+const path = require("path");
 
-  {
-    name: "TCS",
-    key: "NSE_EQ|INE467B01029",
-  },
+const stocksMap = {
 
-  {
-    name: "INFY",
-    key: "NSE_EQ|INE009A01021",
-  },
+  // INDICES
 
-  {
-    name: "HDFCBANK",
-    key: "NSE_EQ|INE040A01034",
-  },
+  "NSE_INDEX|Nifty 50":
+    "NIFTY 50",
 
-  {
-    name: "ICICIBANK",
-    key: "NSE_EQ|INE090A01021",
-  },
+  "BSE_INDEX|SENSEX":
+    "SENSEX",
 
-  {
-    name: "SBIN",
-    key: "NSE_EQ|INE062A01020",
-  },
+  "NSE_INDEX|Nifty Bank":
+    "BANKNIFTY",
 
-];
+  "NSE_INDEX|Nifty Fin Service":
+    "FINNIFTY",
 
-const getLiveMarketData = async () => {
+  // STOCKS
 
-  try {
+  "NSE_EQ|INE002A01018":
+    "RELIANCE",
 
-    const instrumentKeys = instruments
-      .map((item) => item.key)
-      .join(",");
+  "NSE_EQ|INE467B01029":
+    "TCS",
 
-    const response = await axios.get(
+  "NSE_EQ|INE009A01021":
+    "INFY",
 
-      "https://api.upstox.com/v2/market-quote/quotes",
+  "NSE_EQ|INE040A01034":
+    "HDFCBANK",
 
-      {
+  "NSE_EQ|INE090A01021":
+    "ICICIBANK",
 
-        headers: {
-
-          Authorization: `Bearer ${process.env.UPSTOX_ACCESS_TOKEN}`,
-
-          Accept: "application/json",
-
-        },
-
-        params: {
-
-          instrument_key: instrumentKeys,
-
-        },
-
-      }
-
-    );
-
-    return response.data.data;
-
-  } catch (error) {
-
-    console.log(
-
-      "UPSTOX ERROR:",
-
-      error.response?.data ||
-
-      error.message
-
-    );
-
-    return null;
-
-  }
+  "NSE_EQ|INE062A01020":
+    "SBIN",
 
 };
 
-module.exports = {
+const startUpstoxMarketFeed =
+  async (io) => {
 
-  getLiveMarketData,
+    try {
 
-};
+      const token =
+
+        process.env.UPSTOX_ACCESS_TOKEN;
+
+      // AUTHORIZE
+
+      const response =
+        await axios.get(
+
+          "https://api.upstox.com/v3/feed/market-data-feed/authorize",
+
+          {
+
+            headers: {
+
+              Authorization:
+                `Bearer ${token}`,
+
+              Accept:
+                "application/json",
+
+              "Api-Version":
+                "3.0",
+
+            },
+
+          }
+
+        );
+
+      const wsUrl =
+
+        response.data.data
+          .authorized_redirect_uri;
+
+      console.log(
+        "Upstox Feed Authorized"
+      );
+
+      // LOAD PROTO
+
+      const root =
+        await protobuf.load(
+
+          path.join(
+            __dirname,
+            "../proto/MarketDataFeed.proto"
+          )
+        );
+
+      const FeedResponse =
+
+        root.lookupType(
+
+          "com.upstox.marketdatafeeder.rpc.proto.FeedResponse"
+        );
+
+      // CREATE WS
+
+      const ws =
+        new WebSocket(wsUrl);
+
+      ws.on("open", () => {
+
+        console.log(
+          "Upstox WebSocket Connected"
+        );
+
+        // SUBSCRIBE
+
+        ws.send(
+
+          JSON.stringify({
+
+            guid: "tradexpert",
+
+            method: "sub",
+
+            data: {
+
+              mode: "ltpc",
+
+              instrumentKeys:
+
+                Object.keys(
+
+                  stocksMap
+
+                ),
+
+            },
+
+          })
+
+        );
+
+      });
+
+      ws.on(
+
+        "message",
+
+        (buffer) => {
+
+          try {
+
+            const decoded =
+
+              FeedResponse.decode(
+
+                new Uint8Array(
+                  buffer
+                )
+              );
+
+            const object =
+
+              FeedResponse.toObject(
+
+                decoded,
+
+                {
+
+                  longs: String,
+                  enums: String,
+                  bytes: String,
+
+                }
+
+              );
+
+            const feeds =
+
+              object.feeds || {};
+
+            const marketData =
+
+              Object.entries(
+                feeds
+              ).map(
+
+                ([key, value]) => {
+
+                  const ltp =
+                    value.ltpc?.ltp || 0;
+
+                  const close =
+                    value.ltpc?.cp || 0;
+
+                  const change =
+                    close
+
+                      ? (
+                          ((ltp -
+                            close) /
+                            close) *
+                          100
+                        ).toFixed(2)
+
+                      : 0;
+
+                  return {
+
+                    symbol:
+                      stocksMap[key],
+
+                    price:
+                      ltp.toFixed(2),
+
+                    change:
+                      Number(change),
+
+                    ohlc: {
+
+                      open:
+                        close.toFixed(
+                          2
+                        ),
+
+                      high:
+                        (
+                          ltp + 10
+                        ).toFixed(2),
+
+                      low:
+                        (
+                          ltp - 10
+                        ).toFixed(2),
+
+                      close:
+                        close.toFixed(
+                          2
+                        ),
+
+                    },
+
+                  };
+
+                }
+
+              );
+
+            io.emit(
+
+              "marketData",
+
+              marketData
+
+            );
+
+          } catch (error) {
+
+            console.log(
+
+              "Decode Error:",
+              error.message
+
+            );
+
+          }
+
+        }
+
+      );
+
+      ws.on("close", () => {
+
+        console.log(
+          "Upstox Socket Closed"
+        );
+
+      });
+
+    } catch (error) {
+
+      console.log(
+
+        "UPSTOX ERROR:",
+
+        error.response?.data ||
+
+          error.message
+
+      );
+
+    }
+
+  };
+
+module.exports =
+
+  startUpstoxMarketFeed;

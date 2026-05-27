@@ -1,160 +1,345 @@
 import {
 
   TrendingUp,
+  TrendingDown,
 
 } from "lucide-react";
 
-const marketData = [
+const MarketCards = ({
 
-  {
+  marketData = [],
 
-    name: "NIFTY 50",
+}) => {
 
-    value: "24,850.25",
+  const fallbackStocks = [
 
-    change: "+152.40",
+    {
 
-    percent: "+0.61%",
+      symbol: "RELIANCE",
 
-  },
+      price: 2985,
 
-  {
+      change: 2.45,
 
-    name: "SENSEX",
+      high: 3010,
 
-    value: "81,320.45",
+      low: 2960,
 
-    change: "+410.15",
+      volume: "12.4M",
 
-    percent: "+0.51%",
+    },
 
-  },
+    {
 
-  {
+      symbol: "TCS",
 
-    name: "BANK NIFTY",
+      price: 3850,
 
-    value: "52,145.80",
+      change: -0.92,
 
-    change: "-210.40",
+      high: 3895,
 
-    percent: "-0.40%",
+      low: 3810,
 
-  },
+      volume: "5.2M",
 
-];
+    },
 
-const MarketCards = () => {
+    {
+
+      symbol: "INFY",
+
+      price: 1620,
+
+      change: 1.82,
+
+      high: 1638,
+
+      low: 1604,
+
+      volume: "8.1M",
+
+    },
+
+    {
+
+      symbol: "HDFCBANK",
+
+      price: 1785,
+
+      change: 3.11,
+
+      high: 1802,
+
+      low: 1760,
+
+      volume: "7.6M",
+
+    },
+
+    {
+
+      symbol: "ICICIBANK",
+
+      price: 1120,
+
+      change: 0.88,
+
+      high: 1135,
+
+      low: 1108,
+
+      volume: "6.9M",
+
+    },
+
+    {
+
+      symbol: "SBIN",
+
+      price: 812,
+
+      change: -1.25,
+
+      high: 826,
+
+      low: 805,
+
+      volume: "9.4M",
+
+    },
+
+  ];
+
+  const stocks =
+
+    marketData.length > 0
+
+      ? marketData
+
+      : fallbackStocks;
 
   return (
 
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+    <section>
 
-      {marketData.map((market, index) => {
+      {/* HEADER */}
 
-        const positive =
+      <div className="mb-5">
 
-          market.change.includes("+");
+        <h2 className="text-[28px] font-bold tracking-tight text-[#0F172A]">
 
-        return (
+          Live Market
 
-          <div
-            key={index}
-            className="bg-white border border-[#E2E8F0] rounded-[22px] p-5 shadow-sm"
-          >
+        </h2>
 
-            {/* TOP */}
+        <p className="text-[14px] text-[#64748B] mt-1">
 
-            <div className="flex items-start justify-between">
+          Realtime NSE stock updates
 
-              <div>
+        </p>
 
-                <p className="text-sm text-[#64748B]">
+      </div>
 
-                  Market Index
+      {/* GRID */}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+
+        {stocks.map((stock) => {
+
+          const positive =
+
+            Number(stock.change) >=
+            0;
+
+          return (
+
+            <div
+              key={stock.symbol}
+              className="group relative overflow-hidden bg-white rounded-[28px] border border-[#E8ECF2] p-5 shadow-[0_4px_18px_rgba(15,23,42,0.05)] hover:shadow-[0_8px_30px_rgba(15,23,42,0.10)] transition-all duration-300"
+            >
+
+              {/* TOP GLOW */}
+
+              <div
+                className={`absolute top-0 left-0 h-1 w-full ${
+                  positive
+
+                    ? "bg-green-500"
+
+                    : "bg-red-500"
+                }`}
+              />
+
+              {/* HEADER */}
+
+              <div className="flex items-start justify-between">
+
+                <div>
+
+                  <h2 className="text-[22px] font-bold tracking-tight text-[#0F172A]">
+
+                    {stock.symbol}
+
+                  </h2>
+
+                  <p className="text-[12px] text-[#64748B] mt-1">
+
+                    NSE Market
+
+                  </p>
+
+                </div>
+
+                <div
+                  className={`h-11 w-11 rounded-2xl flex items-center justify-center ${
+                    positive
+
+                      ? "bg-green-100 text-green-600"
+
+                      : "bg-red-100 text-red-600"
+                  }`}
+                >
+
+                  {positive ? (
+
+                    <TrendingUp
+                      size={20}
+                    />
+
+                  ) : (
+
+                    <TrendingDown
+                      size={20}
+                    />
+
+                  )}
+
+                </div>
+
+              </div>
+
+              {/* PRICE */}
+
+              <div className="mt-7">
+
+                <h1 className="text-[40px] font-bold tracking-tight text-[#0F172A]">
+
+                  ₹
+                  {stock.price}
+                </h1>
+
+              </div>
+
+              {/* CHANGE */}
+
+              <div className="mt-4 flex items-center gap-3">
+
+                <div
+                  className={`px-4 py-2 rounded-2xl text-[13px] font-bold ${
+                    positive
+
+                      ? "bg-green-100 text-green-700"
+
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+
+                  {positive
+                    ? "+"
+                    : ""}
+                  {stock.change}%
+
+                </div>
+
+                <p className="text-[12px] text-[#64748B]">
+
+                  Today
 
                 </p>
 
-                <h2 className="text-2xl font-bold text-[#0F172A] mt-1">
+              </div>
 
-                  {market.name}
+              {/* DETAILS */}
 
-                </h2>
+              <div className="mt-7 grid grid-cols-3 gap-4">
+
+                <div>
+
+                  <p className="text-[11px] text-[#64748B]">
+
+                    High
+
+                  </p>
+
+                  <h4 className="mt-1 text-[14px] font-bold text-green-600">
+
+                    ₹
+                    {stock.high}
+                  </h4>
+
+                </div>
+
+                <div>
+
+                  <p className="text-[11px] text-[#64748B]">
+
+                    Low
+
+                  </p>
+
+                  <h4 className="mt-1 text-[14px] font-bold text-red-600">
+
+                    ₹
+                    {stock.low}
+                  </h4>
+
+                </div>
+
+                <div>
+
+                  <p className="text-[11px] text-[#64748B]">
+
+                    Volume
+
+                  </p>
+
+                  <h4 className="mt-1 text-[14px] font-bold text-[#0F172A]">
+
+                    {stock.volume}
+                  </h4>
+
+                </div>
 
               </div>
 
-              <div
-                className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
-                  positive
+              {/* BUTTONS */}
 
-                    ? "bg-[#DCFCE7]"
+              <div className="mt-7 flex items-center gap-3">
 
-                    : "bg-[#FEE2E2]"
-                }`}
-              >
+                <button className="flex-1 h-11 rounded-2xl bg-green-500 hover:bg-green-600 text-white text-[13px] font-bold transition-all">
 
-                <TrendingUp
-                  size={26}
-                  className={
-                    positive
+                  Buy
 
-                      ? "text-green-600"
+                </button>
 
-                      : "text-red-600"
-                  }
-                />
+                <button className="flex-1 h-11 rounded-2xl bg-red-500 hover:bg-red-600 text-white text-[13px] font-bold transition-all">
+
+                  Sell
+
+                </button>
 
               </div>
 
             </div>
 
-            {/* VALUE */}
+          );
 
-            <h1 className="text-3xl font-bold text-[#0F172A] mt-8">
+        })}
 
-              {market.value}
+      </div>
 
-            </h1>
-
-            {/* CHANGE */}
-
-            <div
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl mt-5 text-sm font-semibold ${
-                positive
-
-                  ? "bg-green-100 text-green-700"
-
-                  : "bg-red-100 text-red-700"
-              }`}
-            >
-
-              {market.change}
-
-              ({market.percent})
-
-            </div>
-
-            {/* FOOTER */}
-
-            <div className="flex items-center gap-2 mt-6">
-
-              <div className="w-3 h-3 rounded-full bg-green-500"></div>
-
-              <span className="text-[#64748B] text-sm">
-
-                Live Market
-
-              </span>
-
-            </div>
-
-          </div>
-
-        );
-
-      })}
-
-    </div>
+    </section>
 
   );
 
