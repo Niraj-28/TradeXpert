@@ -1,105 +1,18 @@
-import {
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
+import { useAuth } from "./context/AuthContext";
 
-import Dashboard from "./pages/Dashboard/Dashboard";
+import Navbar from "./components/layout/Navbar";
 
-import Markets from "./pages/Markets/Markets";
-
-import Portfolio from "./pages/Portfolio/Portfolio";
-
-import Watchlist from "./pages/Watchlist/Watchlist";
-
-import Trading from "./pages/Trading/Trading";
-
-import Analytics from "./pages/Analytics/Analytics";
-
-import News from "./pages/News/News";
-
-import Navbar from "./components/Navbar/Navbar";
+import AppRoutes from "./routes/AppRoutes";
 
 function App() {
+  const { user } = useAuth();
 
   return (
-
     <div className="min-h-screen bg-[#F4F7FB]">
-
-      {/* GLOBAL NAVBAR */}
-
-      <Navbar />
-
-      {/* ROUTES */}
-
-      <Routes>
-
-        {/* DEFAULT */}
-
-        <Route
-          path="/"
-          element={
-            <Navigate
-              to="/dashboard"
-            />
-          }
-        />
-
-        {/* DASHBOARD */}
-
-        <Route
-          path="/dashboard"
-          element={<Dashboard />}
-        />
-
-        {/* MARKETS */}
-
-        <Route
-          path="/markets"
-          element={<Markets />}
-        />
-
-        {/* PORTFOLIO */}
-
-        <Route
-          path="/portfolio"
-          element={<Portfolio />}
-        />
-
-        {/* WATCHLIST */}
-
-        <Route
-          path="/watchlist"
-          element={<Watchlist />}
-        />
-
-        {/* TRADING */}
-
-        <Route
-          path="/trading"
-          element={<Trading />}
-        />
-
-        {/* ANALYTICS */}
-
-        <Route
-          path="/analytics"
-          element={<Analytics />}
-        />
-
-        {/* NEWS */}
-
-        <Route
-          path="/news"
-          element={<News />}
-        />
-
-      </Routes>
-
+      {user && <Navbar />}
+      <AppRoutes />
     </div>
-
   );
-
 }
 
 export default App;

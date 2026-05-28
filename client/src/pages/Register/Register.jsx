@@ -52,7 +52,7 @@ const Register = () => {
 
       toast.success("Account Created");
 
-      navigate("/dashboard");
+      navigate("/login");
 
     } catch (error) {
 

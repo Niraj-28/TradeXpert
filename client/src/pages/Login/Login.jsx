@@ -50,7 +50,7 @@ const Login = () => {
 
       toast.success("Login Successful");
 
-      navigate("/dashboard");
+      navigate("/markets");
 
     } catch (error) {
 

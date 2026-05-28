@@ -1,48 +1,15 @@
-import { useEffect, useState } from "react";
-
 import TradingChart from "../../components/Dashboard/TradingChart";
 
 import TradingPanel from "../../components/Dashboard/TradingPanel";
 
 import OrderBook from "../../components/Dashboard/OrderBook";
 
-import socket from "../../socket/socket";
+import { useMarket } from "../../context/MarketContext";
 
 const Trading = () => {
 
-  const [marketData, setMarketData] =
-    useState([]);
-
-  // SOCKET
-
-  useEffect(() => {
-
-    socket.connect();
-
-    socket.on(
-      "marketData",
-      (data) => {
-
-        if (
-          Array.isArray(data)
-        ) {
-
-          setMarketData(data);
-
-        }
-
-      }
-    );
-
-    return () => {
-
-      socket.off(
-        "marketData"
-      );
-
-    };
-
-  }, []);
+  const { marketData } =
+    useMarket();
 
   return (
 
@@ -68,8 +35,6 @@ const Trading = () => {
 
         </div>
 
-        {/* MARKET STATUS */}
-
         <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-green-100 text-green-700 w-fit">
 
           <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse" />
@@ -92,13 +57,9 @@ const Trading = () => {
 
         <div className="2xl:col-span-8 space-y-6">
 
-          {/* CHART */}
-
           <TradingChart
             marketData={marketData}
           />
-
-          {/* ORDER BOOK */}
 
           <OrderBook />
 

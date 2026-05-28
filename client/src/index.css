@@ -24,3 +24,186 @@ body {
   background-color: var(--bg);
   color: var(--text-primary);
 }
+
+/* === Design system tokens === */
+:root {
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-xl: 30px;
+
+  --shadow-sm: 0 2px 12px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 6px 24px rgba(15, 23, 42, 0.08);
+
+  --focus: 0 0 0 3px rgba(88, 230, 179, 0.28);
+}
+
+/* === Base reusable utility classes (Tailwind-friendly) === */
+
+/* Surfaces */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.card-soft {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+/* Dark panels for trading terminal areas */
+.panel-dark {
+  background: #071226;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 12px 48px rgba(2, 6, 23, 0.18);
+}
+
+/* Layout helpers */
+.container-trade {
+  max-width: 1600px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* Typography */
+.h1 {
+  font-size: 42px;
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+/* Data styling */
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-lg);
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.badge-positive {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16A34A;
+}
+
+.badge-negative {
+  background: rgba(239, 68, 68, 0.1);
+  color: #DC2626;
+}
+
+/* Terminal row */
+.kv-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* Buttons (Tailwind classes should still be used for per-page colors, but these
+   guarantee consistent shape and focus) */
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+
+
+.btn-primary:hover {
+  background: #43d9a7;
+}
+
+.btn-danger {
+  background: #EF4444;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+.section-title {
+
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-lg);
+  font-weight: 700;
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 160ms ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.field {
+  width: 100%;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: #fff;
+  padding: 0 1.25rem;
+  height: 3.5rem;
+  outline: none;
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.field:focus {
+  border-color: var(--primary);
+  box-shadow: var(--focus);
+}
+
+.select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, rgba(107, 114, 128, 0.7) 50%),
+    linear-gradient(135deg, rgba(107, 114, 128, 0.7) 50%, transparent 50%);
+  background-position: calc(100% - 1.25rem) calc(1em + 0.25rem),
+    calc(100% - 0.9rem) calc(1em + 0.25rem);
+  background-size: 0.35em 0.35em, 0.35em 0.35em;
+  background-repeat: no-repeat;
+}
+
+/* Focus-visible for accessibility */
+:where(button, a, input, select, textarea):focus-visible {
+  box-shadow: var(--focus);
+}
+
+@keyframes ticker {
+  0% {
+    transform: translateX(100%);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-ticker {
+  animation: ticker 25s linear infinite;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 20s linear infinite;
+}

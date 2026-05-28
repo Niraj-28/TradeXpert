@@ -1,17 +1,21 @@
 import React from "react";
-
 import ReactDOM from "react-dom/client";
 
 import App from "./App";
 
 import "./index.css";
 
-import { BrowserRouter } from "react-router-dom";
+import {
+  BrowserRouter,
+} from "react-router-dom";
 
-import { AuthProvider } from "./context/AuthContext";
+import {
+  AuthProvider,
+} from "./context/AuthContext";
 
-import { Toaster } from "react-hot-toast";
-
+import {
+  MarketProvider,
+} from "./context/MarketContext";
 
 ReactDOM.createRoot(
   document.getElementById("root")
@@ -23,14 +27,15 @@ ReactDOM.createRoot(
 
       <AuthProvider>
 
-        <Toaster position="top-right" />
+        <MarketProvider>
 
-        <App />
+          <App />
+
+        </MarketProvider>
 
       </AuthProvider>
 
     </BrowserRouter>
 
   </React.StrictMode>
-
 );
