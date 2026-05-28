@@ -1,70 +1,255 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import socket from "../socket/socket";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 const MarketContext = createContext();
 
-const fallbackStocks = [
-  { symbol: "RELIANCE", price: 2945, change: 2.3 },
-  { symbol: "TCS", price: 3812, change: -1.2 },
-  { symbol: "INFY", price: 1542, change: 1.8 },
-  { symbol: "HDFCBANK", price: 1690, change: 2.9 },
-  { symbol: "ICICIBANK", price: 1128, change: -0.8 },
-  { symbol: "SBIN", price: 967, change: 1.5 },
-  { symbol: "AXISBANK", price: 1185, change: -0.4 },
-  { symbol: "ITC", price: 446, change: 1.1 },
-];
-
-const fallbackIndices = [
-  { symbol: "NIFTY 50", price: 24910, change: 140 },
-  { symbol: "BANK NIFTY", price: 54800, change: 220 },
-  { symbol: "SENSEX", price: 81200, change: 340 },
-  { symbol: "FINNIFTY", price: 24200, change: 90 },
-];
-
 export const MarketProvider = ({ children }) => {
-  const [stocks, setStocks] = useState(fallbackStocks);
-  const [indices, setIndices] = useState(fallbackIndices);
+
+  /* ========================================
+     MARKET INDICES
+  ======================================== */
+
+  const [indices, setIndices] = useState([
+    {
+      name: "NIFTY 50",
+      value: 24850.35,
+      change: "+152.40",
+      percent: "+0.61%",
+    },
+
+    {
+      name: "BANKNIFTY",
+      value: 52310.80,
+      change: "+341.15",
+      percent: "+0.68%",
+    },
+
+    {
+      name: "SENSEX",
+      value: 81420.72,
+      change: "+428.91",
+      percent: "+0.53%",
+    },
+
+    {
+      name: "FINNIFTY",
+      value: 24182.45,
+      change: "+108.22",
+      percent: "+0.44%",
+    },
+  ]);
+
+  /* ========================================
+     TRENDING STOCKS
+  ======================================== */
+
+  const [trendingStocks, setTrendingStocks] =
+    useState([
+      {
+        symbol: "RELIANCE",
+        price: 3124.45,
+        change: "+1.84%",
+      },
+
+      {
+        symbol: "TCS",
+        price: 4210.15,
+        change: "+0.92%",
+      },
+
+      {
+        symbol: "HDFCBANK",
+        price: 1742.30,
+        change: "+1.12%",
+      },
+
+      {
+        symbol: "INFY",
+        price: 1568.40,
+        change: "-0.44%",
+      },
+
+      {
+        symbol: "ICICIBANK",
+        price: 1224.80,
+        change: "+1.66%",
+      },
+    ]);
+
+  /* ========================================
+     TOP GAINERS
+  ======================================== */
+
+  const [topGainers, setTopGainers] = useState([
+    {
+      symbol: "ADANIPORTS",
+      price: 1542.80,
+      percent: "+4.42%",
+    },
+
+    {
+      symbol: "SBIN",
+      price: 924.45,
+      percent: "+3.66%",
+    },
+
+    {
+      symbol: "TATASTEEL",
+      price: 176.52,
+      percent: "+2.95%",
+    },
+
+    {
+      symbol: "HINDALCO",
+      price: 684.10,
+      percent: "+2.64%",
+    },
+  ]);
+
+  /* ========================================
+     TOP LOSERS
+  ======================================== */
+
+  const [topLosers, setTopLosers] = useState([
+    {
+      symbol: "WIPRO",
+      price: 542.40,
+      percent: "-2.18%",
+    },
+
+    {
+      symbol: "TECHM",
+      price: 1314.72,
+      percent: "-1.72%",
+    },
+
+    {
+      symbol: "BAJAJFINSV",
+      price: 1628.55,
+      percent: "-1.28%",
+    },
+
+    {
+      symbol: "NESTLEIND",
+      price: 2421.20,
+      percent: "-0.96%",
+    },
+  ]);
+
+  /* ========================================
+     LIVE MARKET TABLE
+  ======================================== */
+
+  const [marketStocks, setMarketStocks] =
+    useState([
+      {
+        symbol: "RELIANCE",
+        company: "Reliance Industries",
+        price: 3124.45,
+        change: "+1.84%",
+        volume: "12.5M",
+      },
+
+      {
+        symbol: "TCS",
+        company: "Tata Consultancy",
+        price: 4210.15,
+        change: "+0.92%",
+        volume: "3.8M",
+      },
+
+      {
+        symbol: "INFY",
+        company: "Infosys Ltd",
+        price: 1568.40,
+        change: "-0.44%",
+        volume: "8.1M",
+      },
+
+      {
+        symbol: "HDFCBANK",
+        company: "HDFC Bank",
+        price: 1742.30,
+        change: "+1.12%",
+        volume: "9.7M",
+      },
+
+      {
+        symbol: "ICICIBANK",
+        company: "ICICI Bank",
+        price: 1224.80,
+        change: "+1.66%",
+        volume: "10.3M",
+      },
+    ]);
+
+  /* ========================================
+     SECTOR PERFORMANCE
+  ======================================== */
+
+  const [sectors, setSectors] = useState([
+    {
+      sector: "Banking",
+      percent: "+1.44%",
+    },
+
+    {
+      sector: "IT",
+      percent: "+0.84%",
+    },
+
+    {
+      sector: "Pharma",
+      percent: "-0.24%",
+    },
+
+    {
+      sector: "Auto",
+      percent: "+1.18%",
+    },
+
+    {
+      sector: "Energy",
+      percent: "+2.04%",
+    },
+  ]);
+
+  /* ========================================
+     MOCK REALTIME UPDATES
+  ======================================== */
 
   useEffect(() => {
-    const handleMarketData = (data) => {
-      if (!Array.isArray(data)) return;
 
-      const parsedData = data.map((item) => ({
-        symbol: item.symbol || item.name || item.tradingsymbol || "N/A",
-        price: Number(item.price || item.last_price || item.ltp || 0).toFixed(2),
-        change: Number(item.change || item.net_change || 0).toFixed(2),
-        high: item.high || item.ohlc?.high || 0,
-        low: item.low || item.ohlc?.low || 0,
-        open: item.open || item.ohlc?.open || 0,
-        close: item.close || item.ohlc?.close || 0,
-      }));
+    const interval = setInterval(() => {
 
-      const indexRegex = /NIFTY|SENSEX|BANK|FIN/i;
-      const updatedIndices = parsedData.filter((item) =>
-        indexRegex.test(item.symbol)
-      );
-      const updatedStocks = parsedData.filter(
-        (item) => !indexRegex.test(item.symbol)
+      setIndices((prev) =>
+        prev.map((item) => ({
+          ...item,
+          value:
+            item.value +
+            (Math.random() * 10 - 5),
+        }))
       );
 
-      setIndices(updatedIndices);
-      setStocks(updatedStocks);
-    };
+    }, 3000);
 
-    socket.on("marketData", handleMarketData);
+    return () => clearInterval(interval);
 
-    return () => {
-      socket.off("marketData", handleMarketData);
-    };
   }, []);
 
   return (
     <MarketContext.Provider
       value={{
-        stocks,
         indices,
-        marketData: stocks,
-        indicesData: indices,
+        trendingStocks,
+        topGainers,
+        topLosers,
+        marketStocks,
+        sectors,
       }}
     >
       {children}
@@ -72,6 +257,5 @@ export const MarketProvider = ({ children }) => {
   );
 };
 
-export const useMarket = () => {
-  return useContext(MarketContext);
-};
+export const useMarket = () =>
+  useContext(MarketContext);
