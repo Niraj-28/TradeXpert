@@ -1,106 +1,35 @@
-import {
-  Routes,
-  Route,
-} from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
+
+import MainLayout from "../layouts/MainLayout";
 
 import Home from "../pages/Home/Home";
-
 import Login from "../pages/Login/Login";
-
 import Register from "../pages/Register/Register";
 
-import Dashboard from "../pages/Dashboard/Dashboard";
 import Markets from "../pages/Markets/Markets";
 import Portfolio from "../pages/Portfolio/Portfolio";
-import Watchlist from "../pages/Watchlist/Watchlist";
 import Trading from "../pages/Trading/Trading";
-import Analytics from "../pages/Analytics/Analytics";
+import Watchlist from "../pages/Watchlist/Watchlist";
 import News from "../pages/News/News";
-
-import ProtectedRoute from "./ProtectedRoute";
 
 const AppRoutes = () => {
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={<Home />}
-      />
+   <Routes>
 
-      <Route
-        path="/login"
-        element={<Login />}
-      />
+    <Route path="/" element={<Navigate to="/markets" replace />} />
 
-      <Route
-        path="/register"
-        element={<Register />}
-      />
+    <Route path="/login" element={<Login />} />
+    <Route path="/register" element={<Register />} />
 
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
+    <Route element={<MainLayout />}>
+      <Route path="/markets" element={<Markets />} />
+      <Route path="/portfolio" element={<Portfolio />} />
+      <Route path="/trading" element={<Trading />} />
+      <Route path="/watchlist" element={<Watchlist />} />
+      <Route path="/news" element={<News />} />
+    </Route>
 
-      <Route
-        path="/markets"
-        element={
-          <ProtectedRoute>
-            <Markets />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/portfolio"
-        element={
-          <ProtectedRoute>
-            <Portfolio />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/watchlist"
-        element={
-          <ProtectedRoute>
-            <Watchlist />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/trading"
-        element={
-          <ProtectedRoute>
-            <Trading />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/analytics"
-        element={
-          <ProtectedRoute>
-            <Analytics />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/news"
-        element={
-          <ProtectedRoute>
-            <News />
-          </ProtectedRoute>
-        }
-      />
-
-    </Routes>
+  </Routes>
   );
 };
 

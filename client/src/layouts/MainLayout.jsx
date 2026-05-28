@@ -1,25 +1,15 @@
-import Navbar from "../components/Navbar/Navbar";
+import { Outlet } from "react-router-dom";
+import Navbar from "../components/layout/Navbar";
 
-const MainLayout = ({ children }) => {
-
+const MainLayout = () => {
   return (
-
-    <div className="min-h-screen bg-[#F8FAFC]">
-
-      {/* Navbar */}
-
+    <div className="app-layout">
       <Navbar />
 
-      {/* Content */}
-
-      <main className="p-6">
-
-        {children}
-
+      <main className="main-content">
+        <Outlet />
       </main>
-
     </div>
-
   );
 };
 
