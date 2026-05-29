@@ -1,5 +1,5 @@
 const Holding = require(
-  "../models/holdingModel"
+  "../models/holdingModel.cjs"
 );
 
 exports.getHoldings =

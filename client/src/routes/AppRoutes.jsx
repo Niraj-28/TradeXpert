@@ -8,13 +8,17 @@ import MainLayout from "../layouts/MainLayout";
 
 import Login from "../pages/Login/Login";
 import Register from "../pages/Register/Register";
+import ResetPassword from "../pages/ResetPassword/ResetPassword";
 
 import MarketsPage from "../pages/Markets/MarketsPage";
 import Portfolio from "../pages/Portfolio/Portfolio";
 import Trading from "../pages/Trading/Trading";
 import Watchlist from "../pages/Watchlist/Watchlist";
+import Orders from "../pages/Orders/Orders";
 import News from "../pages/News/News";
 import Profile from "../pages/Profile/Profile";
+import StockDetails from "../pages/StockDetails/StockDetails";
+import ProtectedRoute from "./ProtectedRoute";
 
 const AppRoutes = () => {
   return (
@@ -42,8 +46,19 @@ const AppRoutes = () => {
         element={<Register />}
       />
 
+      <Route
+        path="/reset-password"
+        element={<ResetPassword />}
+      />
+
       {/* MAIN APP */}
-      <Route element={<MainLayout />}>
+      <Route 
+        element={
+          <ProtectedRoute>
+            <MainLayout />
+          </ProtectedRoute>
+        }
+      >
 
         <Route
           path="/markets"
@@ -63,6 +78,16 @@ const AppRoutes = () => {
         <Route
           path="/trading"
           element={<Trading />}
+        />
+
+        <Route
+          path="/stocks/:symbol"
+          element={<StockDetails />}
+        />
+
+        <Route
+          path="/orders"
+          element={<Orders />}
         />
 
         <Route

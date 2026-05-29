@@ -1,5 +1,5 @@
 const Watchlist = require(
-  "../models/watchlistModel"
+  "../models/watchlistModel.cjs"
 );
 
 exports.getWatchlist =

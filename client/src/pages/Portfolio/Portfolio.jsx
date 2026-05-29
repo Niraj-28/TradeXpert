@@ -1,190 +1,311 @@
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useMarket } from "../../context/MarketContext";
+import { getHoldings } from "../../services/holdingService";
 import PortfolioAnalytics from "../../components/portfolio/PortfolioAnalytics";
+import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
+import { 
+  ArrowUpRight, ArrowDownRight, Briefcase, TrendingUp, 
+  TrendingDown, Activity, RefreshCw, AlertCircle, Sparkles 
+} from "lucide-react";
 
+// Helper to format currency
 const formatINR = (value) => {
-  try {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(value);
-  } catch {
-    return `₹${Math.round(value).toLocaleString("en-IN")}`;
-  }
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  }).format(value);
 };
 
-const HoldingsTable = () => {
-  // Placeholder rows (wire to API later)
-  const rows = [
-    {
-      symbol: "RELIANCE",
-      name: "Reliance Industries",
-      qty: 12,
-      avgPrice: 2480,
-      ltp: 2795,
-      value: 33540,
-      dayPnL: 1240,
-      dayPnLPct: 0.037,
-      totalPnL: 2920,
-      totalPnLPct: 0.087,
-    },
-    {
-      symbol: "TCS",
-      name: "Tata Consultancy Services",
-      qty: 5,
-      avgPrice: 3450,
-      ltp: 3745,
-      value: 18725,
-      dayPnL: -210,
-      dayPnLPct: -0.011,
-      totalPnL: 1475,
-      totalPnLPct: 0.087,
-    },
-    {
-      symbol: "HDFCBANK",
-      name: "HDFC Bank",
-      qty: 20,
-      avgPrice: 1540,
-      ltp: 1622,
-      value: 32440,
-      dayPnL: 95,
-      dayPnLPct: 0.006,
-      totalPnL: 1640,
-      totalPnLPct: 0.053,
-    },
-    {
-      symbol: "INFY",
-      name: "Infosys",
-      qty: 9,
-      avgPrice: 1420,
-      ltp: 1365,
-      value: 12285,
-      dayPnL: -160,
-      dayPnLPct: -0.012,
-      totalPnL: -495,
-      totalPnLPct: -0.032,
-    },
-  ];
-
-  return (
-    <section className="portfolio-holdings-card">
-      <div className="portfolio-section-header">
-        <h2>Holdings</h2>
-        <p>Latest positions with performance (placeholder)</p>
-      </div>
-
-      <div className="portfolio-holdings-table-wrap">
-        <table className="portfolio-holdings-table">
-          <thead>
-            <tr>
-              <th>Stock</th>
-              <th className="num">Qty</th>
-              <th className="num">Avg</th>
-              <th className="num">LTP</th>
-              <th className="num">Value</th>
-              <th className="num">Day P/L</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => {
-              const isPos = r.dayPnL >= 0;
-              return (
-                <tr key={r.symbol}>
-                  <td>
-                    <div className="holdings-stock">
-                      <span className="holdings-symbol">{r.symbol}</span>
-                      <span className="holdings-name">{r.name}</span>
-                    </div>
-                  </td>
-                  <td className="num">{r.qty}</td>
-                  <td className="num">{formatINR(r.avgPrice)}</td>
-                  <td className="num">{formatINR(r.ltp)}</td>
-                  <td className="num">{formatINR(r.value)}</td>
-                  <td className={`num ${isPos ? "positive" : "negative"}`}>
-                    {formatINR(r.dayPnL)} ({(r.dayPnLPct * 100).toFixed(2)}%)
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
+// Seed deterministic prices for non-ticker stocks
+const getInitialPrice = (symbol) => {
+  let hash = 0;
+  for (let i = 0; i < symbol.length; i++) {
+    hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const basePrice = Math.abs(hash % 2900) + 100; // Rs 100 - 3000
+  const changePercent = ((hash % 100) / 25) - 2; // -2% to +2%
+  const open = basePrice * (1 - changePercent / 100);
+  
+  return {
+    price: parseFloat(basePrice.toFixed(2)),
+    change: parseFloat(changePercent.toFixed(2)),
+    open: parseFloat(open.toFixed(2)),
+    close: parseFloat(open.toFixed(2)),
+  };
 };
 
 const Portfolio = () => {
-  // Placeholder summary (wire to API later)
-  const summary = {
-    totalValue: 154_950,
-    totalPnL: 8_430,
-    totalPnLPct: 0.055,
-    cash: 12_500,
-    holdingsCount: 4,
+  const { marketStocks } = useMarket();
+  const navigate = useNavigate();
+  const [holdings, setHoldings] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Client-side simulated prices for custom holdings
+  const [simulatedPrices, setSimulatedPrices] = useState({});
+
+  const fetchHoldingsData = async () => {
+    try {
+      setLoading(true);
+      const data = await getHoldings();
+      setHoldings(data.holdings || []);
+    } catch (error) {
+      console.error("Fetch holdings error:", error);
+      toast.error("Failed to load your portfolio holdings");
+    } finally {
+      setLoading(false);
+    }
   };
 
+  useEffect(() => {
+    fetchHoldingsData();
+  }, []);
+
+  // Simulate price changes on every interval (mirrors the socket update cycle)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSimulatedPrices((prev) => {
+        const updated = { ...prev };
+        holdings.forEach((item) => {
+          const sym = item.symbol.toUpperCase();
+          const isCore = marketStocks.some(
+            (s) => s.symbol.toUpperCase() === sym
+          );
+          
+          if (!isCore) {
+            const current = updated[sym] || getInitialPrice(sym);
+            const deltaPercent = (Math.random() * 0.3 - 0.15) / 100; // ±0.15% fluctuation
+            const newPrice = current.price * (1 + deltaPercent);
+            const initialData = getInitialPrice(sym);
+            const refClose = initialData.close;
+            const newChange = ((newPrice - refClose) / refClose) * 100;
+
+            updated[sym] = {
+              ...current,
+              price: parseFloat(newPrice.toFixed(2)),
+              change: parseFloat(newChange.toFixed(2)),
+            };
+          }
+        });
+        return updated;
+      });
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [holdings, marketStocks]);
+
+  // Enrich database holdings with live prices and calculate PnL
+  const enrichedHoldings = useMemo(() => {
+    return holdings.map((holding) => {
+      // 1. Check if the stock exists in the active market feed (marketStocks)
+      const liveStock = marketStocks.find(
+        (s) => s.symbol.toUpperCase() === holding.symbol.toUpperCase()
+      );
+
+      let ltp = holding.avgPrice;
+      let change = 0;
+
+      if (liveStock) {
+        ltp = parseFloat(liveStock.price) || holding.avgPrice;
+        change = parseFloat(liveStock.change) || 0;
+      } else {
+        // Fallback to simulated price
+        const sim = simulatedPrices[holding.symbol.toUpperCase()] || getInitialPrice(holding.symbol);
+        ltp = sim.price;
+        change = sim.change;
+      }
+
+      const investedVal = holding.quantity * holding.avgPrice;
+      const currentVal = holding.quantity * ltp;
+      const totalPnL = currentVal - investedVal;
+      const totalPnLPct = investedVal > 0 ? (totalPnL / investedVal) * 100 : 0;
+      
+      // Daily PnL estimate (using change percent relative to price)
+      const dayPnL = currentVal * (change / 100);
+
+      return {
+        ...holding,
+        ltp,
+        change,
+        investedVal,
+        currentVal,
+        totalPnL,
+        totalPnLPct,
+        dayPnL,
+      };
+    });
+  }, [holdings, marketStocks, simulatedPrices]);
+
+  // Compute portfolio calculations
+  const summary = useMemo(() => {
+    const totalInvested = enrichedHoldings.reduce((sum, h) => sum + h.investedVal, 0);
+    const totalCurrentValue = enrichedHoldings.reduce((sum, h) => sum + h.currentVal, 0);
+    const totalPnL = totalCurrentValue - totalInvested;
+    const totalPnLPct = totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0;
+    
+    // Virtual simulation capital is Rs 10 Lakhs
+    const initialCapital = 1000000;
+    const cash = Math.max(0, initialCapital - totalInvested);
+    const totalPortfolioValue = totalCurrentValue + cash;
+    const dayPnL = enrichedHoldings.reduce((sum, h) => sum + h.dayPnL, 0);
+
+    return {
+      invested: totalInvested,
+      currentValue: totalCurrentValue,
+      totalPnL,
+      totalPnLPct,
+      cash,
+      totalValue: totalPortfolioValue,
+      dayPnL,
+    };
+  }, [enrichedHoldings]);
+
   const isPos = summary.totalPnL >= 0;
+  const isDayPos = summary.dayPnL >= 0;
 
   return (
     <div className="portfolio-page">
+      {/* HERO SECTION */}
       <div className="portfolio-hero">
-        <div>
-          <h1>Your Portfolio</h1>
-          <p>Track holdings, allocation and performance.</p>
+        <div className="portfolio-hero-left">
+          <div className="portfolio-hero-title-row">
+            <Briefcase className="hero-portfolio-icon text-[#37c98b]" size={28} />
+            <h1>Virtual Portfolio</h1>
+          </div>
+          <p>Real-time valuation of your stock holdings and cash balance</p>
         </div>
         <div className="portfolio-badge-row">
           <div className="portfolio-badge">
-            <span className="badge-label">Holdings</span>
-            <span className="badge-value">{summary.holdingsCount}</span>
+            <span className="badge-label">Unique Assets</span>
+            <span className="badge-value">{holdings.length}</span>
           </div>
           <div className="portfolio-badge">
-            <span className="badge-label">Cash</span>
+            <span className="badge-label">Available Cash</span>
             <span className="badge-value">{formatINR(summary.cash)}</span>
           </div>
         </div>
       </div>
 
+      {/* SUMMARY STATS GRID */}
       <section className="portfolio-summary-grid">
         <div className="portfolio-summary-card">
-          <div className="summary-card-label">Total Value</div>
+          <div className="summary-card-label">Total Portfolio Net Worth</div>
           <div className="summary-card-value">{formatINR(summary.totalValue)}</div>
-          <div className="summary-card-sub">Holdings + cash</div>
+          <div className="summary-card-sub">Holdings Value + Cash</div>
         </div>
 
         <div className="portfolio-summary-card">
-          <div className="summary-card-label">Total Profit/Loss</div>
+          <div className="summary-card-label">Total Returns (P&L)</div>
           <div className={`summary-card-value ${isPos ? "positive" : "negative"}`}>
-            {formatINR(summary.totalPnL)} ({(summary.totalPnLPct * 100).toFixed(2)}%)
+            {isPos ? "+" : ""}{formatINR(summary.totalPnL)} ({summary.totalPnLPct.toFixed(2)}%)
           </div>
-          <div className="summary-card-sub">Since purchase</div>
+          <div className="summary-card-sub">All-time performance</div>
         </div>
 
         <div className="portfolio-summary-card">
-          <div className="summary-card-label">Invested Amount</div>
-          <div className="summary-card-value">
-            {formatINR(summary.totalValue - summary.cash)}
-          </div>
-          <div className="summary-card-sub">Portfolio capital</div>
+          <div className="summary-card-label">Total Capital Invested</div>
+          <div className="summary-card-value">{formatINR(summary.invested)}</div>
+          <div className="summary-card-sub">Deployed margin value</div>
         </div>
 
         <div className="portfolio-summary-card">
-          <div className="summary-card-label">Allocation</div>
-          <div className="summary-card-value">Stocks</div>
-          <div className="summary-card-sub">See allocation chart</div>
+          <div className="summary-card-label">Today's Returns</div>
+          <div className={`summary-card-value ${isDayPos ? "positive" : "negative"}`}>
+            {isDayPos ? "+" : ""}{formatINR(summary.dayPnL)}
+          </div>
+          <div className="summary-card-sub">Est. day change based on LTP</div>
         </div>
       </section>
 
-      <section className="portfolio-main-grid">
-        <div className="portfolio-analytics-col">
-          <PortfolioAnalytics />
+      {/* MAIN ANALYSIS AND HOLDINGS ROW */}
+      {loading ? (
+        <div className="watchlist-loading-state">
+          <RefreshCw className="animate-spin text-emerald-400" size={32} />
+          <p>Loading portfolio statistics...</p>
         </div>
+      ) : holdings.length === 0 ? (
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="watchlist-empty-state"
+        >
+          <div className="empty-state-icon-box">
+            <Sparkles size={44} className="text-emerald-500" />
+          </div>
+          <h2>Start Virtual Trading</h2>
+          <p>
+            You haven't bought any stock positions yet. Navigate to the Markets page to discover active equities and place your first buy order!
+          </p>
+        </motion.div>
+      ) : (
+        <section className="portfolio-main-grid">
+          {/* Pie Chart allocation */}
+          <div className="portfolio-analytics-col">
+            <PortfolioAnalytics holdings={enrichedHoldings} cash={summary.cash} />
+          </div>
 
-        <div className="portfolio-table-col">
-          <HoldingsTable />
-        </div>
-      </section>
+          {/* Holdings Grid table */}
+          <div className="portfolio-table-col">
+            <section className="portfolio-holdings-card">
+              <div className="portfolio-section-header">
+                <h2>Active Stock Positions</h2>
+                <p>Live values based on latest market ticks</p>
+              </div>
+
+              <div className="portfolio-holdings-table-wrap">
+                <table className="portfolio-holdings-table">
+                  <thead>
+                    <tr>
+                      <th>Stock</th>
+                      <th className="num">Qty</th>
+                      <th className="num">Avg. Price</th>
+                      <th className="num">Current Price</th>
+                      <th className="num">Current Value</th>
+                      <th className="num">Total P/L</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <AnimatePresence>
+                      {enrichedHoldings.map((r) => {
+                        const isCardPos = r.totalPnL >= 0;
+                        return (
+                          <motion.tr 
+                            layout
+                            key={r.symbol}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => navigate(`/stocks/${r.symbol.toUpperCase()}`)}
+                            className="clickable-row"
+                          >
+                            <td>
+                              <div className="holdings-stock">
+                                <span className="holdings-symbol">{r.symbol}</span>
+                                <span className="holdings-name">NSE Equity</span>
+                              </div>
+                            </td>
+                            <td className="num">{r.quantity}</td>
+                            <td className="num">{formatINR(r.avgPrice)}</td>
+                            <td className="num">{formatINR(r.ltp)}</td>
+                            <td className="num">{formatINR(r.currentVal)}</td>
+                            <td className={`num ${isCardPos ? "positive" : "negative"}`}>
+                              {isCardPos ? "+" : ""}{formatINR(r.totalPnL)} ({r.totalPnLPct.toFixed(2)}%)
+                            </td>
+                          </motion.tr>
+                        );
+                      })}
+                    </AnimatePresence>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+      )}
     </div>
   );
 };
 
 export default Portfolio;
-

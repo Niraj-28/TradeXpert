@@ -86,6 +86,22 @@ app.use("/api/market", marketRoutes);
 import upstoxRoutes from "./routes/upstoxRoutes.js";
 app.use("/api/upstox", upstoxRoutes);
 
+// Watchlist routes
+import watchlistRoutes from "./routes/watchlistRoutes.js";
+app.use("/api/watchlist", watchlistRoutes);
+
+// Holdings routes
+import holdingRoutes from "./routes/holdingRoutes.js";
+app.use("/api/holdings", holdingRoutes);
+
+// Orders routes
+import orderRoutes from "./routes/orderRoutes.js";
+app.use("/api/orders", orderRoutes);
+
+// Trade routes
+import tradeRoutes from "./routes/tradeRoutes.js";
+app.use("/api/trade", tradeRoutes);
+
 const PORT =
   process.env.PORT || 5000;
 

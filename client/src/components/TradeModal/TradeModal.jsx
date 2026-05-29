@@ -2,13 +2,7 @@ import { useState } from "react";
 
 import toast from "react-hot-toast";
 
-import {
-
-  buyStock,
-
-  sellStock,
-
-} from "../../services/tradeService";
+import { placeTrade } from "../../services/tradeService";
 
 const TradeModal = ({
 
@@ -24,31 +18,21 @@ const TradeModal = ({
 
     try {
 
+      const token = localStorage.getItem("token");
       const payload = {
 
-        stockSymbol: stock.symbol,
+        symbol: stock.symbol,
 
-        stockName: stock.name,
+        type: type,
 
         quantity: Number(quantity),
 
-        price: stock.price,
+        price: Number(stock.price),
 
       };
 
-      if (type === "BUY") {
-
-        await buyStock(payload);
-
-        toast.success("Stock Bought");
-
-      } else {
-
-        await sellStock(payload);
-
-        toast.success("Stock Sold");
-
-      }
+      await placeTrade(payload, token);
+      toast.success(`Stock ${type === "BUY" ? "Bought" : "Sold"} successfully!`);
 
       onClose();
 

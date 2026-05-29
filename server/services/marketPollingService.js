@@ -173,7 +173,13 @@ async function fetchMarketData() {
           }
         })();
 
-        let baseSymbol = tryValues.find((v) => v && String(v).trim()) || symbolLookup || fallbackFromKey || key;
+        const isValidSymbol = (v) => {
+          if (!v) return false;
+          const s = String(v).trim().toLowerCase();
+          return s && s !== "na" && s !== "n/a" && s !== "null" && s !== "undefined";
+        };
+
+        let baseSymbol = tryValues.find(isValidSymbol) || symbolLookup || fallbackFromKey || key;
         baseSymbol = String(baseSymbol).trim();
 
         const priceValue =

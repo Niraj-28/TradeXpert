@@ -1,184 +1,108 @@
 import { useState } from "react";
-
 import { useNavigate } from "react-router-dom";
-
 import toast from "react-hot-toast";
-
-import logo from "../../assets/logo.png";
-
+import logo from "../../assets/Logo.png";
 import { loginUser } from "../../services/authService";
-
 import { useAuth } from "../../context/AuthContext";
 
-
 const Login = () => {
-
   const navigate = useNavigate();
-
   const { login } = useAuth();
-
   const [formData, setFormData] = useState({
-
     email: "",
     password: "",
-
   });
 
-
   const handleChange = (e) => {
-
     setFormData({
-
       ...formData,
-
       [e.target.name]: e.target.value,
-
     });
-
   };
-
 
   const handleSubmit = async (e) => {
-
     e.preventDefault();
-
     try {
-
       const data = await loginUser(formData);
-
       login(data);
-
       toast.success("Login Successful");
-
       navigate("/markets");
-
     } catch (error) {
-
       toast.error(
-
-        error.response?.data?.message ||
-
-        "Login Failed"
-
+        error.response?.data?.message || "Login Failed"
       );
-
     }
-
   };
 
-
   return (
+    <div className="auth-page-container">
+      {/* BACKGROUND GLOWS */}
+      <div className="auth-glow-ball top-left"></div>
+      <div className="auth-glow-ball bottom-right"></div>
+      <div className="auth-glow-ball center-bg"></div>
 
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#F8FAFC] via-[#F0FFF8] to-[#ECFDF5] px-6">
-
-      {/* BACKGROUND GLOW */}
-
-      <div className="absolute top-[-120px] left-[-120px] w-[320px] h-[320px] bg-[#58E6B3]/20 rounded-full blur-[120px]"></div>
-
-      <div className="absolute bottom-[-120px] right-[-120px] w-[320px] h-[320px] bg-[#34D399]/20 rounded-full blur-[120px]"></div>
-
-      <div className="absolute top-[40%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-[#58E6B3]/10 rounded-full blur-[140px]"></div>
-
-
-      {/* GRID EFFECT */}
-
-      <div className="absolute inset-0 opacity-[0.03]">
-
-        <div
-          className="w-full h-full"
-          style={{
-            backgroundImage:
-              "linear-gradient(#0F172A 1px, transparent 1px), linear-gradient(to right, #0F172A 1px, transparent 1px)",
-            backgroundSize: "60px 60px",
-          }}
-        ></div>
-
-      </div>
-
+      {/* GRID OVERLAY EFFECT */}
+      <div className="auth-grid-overlay"></div>
 
       {/* LOGIN CARD */}
-
-      <form
-        onSubmit={handleSubmit}
-        className="relative z-10 bg-white/80 backdrop-blur-xl p-8 md:p-10 rounded-[32px] shadow-[0_20px_60px_rgba(52,211,153,0.10)] border border-white/60 w-full max-w-md"
-      >
-
+      <form onSubmit={handleSubmit} className="auth-card">
         {/* LOGO */}
-
-        <div className="flex justify-center mb-3">
-
-          <img
-            src={logo}
-            alt="TradeXpert"
-            className="h-16"
-          />
-
+        <div className="auth-logo-box">
+          <img src={logo} alt="TradeXpert" className="auth-logo-image" />
         </div>
 
-
         {/* TITLE */}
-
-        <h1 className="text-[30px] font-bold mb-4 text-center text-[#0F172A]">
-
-          Welcome Back
-
-        </h1>
-
+        <h1>Welcome Back</h1>
+        <p className="auth-subtitle">Log in to monitor watchlists, analyze technicals, and trade virtual assets</p>
 
         {/* INPUTS */}
-
-        <div className="space-y-4">
-
+        <div className="auth-input-group">
           <input
             type="email"
             name="email"
-            placeholder="Email"
+            placeholder="Enter registered email"
             onChange={handleChange}
-            className="w-full h-14 border border-[#E2E8F0] rounded-2xl px-5 outline-none focus:border-[#58E6B3] bg-white"
+            className="auth-input-field"
+            required
           />
 
           <input
             type="password"
             name="password"
-            placeholder="Password"
+            placeholder="Enter password"
             onChange={handleChange}
-            className="w-full h-14 border border-[#E2E8F0] rounded-2xl px-5 outline-none focus:border-[#58E6B3] bg-white"
+            className="auth-input-field"
+            required
           />
 
-          <button className="w-full h-14 bg-gradient-to-r from-[#58E6B3] to-[#34D399] rounded-2xl font-semibold text-black hover:opacity-90 transition-all shadow-[0_10px_30px_rgba(52,211,153,0.20)]">
+          <div className="auth-forgot-link-row">
+            <span 
+              onClick={() => navigate("/reset-password")} 
+              className="auth-forgot-link"
+            >
+              Forgot Password?
+            </span>
+          </div>
 
+          <button type="submit" className="auth-submit-btn">
             Login
-
           </button>
-
         </div>
 
-
-        {/* REGISTER OPTION */}
-
-        <div className="text-center mt-4">
-
-          <p className="text-[#64748B]">
-
+        {/* REGISTER REDIRECT */}
+        <div className="auth-redirect-row">
+          <p>
             Don't have an account?{" "}
-
             <span
               onClick={() => navigate("/register")}
-              className="text-[#34D399] font-semibold cursor-pointer hover:underline"
+              className="auth-redirect-link"
             >
-
               Create Account
-
             </span>
-
           </p>
-
         </div>
-
       </form>
-
     </div>
-
   );
 };
 

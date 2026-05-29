@@ -1,51 +1,45 @@
 import { useMarket } from "../../context/MarketContext";
+import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 
 const LiveTicker = () => {
   const { trendingStocks } = useMarket();
 
   const tickerItems = trendingStocks?.length
-    ? [...trendingStocks, ...trendingStocks]
+    ? [...trendingStocks, ...trendingStocks, ...trendingStocks] // duplicate for infinite loop effect
     : Array.from({ length: 6 }, (_, index) => ({
         symbol: `STK${index + 1}`,
         price: "--",
-        change: "0.00",
+        change: 0,
       }));
 
   return (
-    <div className="live-ticker">
-
-      <div className="ticker-track">
-
+    <div className="live-ticker-container">
+      <div className="live-ticker-track">
         {tickerItems.map((stock, index) => {
-          const change = stock.change ?? "0.00";
-          const changeText = change.toString();
+          const change = stock.change ?? 0;
+          const isPositive = change >= 0;
 
           return (
             <div
               key={`${stock.symbol}-${index}`}
-              className="ticker-item"
+              className="live-ticker-item"
             >
-              <span>{stock.symbol}</span>
-
-              <strong>
-                {stock.price === "--" ? "—" : `₹${stock.price}`}
+              <span className="ticker-symbol">{stock.symbol}</span>
+              <strong className="ticker-price">
+                {stock.price === "--" || stock.price === undefined ? "—" : `₹${stock.price}`}
               </strong>
-
-              <p
-                className={
-                  changeText.includes("-")
-                    ? "negative"
-                    : "positive"
-                }
-              >
-                {changeText}
-              </p>
+              <span className={`ticker-change-pct ${isPositive ? "positive" : "negative"}`}>
+                {isPositive ? (
+                  <ArrowUpRight size={12} className="inline mr-0.5" />
+                ) : (
+                  <ArrowDownRight size={12} className="inline mr-0.5" />
+                )}
+                {Math.abs(change).toFixed(2)}%
+              </span>
             </div>
           );
         })}
-
       </div>
-
     </div>
   );
 };

@@ -1,9 +1,9 @@
 const Order = require(
-  "../models/orderModel"
+  "../models/orderModel.cjs"
 );
 
 const Holding = require(
-  "../models/holdingModel"
+  "../models/holdingModel.cjs"
 );
 
 // PLACE ORDER
