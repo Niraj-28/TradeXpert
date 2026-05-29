@@ -1,27 +1,15 @@
-const express = require("express");
+import express from "express";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const { registerUser, loginUser } = require("../controllers/authController.cjs");
 
 const router = express.Router();
 
-const {
-  registerUser,
-  loginUser,
-} = require("../controllers/authController");
-
-
 // Register
-
-router.post(
-  "/register",
-  registerUser
-);
-
+router.post("/register", registerUser);
 
 // Login
+router.post("/login", loginUser);
 
-router.post(
-  "/login",
-  loginUser
-);
-
-
-module.exports = router;
+export default router;

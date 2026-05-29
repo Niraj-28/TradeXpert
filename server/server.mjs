@@ -1,18 +1,18 @@
 import express from "express";
-
 import http from "http";
-
 import cors from "cors";
-
 import dotenv from "dotenv";
-
 import { Server } from "socket.io";
+import { createRequire } from "module";
 
-import connectDB from "./config/db.js";
+const require = createRequire(import.meta.url);
+const connectDB = require("./config/db.cjs");
 
 import {
   initializeMarketPolling,
 } from "./services/marketPollingService.js";
+
+import startUpstoxMarketFeed from "./services/upstoxMarketService.js";
 
 dotenv.config();
 
@@ -43,6 +43,12 @@ app.use(express.json());
 
 connectDB();
 
+// Initialize real-time market feed via WebSocket
+startUpstoxMarketFeed(io);
+
+// Start the polling fallback for Upstox quote updates
+initializeMarketPolling(io);
+
 io.on(
   "connection",
   (socket) => {
@@ -67,12 +73,18 @@ io.on(
   }
 );
 
-initializeMarketPolling(io);
-
 // ROUTES
 // Auth (register/login)
 import authRoutes from "./routes/authRoutes.js";
 app.use("/api/auth", authRoutes);
+
+// Market routes (search)
+import marketRoutes from "./routes/marketRoutes.js";
+app.use("/api/market", marketRoutes);
+
+// Upstox OAuth routes
+import upstoxRoutes from "./routes/upstoxRoutes.js";
+app.use("/api/upstox", upstoxRoutes);
 
 const PORT =
   process.env.PORT || 5000;

@@ -1,8 +1,12 @@
-const WebSocket = require("ws");
+import axios from "axios";
 
-const protobuf = require("protobufjs");
+import WebSocket from "ws";
 
-const path = require("path");
+import protobuf from "protobufjs";
+
+import path from "path";
+import { fileURLToPath } from "url";
+
 
 const stocksMap = {
 
@@ -15,10 +19,10 @@ const stocksMap = {
     "SENSEX",
 
   "NSE_INDEX|Nifty Bank":
-    "BANKNIFTY",
+    "BANK NIFTY",
 
   "NSE_INDEX|Nifty Fin Service":
-    "FINNIFTY",
+    "FIN NIFTY",
 
   // STOCKS
 
@@ -45,11 +49,17 @@ const stocksMap = {
 const startUpstoxMarketFeed =
   async (io) => {
 
+    // Prevent server crash when token is missing/invalid
+    const token = process.env.UPSTOX_ACCESS_TOKEN;
+    if (!token) {
+      console.log(
+        "⚠️ UPSTOX_ACCESS_TOKEN is missing. Skipping Upstox market feed startup."
+      );
+      return;
+    }
+
     try {
 
-      const token =
-
-        process.env.UPSTOX_ACCESS_TOKEN;
 
       // AUTHORIZE
 
@@ -88,21 +98,18 @@ const startUpstoxMarketFeed =
 
       // LOAD PROTO
 
-      const root =
-        await protobuf.load(
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      const protoPath = path.resolve(__dirname, "../proto/MarketDataFeed.proto");
 
-          path.join(
-            __dirname,
-            "../proto/MarketDataFeed.proto"
-          )
-        );
+      const root =
+        await protobuf.load(protoPath);
 
       const FeedResponse =
-
         root.lookupType(
 
           "com.upstox.marketdatafeeder.rpc.proto.FeedResponse"
-        );
+        ) || root.lookupType("FeedResponse");
 
       // CREATE WS
 
@@ -183,79 +190,132 @@ const startUpstoxMarketFeed =
               object.feeds || {};
 
             const marketData =
-
               Object.entries(
                 feeds
               ).map(
-
                 ([key, value]) => {
-
                   const ltp =
-                    value.ltpc?.ltp || 0;
-
+                    value.ltpc?.ltp ?? 0;
                   const close =
-                    value.ltpc?.cp || 0;
-
+                    value.ltpc?.cp ?? 0;
                   const change =
                     close
-
                       ? (
                           ((ltp -
                             close) /
                             close) *
                           100
-                        ).toFixed(2)
-
+                        )
                       : 0;
 
+                  // key coming from Upstox is typically instrument key.
+                  // Always resolve known indices/stocks to stable symbols.
+                  const symbol =
+                    stocksMap[key] ||
+                    key.split("|").pop()?.replace(/_/g, " ").trim() ||
+                    key;
+
+
                   return {
-
-                    symbol:
-                      stocksMap[key],
-
-                    price:
-                      ltp.toFixed(2),
-
-                    change:
-                      Number(change),
-
+                    symbol,
+                    instrumentKey: key,
+                    price: Number(ltp),
+                    change: Number(change),
                     ohlc: {
-
-                      open:
-                        close.toFixed(
-                          2
-                        ),
-
-                      high:
-                        (
-                          ltp + 10
-                        ).toFixed(2),
-
-                      low:
-                        (
-                          ltp - 10
-                        ).toFixed(2),
-
-                      close:
-                        close.toFixed(
-                          2
-                        ),
-
+                      open: Number(close),
+                      high: Number(ltp) + 10,
+                      low: Number(ltp) - 10,
+                      close: Number(close),
                     },
-
                   };
 
                 }
-
               );
 
+            // Emit both legacy + processed events so different UI parts work.
             io.emit(
-
               "marketData",
-
               marketData
-
             );
+
+            // Indices + movers can be derived from marketData by symbol name.
+            const indexSymbols = new Set([
+              "NIFTY 50",
+              "BANK NIFTY",
+              "BANKNIFTY",
+              "SENSEX",
+              "FIN NIFTY",
+              "FINNIFTY",
+            ]);
+
+            const indicesData = marketData
+              .filter((item) => indexSymbols.has(item.symbol))
+              .map((item) => ({
+                name: item.symbol,
+                // client IndicesBar uses value.toFixed(2), so keep it numeric
+                value: Number(item.price),
+                change: Number(item.change),
+              }));
+
+            const stockData = marketData.filter(
+              (item) => !indexSymbols.has(item.symbol)
+            );
+
+            const trendingData = stockData.slice(0, 6).map((item) => ({
+              symbol: item.symbol,
+              price: item.price,
+              change: Number(item.change),
+            }));
+
+            const gainersData = [...stockData]
+              .sort((a, b) => parseFloat(b.change) - parseFloat(a.change))
+              .slice(0, 3)
+              .map((item) => ({
+                symbol: item.symbol,
+                price: item.price,
+                change: Number(item.change),
+              }));
+
+            const losersData = [...stockData]
+              .sort((a, b) => parseFloat(a.change) - parseFloat(b.change))
+              .slice(0, 3)
+              .map((item) => ({
+                symbol: item.symbol,
+                price: item.price,
+                change: Number(item.change),
+              }));
+
+            const companyMap = {
+              RELIANCE: "Reliance Industries",
+              TCS: "Tata Consultancy Services",
+              INFY: "Infosys",
+              HDFCBANK: "HDFC Bank",
+              ICICIBANK: "ICICI Bank",
+              SBIN: "State Bank of India",
+            };
+
+            const marketTableData = stockData.map((item) => ({
+              symbol: item.symbol,
+              company: companyMap[item.symbol] || item.symbol,
+              price: item.price,
+              change: Number(item.change),
+              volume: "—",
+            }));
+
+            io.emit("market-indices", indicesData);
+            io.emit("trending-stocks", trendingData);
+            io.emit("market-table", marketTableData);
+            io.emit("top-gainers", gainersData);
+            io.emit("top-losers", losersData);
+            io.emit("sector-performance", [
+              { sector: "IT", change: 1.2 },
+              { sector: "BANKING", change: -0.4 },
+              { sector: "AUTO", change: 0.8 },
+              { sector: "PHARMA", change: 1.5 },
+              { sector: "ENERGY", change: -0.2 },
+            ]);
+
+
 
           } catch (error) {
 
@@ -296,6 +356,5 @@ const startUpstoxMarketFeed =
 
   };
 
-module.exports =
+export default startUpstoxMarketFeed;
 
-  startUpstoxMarketFeed;

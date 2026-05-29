@@ -5,245 +5,293 @@ import {
   useState,
 } from "react";
 
+import { socket } from "../services/socket";
+
 const MarketContext = createContext();
 
 export const MarketProvider = ({ children }) => {
+  const [connected, setConnected] = useState(false);
 
-  /* ========================================
-     MARKET INDICES
-  ======================================== */
-
-  const [indices, setIndices] = useState([
-    {
-      name: "NIFTY 50",
-      value: 24850.35,
-      change: "+152.40",
-      percent: "+0.61%",
-    },
-
-    {
-      name: "BANKNIFTY",
-      value: 52310.80,
-      change: "+341.15",
-      percent: "+0.68%",
-    },
-
-    {
-      name: "SENSEX",
-      value: 81420.72,
-      change: "+428.91",
-      percent: "+0.53%",
-    },
-
-    {
-      name: "FINNIFTY",
-      value: 24182.45,
-      change: "+108.22",
-      percent: "+0.44%",
-    },
-  ]);
-
-  /* ========================================
-     TRENDING STOCKS
-  ======================================== */
+  const [indices, setIndices] = useState([]);
 
   const [trendingStocks, setTrendingStocks] =
-    useState([
-      {
-        symbol: "RELIANCE",
-        price: 3124.45,
-        change: "+1.84%",
-      },
+    useState([]);
 
-      {
-        symbol: "TCS",
-        price: 4210.15,
-        change: "+0.92%",
-      },
+  const [topGainers, setTopGainers] =
+    useState([]);
 
-      {
-        symbol: "HDFCBANK",
-        price: 1742.30,
-        change: "+1.12%",
-      },
-
-      {
-        symbol: "INFY",
-        price: 1568.40,
-        change: "-0.44%",
-      },
-
-      {
-        symbol: "ICICIBANK",
-        price: 1224.80,
-        change: "+1.66%",
-      },
-    ]);
-
-  /* ========================================
-     TOP GAINERS
-  ======================================== */
-
-  const [topGainers, setTopGainers] = useState([
-    {
-      symbol: "ADANIPORTS",
-      price: 1542.80,
-      percent: "+4.42%",
-    },
-
-    {
-      symbol: "SBIN",
-      price: 924.45,
-      percent: "+3.66%",
-    },
-
-    {
-      symbol: "TATASTEEL",
-      price: 176.52,
-      percent: "+2.95%",
-    },
-
-    {
-      symbol: "HINDALCO",
-      price: 684.10,
-      percent: "+2.64%",
-    },
-  ]);
-
-  /* ========================================
-     TOP LOSERS
-  ======================================== */
-
-  const [topLosers, setTopLosers] = useState([
-    {
-      symbol: "WIPRO",
-      price: 542.40,
-      percent: "-2.18%",
-    },
-
-    {
-      symbol: "TECHM",
-      price: 1314.72,
-      percent: "-1.72%",
-    },
-
-    {
-      symbol: "BAJAJFINSV",
-      price: 1628.55,
-      percent: "-1.28%",
-    },
-
-    {
-      symbol: "NESTLEIND",
-      price: 2421.20,
-      percent: "-0.96%",
-    },
-  ]);
-
-  /* ========================================
-     LIVE MARKET TABLE
-  ======================================== */
+  const [topLosers, setTopLosers] =
+    useState([]);
 
   const [marketStocks, setMarketStocks] =
-    useState([
-      {
-        symbol: "RELIANCE",
-        company: "Reliance Industries",
-        price: 3124.45,
-        change: "+1.84%",
-        volume: "12.5M",
-      },
+    useState([]);
 
-      {
-        symbol: "TCS",
-        company: "Tata Consultancy",
-        price: 4210.15,
-        change: "+0.92%",
-        volume: "3.8M",
-      },
-
-      {
-        symbol: "INFY",
-        company: "Infosys Ltd",
-        price: 1568.40,
-        change: "-0.44%",
-        volume: "8.1M",
-      },
-
-      {
-        symbol: "HDFCBANK",
-        company: "HDFC Bank",
-        price: 1742.30,
-        change: "+1.12%",
-        volume: "9.7M",
-      },
-
-      {
-        symbol: "ICICIBANK",
-        company: "ICICI Bank",
-        price: 1224.80,
-        change: "+1.66%",
-        volume: "10.3M",
-      },
-    ]);
-
-  /* ========================================
-     SECTOR PERFORMANCE
-  ======================================== */
-
-  const [sectors, setSectors] = useState([
-    {
-      sector: "Banking",
-      percent: "+1.44%",
-    },
-
-    {
-      sector: "IT",
-      percent: "+0.84%",
-    },
-
-    {
-      sector: "Pharma",
-      percent: "-0.24%",
-    },
-
-    {
-      sector: "Auto",
-      percent: "+1.18%",
-    },
-
-    {
-      sector: "Energy",
-      percent: "+2.04%",
-    },
-  ]);
-
-  /* ========================================
-     MOCK REALTIME UPDATES
-  ======================================== */
+  const [sectors, setSectors] =
+    useState([]);
 
   useEffect(() => {
 
-    const interval = setInterval(() => {
+    /*
+    |--------------------------------------------------------------------------
+    | REGISTER LISTENERS FIRST
+    |--------------------------------------------------------------------------
+    */
 
-      setIndices((prev) =>
-        prev.map((item) => ({
-          ...item,
-          value:
-            item.value +
-            (Math.random() * 10 - 5),
-        }))
+    socket.on("connect", () => {
+      console.log("✅ Socket Connected");
+
+      setConnected(true);
+    });
+
+    socket.on("disconnect", () => {
+      console.log("❌ Socket Disconnected");
+
+      setConnected(false);
+    });
+
+    socket.on("market-indices", (data) => {
+      console.log("INDICES:", data);
+
+      // Expected shape from server:
+      // - [{ name, value, change }] (value may be number or string)
+      // Normalize so UI always gets a usable numeric value.
+      if (!Array.isArray(data)) {
+        setIndices([]);
+        return;
+      }
+
+      const normalized = data.map((item) => {
+        const name = item?.name ?? "—";
+
+        // Some emitters send `value` as number, others send a string like "24,850".
+        const rawValue = item?.value;
+        let value = "—";
+        if (rawValue === null || rawValue === undefined) {
+          value = "—";
+        } else {
+          const numeric = Number(String(rawValue).replace(/,/g, ""));
+          value = Number.isFinite(numeric) ? numeric : "—";
+        }
+
+        const changeRaw = item?.change;
+        const change = Number(changeRaw);
+
+        return {
+          name,
+          value,
+          change: Number.isFinite(change) ? change : 0,
+        };
+      });
+
+      setIndices(normalized);
+    });
+
+    socket.on("trending-stocks", (data) => {
+      console.log("TRENDING:", data);
+
+      setTrendingStocks(data);
+    });
+
+    socket.on("top-gainers", (data) => {
+      console.log("GAINERS:", data);
+
+      setTopGainers(data);
+    });
+
+    socket.on("top-losers", (data) => {
+      console.log("LOSERS:", data);
+
+      setTopLosers(data);
+    });
+
+    socket.on("market-table", (data) => {
+      console.log("TABLE:", data);
+
+      setMarketStocks(data);
+    });
+
+    socket.on("sector-performance", (data) => {
+      console.log("SECTORS:", data);
+
+      setSectors(data);
+    });
+
+      const processMarketData = (data) => {
+      if (!Array.isArray(data)) return;
+
+      // Some feeds send precomputed card payloads with different shapes.
+      // Normalize indices payloads so indices UI can always render.
+      // If `market-indices` arrives separately, these helpers won't be used.
+
+      const normalizeIndexValue = (v) => {
+        if (v === null || v === undefined) return "—";
+        const s = String(v).replace(/[^0-9.\-]/g, "").trim();
+        const n = Number(s);
+        return Number.isFinite(n) ? n : "—";
+      };
+
+      const indexSymbols = new Set([
+        "NIFTY 50",
+        "BANK NIFTY",
+        "BANKNIFTY",
+        "SENSEX",
+        "FIN NIFTY",
+        "FINNIFTY",
+      ]);
+
+      const indicesData = data
+        .filter((item) => indexSymbols.has(item.symbol))
+        .map((item) => ({
+          name: item.symbol,
+          value: `₹${item.price}`,
+          change: Number(item.change),
+        }));
+
+      const stockData = data.filter(
+        (item) => !indexSymbols.has(item.symbol)
       );
 
-    }, 3000);
+      const companyMap = {
+        RELIANCE: "Reliance Industries",
+        TCS: "Tata Consultancy Services",
+        INFY: "Infosys",
+        HDFCBANK: "HDFC Bank",
+        ICICIBANK: "ICICI Bank",
+        SBIN: "State Bank of India",
+      };
 
-    return () => clearInterval(interval);
+      // Normalize values coming from server (which can be strings like "—" or even undefined).
+      // This prevents UI rendering "NA" when value/company is missing.
+      const normalizeString = (v) => {
+        if (v === null || v === undefined) return "—";
+        const s = String(v).trim();
+        const lowered = s.toLowerCase();
 
+        // Treat typical placeholders as missing.
+        if (
+          !s ||
+          lowered === "na" ||
+          lowered === "n/a" ||
+          lowered === "null" ||
+          lowered === "undefined" ||
+          lowered === "--"
+        ) {
+          return "—";
+        }
+
+        return s;
+      };
+
+      const trendingData = stockData.slice(0, 6).map((item) => ({
+        symbol: normalizeString(
+          item.symbol || item.instrument || item.company
+        ),
+        price: item.price,
+        change: item.change,
+      }));
+
+      const marketTableData = stockData.map((item) => ({
+        symbol: normalizeString(item.symbol || item.instrument),
+        company: normalizeString(
+          companyMap[item.symbol] || item.company || item.symbol || item.instrument
+        ),
+        price: item.price,
+        change: item.change,
+        volume: normalizeString(item.volume),
+      }));
+
+      const gainersData = [...stockData]
+        .sort((a, b) => parseFloat(b.change) - parseFloat(a.change))
+        .slice(0, 3)
+        .map((item) => ({
+          symbol: normalizeString(item.symbol),
+          price: item.price,
+          change: item.change,
+        }));
+
+      const losersData = [...stockData]
+        .sort((a, b) => parseFloat(a.change) - parseFloat(b.change))
+        .slice(0, 3)
+        .map((item) => ({
+          symbol: normalizeString(item.symbol),
+          price: item.price,
+          change: item.change,
+        }));
+
+      setIndices(indicesData);
+      setTrendingStocks(trendingData);
+      setMarketStocks(marketTableData);
+      setTopGainers(gainersData);
+      setTopLosers(losersData);
+    };
+
+    socket.on("marketData", (data) => {
+      console.log("MARKET DATA:", data);
+      processMarketData(data);
+    });
+
+    // Some backends emit only "market-data".
+    socket.on("market-data", (data) => {
+      console.log("MARKET DATA:", data);
+      processMarketData(data);
+    });
+
+    // Ensure that if the websocket feed already emits fully prepared card payloads,
+    // we don't accidentally overwrite them with mismatched shape.
+    socket.on("market-indices", (data) => {
+      if (Array.isArray(data)) setIndices(data);
+    });
+
+    socket.on("trending-stocks", (data) => {
+      if (Array.isArray(data)) setTrendingStocks(data);
+    });
+
+    socket.on("market-table", (data) => {
+      if (Array.isArray(data)) setMarketStocks(data);
+    });
+
+    socket.on("top-gainers", (data) => {
+      if (Array.isArray(data)) setTopGainers(data);
+    });
+
+    socket.on("top-losers", (data) => {
+      if (Array.isArray(data)) setTopLosers(data);
+    });
+
+    socket.on("sector-performance", (data) => {
+      if (Array.isArray(data)) setSectors(data);
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | CONNECT AFTER LISTENERS
+    |--------------------------------------------------------------------------
+    */
+
+
+    return () => {
+
+      socket.off("connect");
+      socket.off("disconnect");
+
+      socket.off("market-indices");
+      socket.off("trending-stocks");
+
+      socket.off("top-gainers");
+      socket.off("top-losers");
+
+      socket.off("market-table");
+      socket.off("sector-performance");
+      socket.off("marketData");
+      socket.off("market-data");
+
+    };
   }, []);
 
   return (
     <MarketContext.Provider
       value={{
+        connected,
         indices,
         trendingStocks,
         topGainers,

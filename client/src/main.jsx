@@ -7,22 +7,16 @@ import App from "./App";
 
 import "./index.css";
 
-import {
-  MarketProvider,
-} from "./context/MarketContext";
+import { MarketProvider } from "./context/MarketContext";
 
 ReactDOM.createRoot(
   document.getElementById("root")
 ).render(
   <React.StrictMode>
-
     <BrowserRouter>
-
       <MarketProvider>
         <App />
       </MarketProvider>
-
     </BrowserRouter>
-
   </React.StrictMode>
 );

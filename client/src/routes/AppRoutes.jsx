@@ -9,7 +9,7 @@ import MainLayout from "../layouts/MainLayout";
 import Login from "../pages/Login/Login";
 import Register from "../pages/Register/Register";
 
-import Markets from "../pages/Markets/Markets";
+import MarketsPage from "../pages/Markets/MarketsPage";
 import Portfolio from "../pages/Portfolio/Portfolio";
 import Trading from "../pages/Trading/Trading";
 import Watchlist from "../pages/Watchlist/Watchlist";
@@ -47,7 +47,7 @@ const AppRoutes = () => {
 
         <Route
           path="/markets"
-          element={<Markets />}
+          element={<MarketsPage />}
         />
 
         <Route

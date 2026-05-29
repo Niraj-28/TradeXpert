@@ -62,8 +62,10 @@ export const fetchAllInstruments =
 
       const response =
         await axios.get(
+          // Upstox instruments endpoint version may differ; using v3 here.
+          "https://api-v2.upstox.com/v2/market/instruments",
 
-          "https://api.upstox.com/v2/market/instruments",
+
 
           {
 
@@ -89,37 +91,16 @@ export const fetchAllInstruments =
 
       // FILTER NSE & BSE EQUITY STOCKS
 
-      const nseStocks =
-        allInstruments
-          .filter(
-            (item) =>
+      // RETURN ALL NSE & BSE EQUITY STOCKS (no slicing)
+      const nseStocks = allInstruments.filter(
+        (item) => item.exchange === "NSE_EQ" && item.instrument_type === "EQUITY"
+      );
 
-              item.exchange ===
-                "NSE_EQ" &&
-              item.instrument_type ===
-                "EQUITY"
-          )
-          .slice(0, 100); // TOP 100 NSE STOCKS
+      const bseStocks = allInstruments.filter(
+        (item) => item.exchange === "BSE_EQ" && item.instrument_type === "EQUITY"
+      );
 
-      const bseStocks =
-        allInstruments
-          .filter(
-            (item) =>
-
-              item.exchange ===
-                "BSE_EQ" &&
-              item.instrument_type ===
-                "EQUITY"
-          )
-          .slice(0, 50); // TOP 50 BSE STOCKS
-
-      const instruments = [
-
-        ...nseStocks,
-
-        ...bseStocks,
-
-      ];
+      const instruments = [...nseStocks, ...bseStocks];
 
       // SAVE TO CACHE
 
@@ -182,5 +163,40 @@ export const fetchAllInstruments =
       return [];
 
     }
+
+  // Search cached or fetched instruments by query (trading symbol, name, isin, instrument_key)
+  export const searchInstruments = (query) => {
+    try {
+      const q = String(query || "").trim().toLowerCase();
+
+      let items = [];
+
+      if (fs.existsSync(CACHE_FILE)) {
+        const cacheData = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
+        items = cacheData.instruments || [];
+      }
+
+      if (!items.length) return [];
+
+      const results = items.filter((it) => {
+        const trading = (it.trading_symbol || it.tradingSymbol || it.tradingSymbol || "").toLowerCase();
+        const name = (it.name || it.company_name || it.instrument_name || "").toLowerCase();
+        const isin = (it.isin || "").toLowerCase();
+        const key = (it.instrument_key || "").toLowerCase();
+
+        return (
+          trading.includes(q) ||
+          name.includes(q) ||
+          isin.includes(q) ||
+          key.includes(q)
+        );
+      });
+
+      return results.slice(0, 100);
+    } catch (e) {
+      console.error("Search instruments error:", e.message);
+      return [];
+    }
+  };
 
   };

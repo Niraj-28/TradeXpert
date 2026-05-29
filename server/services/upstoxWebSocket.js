@@ -2,6 +2,9 @@ import axios from "axios";
 
 import WebSocket from "ws";
 
+import path from "path";
+import { fileURLToPath } from "url";
+
 import protobuf from "protobufjs";
 
 let ws = null;
@@ -16,10 +19,12 @@ export const connectUpstoxWebSocket =
 
       // LOAD PROTO
 
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      const protoPath = path.resolve(__dirname, "../proto/MarketDataFeed.proto");
+
       const root =
-        await protobuf.load(
-          "./proto/MarketDataFeed.proto"
-        );
+        await protobuf.load(protoPath);
 
       const FeedResponse =
         root.lookupType(
