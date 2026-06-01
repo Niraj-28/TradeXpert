@@ -5,6 +5,7 @@ import { getHoldings } from "../../services/holdingService";
 import PortfolioAnalytics from "../../components/portfolio/PortfolioAnalytics";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
+import { getUserProfile } from "../../services/authService";
 import { 
   ArrowUpRight, ArrowDownRight, Briefcase, TrendingUp, 
   TrendingDown, Activity, RefreshCw, AlertCircle, Sparkles 
@@ -42,6 +43,7 @@ const Portfolio = () => {
   const navigate = useNavigate();
   const [holdings, setHoldings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cashBalance, setCashBalance] = useState(1000000);
 
   // Client-side simulated prices for custom holdings
   const [simulatedPrices, setSimulatedPrices] = useState({});
@@ -51,6 +53,9 @@ const Portfolio = () => {
       setLoading(true);
       const data = await getHoldings();
       setHoldings(data.holdings || []);
+
+      const profile = await getUserProfile();
+      setCashBalance(profile.balance !== undefined ? profile.balance : 1000000);
     } catch (error) {
       console.error("Fetch holdings error:", error);
       toast.error("Failed to load your portfolio holdings");
@@ -145,9 +150,7 @@ const Portfolio = () => {
     const totalPnL = totalCurrentValue - totalInvested;
     const totalPnLPct = totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0;
     
-    // Virtual simulation capital is Rs 10 Lakhs
-    const initialCapital = 1000000;
-    const cash = Math.max(0, initialCapital - totalInvested);
+    const cash = cashBalance;
     const totalPortfolioValue = totalCurrentValue + cash;
     const dayPnL = enrichedHoldings.reduce((sum, h) => sum + h.dayPnL, 0);
 
@@ -160,7 +163,7 @@ const Portfolio = () => {
       totalValue: totalPortfolioValue,
       dayPnL,
     };
-  }, [enrichedHoldings]);
+  }, [enrichedHoldings, cashBalance]);
 
   const isPos = summary.totalPnL >= 0;
   const isDayPos = summary.dayPnL >= 0;

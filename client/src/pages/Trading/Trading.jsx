@@ -4,6 +4,7 @@ import { getWatchlist } from "../../services/watchlistService";
 import { searchStocks } from "../../services/marketApi";
 import { getHoldings } from "../../services/holdingService";
 import { getOrders, placeOrder } from "../../services/orderService";
+import { getUserProfile } from "../../services/authService";
 import TradingChart from "../../components/chart/TradingChart";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -73,6 +74,7 @@ const Trading = () => {
   // Dynamic simulated price feeds
   const [simulatedPrices, setSimulatedPrices] = useState({});
   const [liveTicks, setLiveTicks] = useState([]);
+  const [cashBalance, setCashBalance] = useState(1000000);
 
   // Fetch initial watchlist, holdings, and order history
   const fetchTerminalData = async () => {
@@ -85,6 +87,9 @@ const Trading = () => {
 
       const ordersData = await getOrders();
       setOrders(ordersData.orders || []);
+
+      const profile = await getUserProfile();
+      setCashBalance(profile.balance !== undefined ? profile.balance : 1000000);
     } catch (error) {
       console.error("Terminal initialization error:", error);
     }
@@ -103,6 +108,9 @@ const Trading = () => {
 
         const ordersData = await getOrders();
         setOrders(ordersData.orders || []);
+
+        const profile = await getUserProfile();
+        setCashBalance(profile.balance !== undefined ? profile.balance : 1000000);
       } catch (err) {
         console.error(err);
       }
@@ -252,10 +260,8 @@ const Trading = () => {
   // Calculate dynamic cash balance based on actual holdings (Total Rs 10 Lakhs simulation limit)
   const portfolioSummary = useMemo(() => {
     const totalInvested = holdings.reduce((sum, h) => sum + h.quantity * h.avgPrice, 0);
-    const initialCapital = 1000000;
-    const cash = Math.max(0, initialCapital - totalInvested);
-    return { invested: totalInvested, cash };
-  }, [holdings]);
+    return { invested: totalInvested, cash: cashBalance };
+  }, [holdings, cashBalance]);
 
   // Submit Order Execution
   const handleSubmitOrder = async (e) => {

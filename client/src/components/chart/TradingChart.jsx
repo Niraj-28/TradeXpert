@@ -84,7 +84,7 @@ const TradingChart = ({ symbol = "RELIANCE", timeframe = "1D", liveTicks = [] })
           <span>Connecting to live quote feed to draw line...</span>
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={380}>
+        <ResponsiveContainer width="100%" height={300}>
           <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -114,7 +114,7 @@ const TradingChart = ({ symbol = "RELIANCE", timeframe = "1D", liveTicks = [] })
             <Tooltip 
               formatter={(value) => [`₹${value.toLocaleString("en-IN")}`, "Price"]}
               contentStyle={{
-                borderRadius: "14px",
+                borderRadius: "8px",
                 fontFamily: "Poppins, sans-serif",
                 fontSize: "12px",
                 border: "1px solid #e8edf5",

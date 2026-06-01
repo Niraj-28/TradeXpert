@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useMarket } from "../../context/MarketContext";
 import { getHoldings } from "../../services/holdingService";
 import { placeOrder } from "../../services/orderService";
+import { getUserProfile } from "../../services/authService";
 import { 
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, 
   CartesianGrid, BarChart, Bar 
@@ -283,8 +284,8 @@ const StockDetails = () => {
       const currentHoldings = data.holdings || [];
       setHoldings(currentHoldings);
       
-      const totalInvested = currentHoldings.reduce((sum, h) => sum + h.quantity * h.avgPrice, 0);
-      setCashBalance(Math.max(0, 1000000 - totalInvested));
+      const profile = await getUserProfile();
+      setCashBalance(profile.balance !== undefined ? profile.balance : 1000000);
     } catch (error) {
       console.error("Failed to load user portfolio data:", error);
     }
@@ -578,7 +579,7 @@ const StockDetails = () => {
 
             {/* Recharts Wrapper */}
             <div className="recharts-wrapper-box">
-              <ResponsiveContainer width="100%" height={340}>
+              <ResponsiveContainer width="100%" height={300}>
                 {chartType === "line" ? (
                   <AreaChart data={chartData} margin={{ top: 10, right: 5, left: 5, bottom: 5 }}>
                     <defs>
@@ -601,7 +602,7 @@ const StockDetails = () => {
                     <Tooltip 
                       formatter={(v) => [`₹${v.toLocaleString("en-IN")}`, "LTP"]}
                       contentStyle={{
-                        borderRadius: "12px",
+                        borderRadius: "8px",
                         border: "1px solid #e8edf5",
                         boxShadow: "0 8px 24px rgba(15,23,42,0.04)",
                         fontSize: "12px",
@@ -639,7 +640,7 @@ const StockDetails = () => {
                         ];
                       }}
                       contentStyle={{
-                        borderRadius: "12px",
+                        borderRadius: "8px",
                         border: "1px solid #e8edf5",
                         boxShadow: "0 8px 24px rgba(15,23,42,0.04)",
                         fontSize: "11px",

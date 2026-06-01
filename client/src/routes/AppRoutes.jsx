@@ -19,20 +19,16 @@ import News from "../pages/News/News";
 import Profile from "../pages/Profile/Profile";
 import StockDetails from "../pages/StockDetails/StockDetails";
 import ProtectedRoute from "./ProtectedRoute";
+import Home from "../pages/Home/Home";
 
 const AppRoutes = () => {
   return (
     <Routes>
 
-      {/* DEFAULT REDIRECT */}
+      {/* HOME PAGE LANDING */}
       <Route
         path="/"
-        element={
-          <Navigate
-            to="/markets"
-            replace
-          />
-        }
+        element={<Home />}
       />
 
       {/* AUTH */}

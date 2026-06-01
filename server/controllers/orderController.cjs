@@ -6,6 +6,10 @@ const Holding = require(
   "../models/holdingModel.cjs"
 );
 
+const User = require(
+  "../models/User.cjs"
+);
+
 // PLACE ORDER
 
 exports.placeOrder =
@@ -40,6 +44,33 @@ exports.placeOrder =
 
         });
 
+      }
+
+      // WALLET BALANCE & HOLDINGS VALIDATION
+      const userDoc = await User.findById(req.user.id);
+      if (!userDoc) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      const cost = Number(price) * Number(quantity);
+      if (type === "BUY" && (userDoc.balance ?? 1000000) < cost) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient funds! Required: ₹${cost.toFixed(2)}, Available: ₹${(userDoc.balance ?? 1000000).toFixed(2)}`,
+        });
+      }
+
+      if (type === "SELL") {
+        const holding = await Holding.findOne({ user: req.user.id, symbol });
+        if (!holding || holding.quantity < Number(quantity)) {
+          return res.status(400).json({
+            success: false,
+            message: `Insufficient holdings! You only own ${holding?.quantity || 0} shares of ${symbol}.`,
+          });
+        }
       }
 
       // CREATE ORDER
@@ -88,6 +119,9 @@ exports.placeOrder =
 
             });
 
+          const user = await User.findById(req.user.id);
+          const execCost = Number(price) * Number(quantity);
+
           // BUY ORDER
 
           if (type === "BUY") {
@@ -105,9 +139,7 @@ exports.placeOrder =
 
                 holding.avgPrice *
                   holding.quantity +
-
-                Number(price) *
-                  Number(quantity);
+                execCost;
 
               holding.quantity =
                 totalQty;
@@ -136,6 +168,11 @@ exports.placeOrder =
 
               });
 
+            }
+
+            if (user) {
+              user.balance = Math.max(0, (user.balance ?? 1000000) - execCost);
+              await user.save();
             }
 
           }
@@ -168,6 +205,11 @@ exports.placeOrder =
 
               }
 
+            }
+
+            if (user) {
+              user.balance = (user.balance ?? 1000000) + execCost;
+              await user.save();
             }
 
           }

@@ -5,6 +5,8 @@ import {
 } from "lucide-react";
 import { getHoldings } from "../../services/holdingService";
 import { getOrders } from "../../services/orderService";
+import { useAuth } from "../../context/AuthContext";
+import { getUserProfile, updateUserProfile, changeUserPassword } from "../../services/authService";
 import toast from "react-hot-toast";
 
 // Helper to format currency
@@ -17,25 +19,37 @@ const formatINR = (value) => {
 };
 
 const Profile = () => {
-  // Load editable personal data from localStorage or fallback
-  const [profileData, setProfileData] = useState(() => {
-    const saved = localStorage.getItem("profile_data");
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
-    }
-    return {
-      fullName: "Niraj Kotadiya",
-      username: "niraj_trader",
-      email: "niraj@gmail.com",
-      phone: "+91 9876543210",
-      bio: "FII/DII tracking & quantitative futures virtual trader.",
-      accountType: "Premium Simulator Tier"
-    };
+  const { user, login } = useAuth();
+
+  const [profileData, setProfileData] = useState({
+    fullName: user?.name || "Niraj Kotadiya",
+    username: user?.username || "",
+    email: user?.email || "niraj@gmail.com",
+    phone: user?.phone || "",
+    bio: user?.bio || "FII/DII tracking & quantitative futures virtual trader.",
+    accountType: "Premium Simulator Tier"
   });
 
   // Edit Mode states
   const [isEditing, setIsEditing] = useState(false);
   const [editedFields, setEditedFields] = useState({ ...profileData });
+
+  // Sync edits if user context resolves after initial load
+  useEffect(() => {
+    if (user) {
+      const data = {
+        fullName: user.name || "",
+        username: user.username || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        bio: user.bio || "FII/DII tracking & quantitative futures virtual trader.",
+        accountType: "Premium Simulator Tier",
+        balance: user.balance !== undefined ? user.balance : 1000000
+      };
+      setProfileData(data);
+      setEditedFields(data);
+    }
+  }, [user]);
 
   // Password reset state
   const [showPasswordBox, setShowPasswordBox] = useState(false);
@@ -69,27 +83,44 @@ const Profile = () => {
           ordersCount: ordersList.length,
           holdingsCount: holdingsList.length
         });
-      } catch (e) {
-        console.error("Failed to load profile metrics stats:", e);
+
+        // Fetch latest profile details (including balance) and sync
+        const profile = await getUserProfile();
+        login(profile);
+      } catch (error) {
+        console.error("Failed to load profile metrics:", error);
       }
     };
     loadStats();
   }, []);
 
-  // Save profile edits
-  const handleSaveProfile = () => {
+  // Save profile edits to database
+  const handleSaveProfile = async () => {
     if (!editedFields.fullName.trim()) {
       toast.error("Full Name cannot be empty!");
       return;
     }
-    setProfileData(editedFields);
-    localStorage.setItem("profile_data", JSON.stringify(editedFields));
-    setIsEditing(false);
-    toast.success("Profile details updated successfully!");
+    try {
+      const payload = {
+        name: editedFields.fullName,
+        username: editedFields.username,
+        email: editedFields.email,
+        phone: editedFields.phone,
+        bio: editedFields.bio,
+      };
+      const updated = await updateUserProfile(payload);
+      
+      // Update session context
+      login(updated);
+      setIsEditing(false);
+      toast.success("Profile details updated in database successfully!");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update profile!");
+    }
   };
 
-  // Change Password submit handler
-  const handleResetPassword = (e) => {
+  // Change Password submit handler in database
+  const handleResetPassword = async (e) => {
     e.preventDefault();
     if (!passwordFields.currentPassword || !passwordFields.newPassword || !passwordFields.confirmPassword) {
       toast.error("Please fill in all password fields");
@@ -104,10 +135,18 @@ const Profile = () => {
       return;
     }
     
-    // Simulate successful password change
-    toast.success("Password reset securely in virtual session!", { icon: "🔒" });
-    setPasswordFields({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    setShowPasswordBox(false);
+    try {
+      const payload = {
+        currentPassword: passwordFields.currentPassword,
+        newPassword: passwordFields.newPassword,
+      };
+      await changeUserPassword(payload);
+      toast.success("Password changed successfully in database!", { icon: "🔒" });
+      setPasswordFields({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setShowPasswordBox(false);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Incorrect current password or update failed!");
+    }
   };
 
   return (
@@ -252,7 +291,7 @@ const Profile = () => {
               </div>
               <div className="profile-metric-info">
                 <span className="metric-label">Total Balance</span>
-                <strong className="metric-val">{formatINR(1000000)}</strong>
+                <strong className="metric-val">{formatINR(profileData.balance ?? 1000000)}</strong>
               </div>
             </div>
 

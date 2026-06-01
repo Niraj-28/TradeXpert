@@ -23,9 +23,9 @@ const marketSocket = (io) => {
       },
 
       {
-        name: "NIFTY IT",
-        value: "38,420",
-        change: 2.14,
+        name: "FIN NIFTY",
+        value: "23,150",
+        change: 0.35,
       },
     ]);
 

@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import logo from "../../assets/Logo.png";
 import { loginUser } from "../../services/authService";
 import { useAuth } from "../../context/AuthContext";
+import { FaChartLine, FaShieldAlt, FaBriefcase, FaArrowUp } from "react-icons/fa";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -35,73 +36,128 @@ const Login = () => {
   };
 
   return (
-    <div className="auth-page-container">
-      {/* BACKGROUND GLOWS */}
-      <div className="auth-glow-ball top-left"></div>
-      <div className="auth-glow-ball bottom-right"></div>
-      <div className="auth-glow-ball center-bg"></div>
-
-      {/* GRID OVERLAY EFFECT */}
-      <div className="auth-grid-overlay"></div>
-
-      {/* LOGIN CARD */}
-      <form onSubmit={handleSubmit} className="auth-card">
-        {/* LOGO */}
-        <div className="auth-logo-box">
-          <img src={logo} alt="TradeXpert" className="auth-logo-image" />
-        </div>
-
-        {/* TITLE */}
-        <h1>Welcome Back</h1>
-        <p className="auth-subtitle">Log in to monitor watchlists, analyze technicals, and trade virtual assets</p>
-
-        {/* INPUTS */}
-        <div className="auth-input-group">
-          <input
-            type="email"
-            name="email"
-            placeholder="Enter registered email"
-            onChange={handleChange}
-            className="auth-input-field"
-            required
-          />
-
-          <input
-            type="password"
-            name="password"
-            placeholder="Enter password"
-            onChange={handleChange}
-            className="auth-input-field"
-            required
-          />
-
-          <div className="auth-forgot-link-row">
-            <span 
-              onClick={() => navigate("/reset-password")} 
-              className="auth-forgot-link"
-            >
-              Forgot Password?
-            </span>
+    <div className="auth-split-container">
+      {/* LEFT COLUMN: HERO PANEL */}
+      <div className="auth-hero-panel">
+        <div className="auth-hero-glow"></div>
+        <div className="auth-hero-grid-overlay"></div>
+        
+        <div className="auth-hero-content-wrap">
+          <div className="auth-hero-logo" onClick={() => navigate("/")}>
+            <img src={logo} alt="TradeXpert" />
           </div>
 
-          <button type="submit" className="auth-submit-btn">
-            Login
-          </button>
-        </div>
+          <div className="auth-hero-main">
+            <h1 className="auth-hero-tagline">
+              Trade Smart.<br />
+              Invest Better.<br />
+              <span>Master The Market.</span>
+            </h1>
+            <p className="auth-hero-desc">
+              Practise virtual stock trading using live Indian indices, interactive chart technicals, watchlists, and comprehensive portfolio tracking.
+            </p>
+          </div>
 
-        {/* REGISTER REDIRECT */}
-        <div className="auth-redirect-row">
-          <p>
-            Don't have an account?{" "}
-            <span
-              onClick={() => navigate("/register")}
-              className="auth-redirect-link"
-            >
-              Create Account
-            </span>
-          </p>
+          {/* SIMULATED ACCENT CARD FOR GRAPHICS */}
+          <div className="auth-hero-widget">
+            <div className="widget-header">
+              <span className="widget-title">Indices Highlight</span>
+              <span className="widget-badge">Live Feed</span>
+            </div>
+            <div className="widget-body">
+              <div className="widget-metric">
+                <span className="metric-label">NIFTY 50</span>
+                <div className="metric-row">
+                  <span className="metric-value">₹24,850.00</span>
+                  <span className="metric-change positive">
+                    <FaArrowUp size={8} /> +1.25%
+                  </span>
+                </div>
+              </div>
+              <div className="widget-mini-chart">
+                <div className="chart-bar" style={{ height: "40%" }}></div>
+                <div className="chart-bar" style={{ height: "55%" }}></div>
+                <div className="chart-bar" style={{ height: "70%" }}></div>
+                <div className="chart-bar" style={{ height: "50%" }}></div>
+                <div className="chart-bar active" style={{ height: "85%" }}></div>
+              </div>
+            </div>
+          </div>
+
+          <div className="auth-hero-footer">
+            <div className="hero-bullet">
+              <FaChartLine className="bullet-icon" />
+              <span>Real-Time Quotes</span>
+            </div>
+            <div className="hero-bullet">
+              <FaShieldAlt className="bullet-icon" />
+              <span>Zero Risk Trading</span>
+            </div>
+            <div className="hero-bullet">
+              <FaBriefcase className="bullet-icon" />
+              <span>Full Analytics</span>
+            </div>
+          </div>
         </div>
-      </form>
+      </div>
+
+      {/* RIGHT COLUMN: FORM PANEL */}
+      <div className="auth-form-panel">
+        <div className="auth-form-container">
+          <div className="auth-form-header">
+            <h2>Welcome Back</h2>
+            <p>Log in to access your virtual trading simulator portfolio</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="auth-actual-form">
+            <div className="auth-input-group">
+              <label className="auth-input-label">Email Address</label>
+              <input
+                type="email"
+                name="email"
+                placeholder="email@example.com"
+                onChange={handleChange}
+                className="auth-input-field"
+                required
+              />
+            </div>
+
+            <div className="auth-input-group">
+              <label className="auth-input-label">Password</label>
+              <input
+                type="password"
+                name="password"
+                placeholder="••••••••"
+                onChange={handleChange}
+                className="auth-input-field"
+                required
+              />
+            </div>
+
+            <div className="auth-forgot-link-row">
+              <span 
+                onClick={() => navigate("/reset-password")} 
+                className="auth-forgot-link"
+              >
+                Forgot Password?
+              </span>
+            </div>
+
+            <button type="submit" className="auth-submit-btn">
+              Sign In
+            </button>
+          </form>
+
+          <div className="auth-form-footer">
+            <p>
+              Don't have an account?{" "}
+              <span onClick={() => navigate("/register")} className="auth-redirect-link">
+                Create Account
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
