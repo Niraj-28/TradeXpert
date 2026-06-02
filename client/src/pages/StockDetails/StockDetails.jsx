@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useMarket } from "../../context/MarketContext";
+import { socket } from "../../services/socket";
 import { getHoldings } from "../../services/holdingService";
 import { placeOrder } from "../../services/orderService";
 import { getUserProfile } from "../../services/authService";
@@ -359,6 +360,16 @@ const StockDetails = () => {
       setLimitPrice(stockDetails.price);
     }
   }, [stockDetails.price, priceMode]);
+
+  // Register dynamic view-stock in backend dynamically
+  useEffect(() => {
+    if (symbol) {
+      socket.emit("view-stock", symbol);
+    }
+    return () => {
+      socket.emit("unview-stock");
+    };
+  }, [symbol]);
 
   // Simulate dynamic ticks for non-feed stocks
   useEffect(() => {

@@ -1,14 +1,15 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
+// Brand color palette for pie chart slices
 const COLORS = [
-  "#37c98b", // Emerald/Green
-  "#0f172a", // Navy Blue
+  "#408A71", // Brand Accent (Emerald Green)
+  "#091413", // Brand Dark (Navy)
+  "#285A48", // Brand Primary (Forest Green)
+  "#B0E4CC", // Brand Mint
   "#4f46e5", // Indigo
   "#0ea5e9", // Sky Blue
   "#f59e0b", // Amber/Gold
   "#ec4899", // Pink
-  "#8b5cf6", // Purple
-  "#94a3b8", // Slate
 ];
 
 const PortfolioAnalytics = ({ holdings = [], cash = 0 }) => {
@@ -37,15 +38,13 @@ const PortfolioAnalytics = ({ holdings = [], cash = 0 }) => {
   const totalValue = dataToRender.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <div className="bg-white rounded-[30px] border border-[#e8edf5] p-6 shadow-sm">
-      <div className="mb-4">
-        <h2 className="text-xl font-extrabold text-[#0f172a]">
-          Asset Distribution
-        </h2>
-        <p className="text-xs text-slate-400 mt-1">Relative value weightage of your simulation assets</p>
+    <div className="portfolio-analytics-card">
+      <div className="analytics-card-header">
+        <h2 className="analytics-card-title">Asset Distribution</h2>
+        <p className="analytics-card-subtitle">Relative value weightage of your simulation assets</p>
       </div>
 
-      <div className="h-[280px] relative">
+      <div className="analytics-chart-wrap">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -81,32 +80,26 @@ const PortfolioAnalytics = ({ holdings = [], cash = 0 }) => {
         </ResponsiveContainer>
 
         {/* Center Text displaying total capital */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-4">
-          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-            Total Value
-          </span>
-          <span className="text-sm font-extrabold text-[#0f172a] mt-1">
+        <div className="analytics-chart-center-label">
+          <span className="analytics-total-label">Total Value</span>
+          <span className="analytics-total-value">
             ₹{Math.round(totalValue).toLocaleString("en-IN")}
           </span>
         </div>
       </div>
 
       {/* Dynamic Legend List Grid */}
-      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-slate-100 pt-4">
+      <div className="analytics-legend-grid">
         {dataToRender.map((item, index) => {
           const percentage = totalValue > 0 ? (item.value / totalValue) * 100 : 0;
           return (
-            <div key={`${item.name}-${index}`} className="flex items-center gap-2">
-              <span 
-                className="w-2.5 h-2.5 rounded-full shrink-0" 
+            <div key={`${item.name}-${index}`} className="analytics-legend-item">
+              <span
+                className="analytics-legend-dot"
                 style={{ backgroundColor: COLORS[index % COLORS.length] }}
               />
-              <span className="text-xs font-semibold text-[#334155] truncate max-w-[100px]">
-                {item.name}
-              </span>
-              <span className="text-[11px] font-bold text-slate-400 ml-auto">
-                {percentage.toFixed(1)}%
-              </span>
+              <span className="analytics-legend-name">{item.name}</span>
+              <span className="analytics-legend-pct">{percentage.toFixed(1)}%</span>
             </div>
           );
         })}

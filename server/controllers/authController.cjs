@@ -4,6 +4,13 @@ const bcrypt = require("bcryptjs");
 
 const jwt = require("jsonwebtoken");
 
+let nodemailer;
+try {
+  nodemailer = require("nodemailer");
+} catch (e) {
+  nodemailer = null;
+}
+
 // GENERATE JWT
 
 const generateToken = (id) => {
@@ -296,16 +303,105 @@ const sendOtp = async (req, res) => {
       return res.status(404).json({ message: "User not found with this email/phone number" });
     }
 
+    // Enforce 60-second cooldown rate limit
+    if (user.resetOtpLastSent && (new Date() - user.resetOtpLastSent < 60000)) {
+      const secondsLeft = Math.ceil((60000 - (new Date() - user.resetOtpLastSent)) / 1000);
+      return res.status(429).json({ message: `Please wait ${secondsLeft} seconds before requesting a new OTP.` });
+    }
+
+    // Generate numeric 6-digit OTP code
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.resetOtp = otp;
-    user.resetOtpExpires = new Date(Date.now() + 10 * 60 * 1000);
+    user.resetOtpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+    user.resetOtpAttempts = 0; // Reset incorrect attempts counter
+    user.resetOtpLastSent = new Date();
     await user.save();
 
-    console.log(`\n==================================================`);
-    console.log(`🔑 [OTP SYSTEM] Verification Code for ${user.email}: ${otp}`);
-    console.log(`==================================================\n`);
+    let emailSent = false;
 
-    res.status(200).json({ success: true, message: "OTP sent successfully to email/mobile" });
+    // Send via nodemailer if SMTP is fully configured
+    if (nodemailer) {
+      const isSmtpConfigured =
+        process.env.SMTP_HOST &&
+        process.env.SMTP_PORT &&
+        process.env.SMTP_USER &&
+        process.env.SMTP_USER !== "your_email@gmail.com" &&
+        process.env.SMTP_PASS &&
+        process.env.SMTP_PASS !== "your_gmail_app_password";
+
+      if (isSmtpConfigured) {
+        try {
+          const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: Number(process.env.SMTP_PORT),
+            secure: Number(process.env.SMTP_PORT) === 465,
+            auth: {
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS,
+            },
+          });
+
+          const fromEmail = process.env.SMTP_FROM || `"TradeXpert Security" <${process.env.SMTP_USER}>`;
+
+          const mailOptions = {
+            from: fromEmail,
+            to: user.email,
+            subject: "🔑 Your TradeXpert Verification Code",
+            html: `
+              <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; background-color: #0c1a17; border: 1px solid #1e3d33; border-radius: 12px; color: #ffffff;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                  <h1 style="color: #408A71; font-size: 28px; font-weight: 800; margin: 0; letter-spacing: 0.5px;">TradeXpert</h1>
+                  <p style="color: #a3b8cc; font-size: 13px; margin: 5px 0 0 0;">Virtual Stock Trading Simulator</p>
+                </div>
+                <div style="background-color: #122822; padding: 25px; border-radius: 8px; border: 1px solid #204539; margin-bottom: 25px;">
+                  <h2 style="font-size: 18px; font-weight: 700; color: #B0E4CC; margin-top: 0; margin-bottom: 15px; text-align: center;">Reset Your Password</h2>
+                  <p style="font-size: 14px; line-height: 22px; color: #a3b8cc; margin-bottom: 20px;">
+                    We received a request to reset your TradeXpert account password. Use the verification code below to proceed. This code is valid for <strong>10 minutes</strong>.
+                  </p>
+                  <div style="text-align: center; margin: 25px 0;">
+                    <div style="display: inline-block; background-color: #0c1a17; border: 2px dashed #408A71; border-radius: 8px; padding: 15px 40px; font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #B0E4CC;">
+                      ${otp}
+                    </div>
+                  </div>
+                  <p style="font-size: 12px; color: #ef4444; text-align: center; font-weight: 600; margin-top: 15px;">
+                    ⚠️ Do not share this verification code with anyone. Our support team will never ask for it.
+                  </p>
+                </div>
+                <div style="text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid #1c362c; padding-top: 20px; margin-top: 10px;">
+                  <p style="margin: 0 0 8px 0;">This is an automated security message. If you did not request this, please secure your account.</p>
+                  <p style="margin: 0;">&copy; 2026 TradeXpert Team. All Rights Reserved.</p>
+                </div>
+              </div>
+            `,
+          };
+
+          await transporter.sendMail(mailOptions);
+          emailSent = true;
+        } catch (mailError) {
+          console.error("❌ Mail delivery error:", mailError);
+        }
+      }
+    }
+
+    // Print styled console box for developers (guaranteed fallback)
+    console.log(`
+┌────────────────────────────────────────────────────────┐
+│             🔑  TRADEXPERT OTP VERIFICATION            │
+├────────────────────────────────────────────────────────┤
+│  Recipient:  ${user.email.padEnd(41)} │
+│  OTP Code:   ${otp.padEnd(41)} │
+│  Expires:    10 Minutes                                │
+├────────────────────────────────────────────────────────┤
+│  Mail Sent:  ${(emailSent ? "YES (Nodemailer)" : "NO (Console Fallback)").padEnd(41)} │
+└────────────────────────────────────────────────────────┘
+    `);
+
+    res.status(200).json({ 
+      success: true, 
+      message: emailSent 
+        ? "OTP sent successfully to your registered email!" 
+        : "OTP generated successfully! Check server console logs." 
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -327,11 +423,52 @@ const verifyOtp = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (user.resetOtp !== otp || new Date() > user.resetOtpExpires) {
-      return res.status(400).json({ message: "Invalid or expired verification code" });
+    if (!user.resetOtp) {
+      return res.status(400).json({ message: "No active verification code request found. Please request a new OTP." });
     }
 
-    res.status(200).json({ success: true, message: "OTP verified successfully" });
+    // Check expiry
+    if (new Date() > user.resetOtpExpires) {
+      user.resetOtp = null;
+      user.resetOtpExpires = null;
+      user.resetOtpAttempts = 0;
+      await user.save();
+      return res.status(400).json({ message: "Verification code has expired. Please request a new one." });
+    }
+
+    // Verify OTP code and check brute force attempts
+    if (user.resetOtp !== otp) {
+      user.resetOtpAttempts = (user.resetOtpAttempts || 0) + 1;
+      await user.save();
+
+      const maxAttempts = 5;
+      const attemptsRemaining = maxAttempts - user.resetOtpAttempts;
+
+      if (attemptsRemaining <= 0) {
+        user.resetOtp = null;
+        user.resetOtpExpires = null;
+        user.resetOtpAttempts = 0;
+        await user.save();
+        return res.status(400).json({ message: "Too many failed attempts. This OTP has been invalidated. Please request a new one." });
+      }
+
+      return res.status(400).json({ message: `Invalid verification code. ${attemptsRemaining} attempts remaining.` });
+    }
+
+    // Create a temporary JWT signed token indicating OTP has been verified
+    const resetToken = jwt.sign(
+      { id: user._id, emailOrPhone, resetVerified: true },
+      process.env.JWT_SECRET,
+      { expiresIn: "10m" }
+    );
+
+    // Clean up OTP from DB immediately to prevent replay attacks
+    user.resetOtp = null;
+    user.resetOtpExpires = null;
+    user.resetOtpAttempts = 0;
+    await user.save();
+
+    res.status(200).json({ success: true, message: "OTP verified successfully", resetToken });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -340,27 +477,36 @@ const verifyOtp = async (req, res) => {
 // RESET FORGOTTEN PASSWORD
 const resetForgottenPassword = async (req, res) => {
   try {
-    const { emailOrPhone, otp, newPassword } = req.body;
-    if (!emailOrPhone || !otp || !newPassword) {
-      return res.status(400).json({ message: "All fields are required" });
+    const { resetToken, newPassword } = req.body;
+    if (!resetToken || !newPassword) {
+      return res.status(400).json({ message: "Reset token and new password are required" });
     }
 
-    const user = await User.findOne({
-      $or: [{ email: emailOrPhone }, { phone: emailOrPhone }]
-    });
+    // Verify reset session JWT
+    let decoded;
+    try {
+      decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+    } catch (err) {
+      return res.status(400).json({ message: "Your reset session has expired or is invalid. Please request a new OTP." });
+    }
 
+    if (!decoded || !decoded.resetVerified || !decoded.id) {
+      return res.status(400).json({ message: "Invalid reset session token." });
+    }
+
+    const user = await User.findById(decoded.id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (user.resetOtp !== otp || new Date() > user.resetOtpExpires) {
-      return res.status(400).json({ message: "Verification failed. Please request a new OTP." });
-    }
-
+    // Hash & save the new password
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
+    
+    // Clear any leftover OTP fields
     user.resetOtp = null;
     user.resetOtpExpires = null;
+    user.resetOtpAttempts = 0;
     await user.save();
 
     res.status(200).json({ success: true, message: "Password updated successfully" });
@@ -370,21 +516,45 @@ const resetForgottenPassword = async (req, res) => {
 };
 
 module.exports = {
-
   registerUser,
-
   loginUser,
-
   getUserProfile,
-
   updateUserProfile,
-
   changePassword,
-
   sendOtp,
-
   verifyOtp,
-
   resetForgottenPassword,
-
 };
+
+// Test SMTP Connection on load to verify configurations
+if (nodemailer) {
+  const isSmtpConfigured =
+    process.env.SMTP_HOST &&
+    process.env.SMTP_PORT &&
+    process.env.SMTP_USER &&
+    process.env.SMTP_USER !== "your_email@gmail.com" &&
+    process.env.SMTP_PASS &&
+    process.env.SMTP_PASS !== "your_gmail_app_password";
+
+  if (isSmtpConfigured) {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT),
+      secure: Number(process.env.SMTP_PORT) === 465,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    transporter.verify((error, success) => {
+      if (error) {
+        console.error("❌ [SMTP ERROR] SMTP connection verification failed:", error.message);
+      } else {
+        console.log("✅ [SMTP SUCCESS] SMTP server is online and ready to send emails.");
+      }
+    });
+  } else {
+    console.log("ℹ️ [OTP SYSTEM] SMTP is not configured (using placeholders). Falling back to local console logging.");
+  }
+}

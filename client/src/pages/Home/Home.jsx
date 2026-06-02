@@ -1,7 +1,6 @@
 import logo from "../../assets/logo.png";
 import { useNavigate } from "react-router-dom";
 import { useMarket } from "../../context/MarketContext";
-import { useState, useEffect } from "react";
 
 import {
   FaChartLine,
@@ -11,76 +10,49 @@ import {
   FaShieldAlt,
   FaWallet,
   FaArrowUp,
-  FaArrowDown,
-  FaCheck,
-  FaPlay,
-  FaBolt,
-  FaGlobe,
-  FaLock,
-  FaTrophy,
 } from "react-icons/fa";
-import { FiTrendingUp, FiTrendingDown, FiActivity } from "react-icons/fi";
 
 const Home = () => {
   const navigate = useNavigate();
   const { indices } = useMarket();
-  const [scrolled, setScrolled] = useState(false);
-  const [ticker, setTicker] = useState(0);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
-    const t = setInterval(() => setTicker((p) => p + 1), 3000);
-    return () => clearInterval(t);
-  }, []);
 
   const stats = [
-    { number: "50K+", title: "Active Traders", icon: <FaTrophy /> },
-    { number: "₹120Cr+", title: "Virtual Volume", icon: <FaChartLine /> },
-    { number: "99.9%", title: "Platform Uptime", icon: <FaBolt /> },
-    { number: "24/7", title: "Market Insights", icon: <FaGlobe /> },
+    { number: "50K+", title: "Active Traders" },
+    { number: "₹120Cr+", title: "Virtual Trades" },
+    { number: "99.9%", title: "Platform Uptime" },
+    { number: "24/7", title: "Market Insights" },
   ];
 
   const features = [
     {
       icon: <FaChartLine />,
       title: "Virtual Trading",
-      description: "Practice stock trading with realistic market simulation and live order execution at real prices.",
-      badge: "Core",
+      description: "Practice stock trading with realistic market simulation and live execution.",
     },
     {
       icon: <FaChartPie />,
       title: "Portfolio Analytics",
-      description: "Track P&L, holdings, and investment performance with advanced analytics and rich visual charts.",
-      badge: "Analytics",
+      description: "Track investments using advanced analytics and modern financial insights.",
     },
     {
       icon: <FaSignal />,
-      title: "Live Market Data",
-      description: "Monitor real-time NSE/BSE indices, stock prices, and market movements via WebSocket streams.",
-      badge: "Real-time",
+      title: "Live Market Tracking",
+      description: "Monitor real-time stock prices, market trends, and trading movements.",
     },
     {
       icon: <FaStar />,
       title: "Smart Watchlists",
-      description: "Create personalized watchlists and get instant alerts on your favorite stocks.",
-      badge: "Watchlist",
+      description: "Create personalized watchlists and monitor your favorite stocks easily.",
     },
     {
       icon: <FaShieldAlt />,
       title: "Risk Analysis",
-      description: "Understand market exposure and make smarter risk-adjusted investment decisions.",
-      badge: "Risk",
+      description: "Understand investment risk and make smarter financial decisions.",
     },
     {
       icon: <FaWallet />,
-      title: "₹10L Virtual Cash",
-      description: "Start with ₹10 lakh in virtual capital. Practice freely — no real money at stake.",
-      badge: "Free",
+      title: "Advanced Dashboard",
+      description: "Experience a premium fintech dashboard with charts and analytics.",
     },
   ];
 
@@ -90,308 +62,231 @@ const Home = () => {
     let found = indices?.find((item) => item.name?.toUpperCase() === name);
     if (!found) {
       found = indices?.find((item) => {
-        const u = item.name?.toUpperCase() || "";
-        if (name === "BANK NIFTY" && (u === "NIFTY BANK" || u === "BANKNIFTY")) return true;
-        if (name === "FIN NIFTY" && (u === "NIFTY FIN SERVICE" || u === "NIFTY FIN" || u === "FINNIFTY")) return true;
+        const itemUpper = item.name?.toUpperCase() || "";
+        if (name === "BANK NIFTY" && (itemUpper === "NIFTY BANK" || itemUpper === "BANKNIFTY")) {
+          return true;
+        }
+        if (name === "FIN NIFTY" && (itemUpper === "NIFTY FIN SERVICE" || itemUpper === "NIFTY FIN" || itemUpper === "FINNIFTY")) {
+          return true;
+        }
         return false;
       });
     }
+
     if (found) {
-      return { name, value: found.value, change: found.change ?? 0 };
+      return {
+        name,
+        value: found.value,
+        change: found.change ?? 0,
+      };
     }
+
     const defaults = {
-      "NIFTY 50": { value: "23,525.05", change: -0.09 },
-      SENSEX: { value: "74,716.14", change: -0.08 },
-      "BANK NIFTY": { value: "53,926.10", change: -0.58 },
-      "FIN NIFTY": { value: "25,150.70", change: -0.80 },
+      "NIFTY 50": { value: "24,850.00", change: 1.25 },
+      "SENSEX": { value: "81,240.00", change: 0.84 },
+      "BANK NIFTY": { value: "52,100.00", change: -0.42 },
+      "FIN NIFTY": { value: "23,150.00", change: 0.35 },
     };
-    return { name, value: defaults[name]?.value ?? "—", change: defaults[name]?.change ?? 0 };
+
+    return {
+      name,
+      value: defaults[name]?.value ?? "—",
+      change: defaults[name]?.change ?? 0,
+    };
   });
 
-  const formatValue = (v) => {
-    if (typeof v === "number") {
-      return `₹${v.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-    const clean = String(v).replace(/[₹,]/g, "");
-    const num = parseFloat(clean);
-    if (!isNaN(num)) {
-      return `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-    return v;
-  };
-
-  const testimonials = [
-    { name: "Arjun S.", role: "Final Year Student", text: "TradeXpert helped me understand markets without risking a single rupee. The live data is incredible." },
-    { name: "Priya M.", role: "Software Engineer", text: "Best virtual trading platform I've used. The portfolio analytics are on par with real trading apps." },
-    { name: "Rahul K.", role: "Finance Graduate", text: "The UI is stunning and the real-time WebSocket data makes it feel like actual trading." },
-  ];
-
   return (
-    <div className="lp-root">
-      {/* ── NAVBAR ── */}
-      <nav className={`lp-nav ${scrolled ? "lp-nav--scrolled" : ""}`}>
-        <div className="lp-nav__logo" onClick={() => navigate("/")}>
-          <img src={logo} alt="TradeXpert" />
+    <div className="landing-page-container">
+      {/* NAVBAR */}
+      <nav className="landing-navbar">
+        <div className="landing-navbar-left" onClick={() => navigate("/")}>
+          <img src={logo} alt="TradeXpert" className="landing-logo" />
         </div>
-        <div className="lp-nav__links">
-          <button onClick={() => navigate("/markets")} className="lp-nav__link">Markets</button>
-          <button onClick={() => navigate("/portfolio")} className="lp-nav__link">Portfolio</button>
-          <button onClick={() => navigate("/trading")} className="lp-nav__link">Trading</button>
-          <button onClick={() => navigate("/news")} className="lp-nav__link">News</button>
+
+        <div className="landing-navbar-center">
+          <button onClick={() => navigate("/markets")} className="landing-nav-link">Markets</button>
+          <button onClick={() => navigate("/portfolio")} className="landing-nav-link">Portfolio</button>
+          <button onClick={() => navigate("/trading")} className="landing-nav-link">Trading</button>
+          <button onClick={() => navigate("/news")} className="landing-nav-link">News</button>
         </div>
-        <div className="lp-nav__actions">
-          <button onClick={() => navigate("/login")} className="lp-btn-ghost">Sign In</button>
-          <button onClick={() => navigate("/register")} className="lp-btn-primary">Start Free</button>
+
+        <div className="landing-navbar-right">
+          <button onClick={() => navigate("/login")} className="landing-btn-text">Sign In</button>
+          <button onClick={() => navigate("/register")} className="landing-btn-primary">Get Started</button>
         </div>
       </nav>
 
-      {/* ── HERO ── */}
-      <section className="lp-hero">
-        {/* background decorations */}
-        <div className="lp-hero__bg-glow lp-hero__bg-glow--1" />
-        <div className="lp-hero__bg-glow lp-hero__bg-glow--2" />
-        <div className="lp-hero__grid-overlay" />
-
-        <div className="lp-hero__left">
-          <div className="lp-hero__badge">
-            <FiActivity size={12} />
-            <span>Live NSE · BSE Market Data</span>
-          </div>
-
-          <h1 className="lp-hero__headline">
+      {/* HERO SECTION */}
+      <header className="landing-hero-section">
+        <div className="landing-hero-content">
+          <h1 className="landing-hero-title">
             Trade Smart.<br />
             Invest Better.<br />
-            <span className="lp-hero__headline--accent">Master</span> The Market.
+            <span>Master The</span> Market.
           </h1>
-
-          <p className="lp-hero__sub">
-            India's most advanced virtual stock market platform. Practice trading with real-time NSE/BSE data, powerful analytics, and a ₹10L virtual portfolio — completely risk-free.
+          <p className="landing-hero-subtitle">
+            Experience real-time Indian stock market simulation with portfolio analytics, market insights, live trends, and advanced trading tools — all in one premium fintech platform.
           </p>
 
-          <div className="lp-hero__cta-row">
-            <button onClick={() => navigate("/register")} className="lp-btn-primary lp-btn-primary--lg">
-              <FaPlay size={11} /> Start Trading Free
-            </button>
-            <button onClick={() => navigate("/markets")} className="lp-btn-outline--dark">
-              Explore Markets
-            </button>
+          <div className="landing-hero-actions">
+            <button onClick={() => navigate("/register")} className="landing-btn-primary">Start Trading</button>
+            <button onClick={() => navigate("/markets")} className="landing-btn-secondary">Explore Market</button>
           </div>
 
-          <div className="lp-hero__trust">
-            <div className="lp-hero__trust-avatars">
-              {["A", "P", "R", "S", "N"].map((l, i) => (
-                <span key={i} className="lp-hero__avatar" style={{ zIndex: 5 - i }}>{l}</span>
-              ))}
-            </div>
-            <p><strong>50,000+</strong> traders already onboard</p>
+          <div className="landing-hero-stats">
+            {stats.map((item, index) => (
+              <div key={index} className="landing-stat-item">
+                <h3>{item.number}</h3>
+                <p>{item.title}</p>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="lp-hero__right">
-          {/* Dashboard mockup card */}
-          <div className="lp-mockup">
-            <div className="lp-mockup__header">
+        {/* RIGHT DASHBOARD PREVIEW */}
+        <div className="landing-hero-mockup">
+          <div className="landing-mockup-card">
+            <div className="landing-mockup-header">
               <div>
-                <h2>Live Market Overview</h2>
-                <p>Real-time analytics · NSE / BSE</p>
+                <h2>Market Overview</h2>
+                <p>Real-time analytics dashboard</p>
               </div>
-              <span className="lp-live-dot"><span className="lp-live-dot__pulse" />LIVE</span>
+              <span className="landing-live-badge">Live Market</span>
             </div>
 
-            {/* portfolio strip */}
-            <div className="lp-mockup__portfolio">
-              <div className="lp-mockup__portfolio-bg" />
-              <div className="lp-mockup__portfolio-left">
-                <span className="lp-mockup__portfolio-label">Portfolio Value</span>
-                <h2 className="lp-mockup__portfolio-val">₹4,25,320</h2>
+            <div className="landing-mockup-portfolio">
+              <div className="landing-portfolio-bg-circle"></div>
+              <div className="landing-portfolio-header">
+                <div>
+                  <span className="landing-portfolio-label">Portfolio Value</span>
+                  <h2 className="landing-portfolio-value">₹4,25,320</h2>
+                </div>
+                <span className="landing-portfolio-badge">
+                  <FaArrowUp size={10} /> 12.4%
+                </span>
               </div>
-              <div className="lp-mockup__portfolio-right">
-                <span className="lp-badge-green"><FaArrowUp size={9} /> +12.4%</span>
-                <p className="lp-mockup__portfolio-since">vs last month</p>
-              </div>
-              {/* mini chart bars */}
-              <div className="lp-mini-chart">
-                {[45, 60, 50, 75, 55, 85, 50, 95, 70, 80].map((h, i) => (
-                  <div key={i} className={`lp-mini-bar ${i === 7 || i === 9 ? "lp-mini-bar--accent" : ""}`} style={{ height: `${h}%` }} />
-                ))}
+
+              {/* simulated graph w/ bars */}
+              <div className="landing-mockup-chart">
+                <div className="landing-chart-bar" style={{ height: "45%" }}></div>
+                <div className="landing-chart-bar" style={{ height: "60%" }}></div>
+                <div className="landing-chart-bar" style={{ height: "75%" }}></div>
+                <div className="landing-chart-bar" style={{ height: "55%" }}></div>
+                <div className="landing-chart-bar active-green" style={{ height: "85%" }}></div>
+                <div className="landing-chart-bar" style={{ height: "50%" }}></div>
+                <div className="landing-chart-bar active-teal" style={{ height: "95%" }}></div>
+                <div className="landing-chart-bar" style={{ height: "70%" }}></div>
               </div>
             </div>
 
-            {/* indices grid */}
-            <div className="lp-mockup__indices">
-              {cards.map((item, idx) => {
+            {/* REAL-TIME INDICES CARDS */}
+            <div className="landing-mockup-indices">
+              {cards.map((item, index) => {
                 const change = typeof item.change === "number" ? item.change : parseFloat(item.change) || 0;
-                const pos = change >= 0;
+                const isPositive = change >= 0;
+
+                let displayValue = item.value;
+                if (typeof displayValue === "number") {
+                  displayValue = `₹${displayValue.toLocaleString("en-IN", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}`;
+                } else if (typeof displayValue === "string") {
+                  const cleanString = displayValue.replace(/[₹,]/g, "");
+                  const num = parseFloat(cleanString);
+                  if (!isNaN(num)) {
+                    displayValue = `₹${num.toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`;
+                  } else {
+                    if (displayValue !== "—" && !displayValue.startsWith("₹")) {
+                      displayValue = `₹${displayValue}`;
+                    }
+                  }
+                }
+
                 return (
-                  <div key={idx} className={`lp-idx-card ${pos ? "lp-idx-card--up" : "lp-idx-card--down"}`}>
-                    <div className="lp-idx-card__top">
-                      <span className="lp-idx-card__name">{item.name}</span>
-                      <span className={`lp-idx-card__pct ${pos ? "up" : "down"}`}>
-                        {pos ? <FiTrendingUp size={10} /> : <FiTrendingDown size={10} />}
-                        {pos ? "+" : ""}{change.toFixed(2)}%
+                  <div key={`${item.name}-${index}`} className="landing-index-item">
+                    <div className="landing-index-top">
+                      <span className="landing-index-name">{item.name}</span>
+                      <span className={`landing-index-pct ${isPositive ? "up" : "down"}`}>
+                        {isPositive ? "+" : ""}{change.toFixed(2)}%
                       </span>
                     </div>
-                    <div className="lp-idx-card__val">{formatValue(item.value)}</div>
+                    <div className="landing-index-val">{displayValue}</div>
                   </div>
                 );
               })}
             </div>
-
-            {/* quick trade strip */}
-            <div className="lp-mockup__trade-strip">
-              <div className="lp-trade-chip lp-trade-chip--buy">BUY · RELIANCE</div>
-              <div className="lp-trade-chip lp-trade-chip--sell">SELL · TCS</div>
-              <div className="lp-trade-chip lp-trade-chip--watch">WATCH · INFY</div>
-            </div>
           </div>
         </div>
-      </section>
+      </header>
 
-      {/* ── STATS BAND ── */}
-      <section className="lp-stats-band">
-        <div className="lp-stats-band__inner">
-          {stats.map((s, i) => (
-            <div key={i} className="lp-stat">
-              <div className="lp-stat__icon">{s.icon}</div>
-              <h3 className="lp-stat__num">{s.number}</h3>
-              <p className="lp-stat__label">{s.title}</p>
+      {/* FEATURES SECTION */}
+      <section className="landing-features-section">
+        <div className="landing-features-header">
+          <h2>Powerful Trading Features</h2>
+          <p>Everything you need to learn, practice, and master trading.</p>
+        </div>
+
+        <div className="landing-features-grid">
+          {features.map((feature, index) => (
+            <div key={index} className="landing-feature-card">
+              <div className="landing-feature-icon-wrapper">
+                {feature.icon}
+              </div>
+              <h3>{feature.title}</h3>
+              <p>{feature.description}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── FEATURES ── */}
-      <section className="lp-features">
-        <div className="lp-features__inner">
-          <div className="lp-section-head">
-            <span className="lp-section-head__eyebrow">Platform Features</span>
-            <h2 className="lp-section-head__title">Everything You Need to Trade</h2>
-            <p className="lp-section-head__sub">A complete fintech suite built for Indian stock markets.</p>
-          </div>
-
-          <div className="lp-features__grid">
-            {features.map((f, i) => (
-              <div key={i} className="lp-feat-card">
-                <div className="lp-feat-card__top">
-                  <div className="lp-feat-card__icon">{f.icon}</div>
-                  <span className="lp-feat-card__badge">{f.badge}</span>
-                </div>
-                <h3 className="lp-feat-card__title">{f.title}</h3>
-                <p className="lp-feat-card__desc">{f.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS ── */}
-      <section className="lp-how">
-        <div className="lp-how__inner">
-          <div className="lp-section-head lp-section-head--dark">
-            <span className="lp-section-head__eyebrow lp-section-head__eyebrow--mint">How It Works</span>
-            <h2 className="lp-section-head__title lp-section-head__title--white">Start Trading in 3 Steps</h2>
-            <p className="lp-section-head__sub lp-section-head__sub--muted">Simple. Fast. Zero risk.</p>
-          </div>
-
-          <div className="lp-steps">
-            {[
-              { step: "01", title: "Create Account", desc: "Sign up for free. No credit card required.", icon: <FaLock /> },
-              { step: "02", title: "Get ₹10L Capital", desc: "Receive virtual cash and start exploring markets instantly.", icon: <FaWallet /> },
-              { step: "03", title: "Trade & Analyse", desc: "Place orders, track P&L, and sharpen your trading skills.", icon: <FaChartLine /> },
-            ].map((s, i) => (
-              <div key={i} className="lp-step">
-                <div className="lp-step__num">{s.step}</div>
-                <div className="lp-step__icon">{s.icon}</div>
-                <h3 className="lp-step__title">{s.title}</h3>
-                <p className="lp-step__desc">{s.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── TESTIMONIALS ── */}
-      <section className="lp-testimonials">
-        <div className="lp-testimonials__inner">
-          <div className="lp-section-head">
-            <span className="lp-section-head__eyebrow">Testimonials</span>
-            <h2 className="lp-section-head__title">Loved by Traders</h2>
-          </div>
-          <div className="lp-testimonials__grid">
-            {testimonials.map((t, i) => (
-              <div key={i} className="lp-testimonial-card">
-                <div className="lp-testimonial-card__stars">
-                  {[...Array(5)].map((_, si) => <FaStar key={si} size={12} />)}
-                </div>
-                <p className="lp-testimonial-card__text">"{t.text}"</p>
-                <div className="lp-testimonial-card__author">
-                  <div className="lp-testimonial-card__avatar">{t.name[0]}</div>
-                  <div>
-                    <strong>{t.name}</strong>
-                    <span>{t.role}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── CTA BANNER ── */}
-      <section className="lp-cta">
-        <div className="lp-cta__inner">
-          <div className="lp-cta__glow" />
-          <span className="lp-section-head__eyebrow lp-section-head__eyebrow--mint">Get Started Today</span>
-          <h2 className="lp-cta__title">Your Trading Journey Begins Here</h2>
-          <p className="lp-cta__sub">
-            Join 50,000+ traders practising with TradeXpert's real-time NSE & BSE data, advanced analytics, and zero-risk virtual capital.
+      {/* CTA SECTION */}
+      <section className="landing-cta-section">
+        <div className="landing-cta-banner">
+          <h2>Start Your Trading Journey Today</h2>
+          <p>
+            Join thousands of traders using TradeXpert to practice, analyze, and master stock market trading with modern fintech tools.
           </p>
-          <div className="lp-cta__checks">
-            {["Free to join, no card needed", "₹10 Lakh virtual capital", "Real NSE / BSE live prices", "Advanced portfolio analytics"].map((c, i) => (
-              <div key={i} className="lp-cta__check">
-                <FaCheck size={10} /> {c}
-              </div>
-            ))}
-          </div>
-          <button onClick={() => navigate("/register")} className="lp-btn-primary lp-btn-primary--lg lp-cta__btn">
-            Create Free Account
+          <button onClick={() => navigate("/register")} className="landing-cta-btn">
+            Get Started Now
           </button>
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
-      <footer className="lp-footer">
-        <div className="lp-footer__inner">
-          <div className="lp-footer__brand">
-            <img src={logo} alt="TradeXpert" className="lp-footer__logo" />
+      {/* FOOTER */}
+      <footer className="landing-footer-section">
+        <div className="landing-footer-content">
+          <div className="landing-footer-left">
+            <img src={logo} alt="TradeXpert" className="landing-logo" />
             <p>
-              India's most advanced virtual stock market trading platform. Practice with live NSE & BSE prices, build skills, and invest with confidence.
+              TradeXpert is a modern virtual trading platform helping traders learn stock market investing using advanced analytics, real-time insights, and fintech tools.
             </p>
           </div>
 
-          <div className="lp-footer__cols">
-            <div className="lp-footer__col">
-              <h4>Platform</h4>
-              {[["Markets", "/markets"], ["Portfolio", "/portfolio"], ["Trading", "/trading"], ["News", "/news"]].map(([l, r]) => (
-                <button key={l} onClick={() => navigate(r)} className="lp-footer__link">{l}</button>
-              ))}
+          <div className="landing-footer-right">
+            <div className="landing-footer-column">
+              <h3>Platform</h3>
+              <p onClick={() => navigate("/markets")}>Markets</p>
+              <p onClick={() => navigate("/portfolio")}>Portfolio</p>
+              <p onClick={() => navigate("/trading")}>Trading</p>
+              <p onClick={() => navigate("/news")}>News</p>
             </div>
-            <div className="lp-footer__col">
-              <h4>Account</h4>
-              {[["Sign In", "/login"], ["Register", "/register"], ["Forgot Password", "/forgot-password"]].map(([l, r]) => (
-                <button key={l} onClick={() => navigate(r)} className="lp-footer__link">{l}</button>
-              ))}
-            </div>
-            <div className="lp-footer__col">
-              <h4>Legal</h4>
-              {["Privacy Policy", "Terms & Conditions", "Disclaimer", "Support"].map((l) => (
-                <span key={l} className="lp-footer__link lp-footer__link--plain">{l}</span>
-              ))}
+
+            <div className="landing-footer-column">
+              <h3>Resources</h3>
+              <p>Documentation</p>
+              <p>Support</p>
+              <p>Privacy Policy</p>
+              <p>Terms & Conditions</p>
             </div>
           </div>
         </div>
-        <div className="lp-footer__bottom">
-          <span>© 2026 TradeXpert. All rights reserved. Virtual trading — for educational purposes only.</span>
+
+        <div className="landing-footer-bottom">
+          © 2026 TradeXpert. All rights reserved.
         </div>
       </footer>
     </div>

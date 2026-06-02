@@ -48,6 +48,16 @@ const userSchema = new mongoose.Schema({
     default: null,
   },
 
+  resetOtpAttempts: {
+    type: Number,
+    default: 0,
+  },
+
+  resetOtpLastSent: {
+    type: Date,
+    default: null,
+  },
+
 }, {
   timestamps: true,
 });

@@ -1,7 +1,7 @@
+import "dotenv/config";
 import express from "express";
 import http from "http";
 import cors from "cors";
-import dotenv from "dotenv";
 import { Server } from "socket.io";
 import { createRequire } from "module";
 
@@ -14,7 +14,7 @@ import {
 
 import startUpstoxMarketFeed from "./services/upstoxMarketService.js";
 
-dotenv.config();
+import { fetchAllInstruments } from "./services/instrumentService.mjs";
 
 const app = express();
 
@@ -43,35 +43,38 @@ app.use(express.json());
 
 connectDB();
 
+// Fetch and cache NSE & BSE equity instruments on boot in the background
+fetchAllInstruments().catch((err) => {
+  console.error("❌ [INSTRUMENTS ERROR] Error loading instruments on boot:", err.message);
+});
+
 // Initialize real-time market feed via WebSocket
 startUpstoxMarketFeed(io);
 
 // Start the polling fallback for Upstox quote updates
 initializeMarketPolling(io);
 
-io.on(
-  "connection",
-  (socket) => {
+io.on("connection", (socket) => {
+  console.log("✅ Client Connected:", socket.id);
 
-    console.log(
-      "✅ Client Connected:",
-      socket.id
-    );
+  socket.on("view-stock", (symbol) => {
+    if (symbol) {
+      socket.currentViewedStock = symbol.toUpperCase();
+      console.log(`👁️ Client ${socket.id} started viewing: ${socket.currentViewedStock}`);
+    }
+  });
 
-    socket.on(
-      "disconnect",
-      () => {
+  socket.on("unview-stock", () => {
+    if (socket.currentViewedStock) {
+      console.log(`👁️ Client ${socket.id} stopped viewing: ${socket.currentViewedStock}`);
+      socket.currentViewedStock = null;
+    }
+  });
 
-        console.log(
-          "❌ Client Disconnected:",
-          socket.id
-        );
-
-      }
-    );
-
-  }
-);
+  socket.on("disconnect", () => {
+    console.log("❌ Client Disconnected:", socket.id);
+  });
+});
 
 // ROUTES
 // Auth (register/login)

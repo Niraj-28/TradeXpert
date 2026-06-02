@@ -4,15 +4,35 @@ import toast from "react-hot-toast";
 import logo from "../../assets/Logo.png";
 import { loginUser } from "../../services/authService";
 import { useAuth } from "../../context/AuthContext";
-import { FaChartLine, FaShieldAlt, FaBriefcase, FaArrowUp } from "react-icons/fa";
+import { useMarket } from "../../context/MarketContext";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { indices, connected } = useMarket();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
+
+  const formatValue = (val) => {
+    if (!val) return "—";
+    let numStr = String(val).replace(/[₹,]/g, "");
+    const num = parseFloat(numStr);
+    if (isNaN(num)) return val;
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 2,
+    }).format(num);
+  };
+
+  const niftyData = indices.find((ind) => ind.name === "NIFTY 50");
+  const niftyValue = niftyData ? niftyData.value : 22450.00;
+  const niftyChange = niftyData ? niftyData.change : 0.45;
+  const isPositive = niftyChange >= 0;
 
   const handleChange = (e) => {
     setFormData({
@@ -50,53 +70,34 @@ const Login = () => {
           <div className="auth-hero-main">
             <h1 className="auth-hero-tagline">
               Trade Smart.<br />
-              Invest Better.<br />
-              <span>Master The Market.</span>
+              <span>Master the Market.</span>
             </h1>
             <p className="auth-hero-desc">
-              Practise virtual stock trading using live Indian indices, interactive chart technicals, watchlists, and comprehensive portfolio tracking.
+              Practice stock trading using our high-performance virtual simulator powered by real-time Indian market feeds.
             </p>
           </div>
 
-          {/* SIMULATED ACCENT CARD FOR GRAPHICS */}
+          {/* MINIMAL LIVE ACCENT CARD */}
           <div className="auth-hero-widget">
             <div className="widget-header">
-              <span className="widget-title">Indices Highlight</span>
-              <span className="widget-badge">Live Feed</span>
+              <span className="widget-title">Market Index Live Feed</span>
+              <span className={`widget-status-dot ${connected ? "connected" : "simulated"}`}></span>
             </div>
             <div className="widget-body">
               <div className="widget-metric">
                 <span className="metric-label">NIFTY 50</span>
                 <div className="metric-row">
-                  <span className="metric-value">₹24,850.00</span>
-                  <span className="metric-change positive">
-                    <FaArrowUp size={8} /> +1.25%
+                  <span className="metric-value">{formatValue(niftyValue)}</span>
+                  <span className={`metric-change ${isPositive ? "positive" : "negative"}`}>
+                    {isPositive ? "▲" : "▼"} {Math.abs(niftyChange).toFixed(2)}%
                   </span>
                 </div>
-              </div>
-              <div className="widget-mini-chart">
-                <div className="chart-bar" style={{ height: "40%" }}></div>
-                <div className="chart-bar" style={{ height: "55%" }}></div>
-                <div className="chart-bar" style={{ height: "70%" }}></div>
-                <div className="chart-bar" style={{ height: "50%" }}></div>
-                <div className="chart-bar active" style={{ height: "85%" }}></div>
               </div>
             </div>
           </div>
 
           <div className="auth-hero-footer">
-            <div className="hero-bullet">
-              <FaChartLine className="bullet-icon" />
-              <span>Real-Time Quotes</span>
-            </div>
-            <div className="hero-bullet">
-              <FaShieldAlt className="bullet-icon" />
-              <span>Zero Risk Trading</span>
-            </div>
-            <div className="hero-bullet">
-              <FaBriefcase className="bullet-icon" />
-              <span>Full Analytics</span>
-            </div>
+            <span>© 2026 TradeXpert. Practise virtual stock trading with zero financial risk.</span>
           </div>
         </div>
       </div>
@@ -116,6 +117,7 @@ const Login = () => {
                 type="email"
                 name="email"
                 placeholder="email@example.com"
+                value={formData.email}
                 onChange={handleChange}
                 className="auth-input-field"
                 required
@@ -124,14 +126,24 @@ const Login = () => {
 
             <div className="auth-input-group">
               <label className="auth-input-label">Password</label>
-              <input
-                type="password"
-                name="password"
-                placeholder="••••••••"
-                onChange={handleChange}
-                className="auth-input-field"
-                required
-              />
+              <div className="password-input-wrapper">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="auth-input-field"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="password-toggle-btn"
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
             </div>
 
             <div className="auth-forgot-link-row">

@@ -1,6 +1,23 @@
 import axios from "axios";
 import fs from "fs";
 import path from "path";
+import zlib from "zlib";
+import { promisify } from "util";
+
+const gunzip = promisify(zlib.gunzip);
+
+const fetchExchangeInstruments = async (url) => {
+  try {
+    console.log(`⬇️ Downloading ${url}...`);
+    const response = await axios.get(url, { responseType: "arraybuffer" });
+    const decompressed = await gunzip(response.data);
+    const data = JSON.parse(decompressed.toString("utf-8"));
+    return data;
+  } catch (e) {
+    console.error(`❌ Failed to fetch/parse from ${url}:`, e.message);
+    return [];
+  }
+};
 
 const CACHE_FILE = path.join(
   process.cwd(),
@@ -56,30 +73,40 @@ export const fetchAllInstruments = async (accessToken) => {
       }
     }
 
-    // FETCH FROM UPSTOX API
-    console.log("⬇️  Fetching instruments from Upstox...");
+    console.log("⬇️ Fetching instruments from public Upstox assets...");
 
-    const response = await axios.get("https://api-v2.upstox.com/v2/market/instruments", {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: "application/json",
-      },
-    });
+    const nseUrl = "https://assets.upstox.com/market-quote/instruments/exchange/NSE.json.gz";
+    const bseUrl = "https://assets.upstox.com/market-quote/instruments/exchange/BSE.json.gz";
 
-    const allInstruments = response.data.data || [];
+    const [nseData, bseData] = await Promise.all([
+      fetchExchangeInstruments(nseUrl),
+      fetchExchangeInstruments(bseUrl),
+    ]);
 
-    // RETURN ALL NSE & BSE EQUITY STOCKS
-    const nseStocks = allInstruments.filter((item) => item.exchange === "NSE_EQ" && item.instrument_type === "EQUITY");
-    const bseStocks = allInstruments.filter((item) => item.exchange === "BSE_EQ" && item.instrument_type === "EQUITY");
+    console.log(`Processing and filtering ${nseData.length + bseData.length} total instruments...`);
+
+    const filterEquity = (list) => {
+      if (!Array.isArray(list)) return [];
+      return list.filter((item) => {
+        const type = (item.instrument_type || item.instrumentType || "").toUpperCase();
+        const segment = (item.segment || "").toUpperCase();
+        return type === "EQ" || type === "EQUITY" || segment === "NSE_EQ" || segment === "BSE_EQ";
+      });
+    };
+
+    const nseStocks = filterEquity(nseData);
+    const bseStocks = filterEquity(bseData);
 
     const instruments = [...nseStocks, ...bseStocks];
 
-    // SAVE TO CACHE
-    fs.writeFileSync(CACHE_FILE, JSON.stringify({ timestamp: Date.now(), instruments }));
-
-    console.log(`✅ Fetched ${instruments.length} instruments`);
-
-    return instruments;
+    if (instruments.length > 0) {
+      // SAVE TO CACHE
+      fs.writeFileSync(CACHE_FILE, JSON.stringify({ timestamp: Date.now(), instruments }));
+      console.log(`✅ Saved ${instruments.length} equity instruments to cache.`);
+      return instruments;
+    } else {
+      throw new Error("No equity instruments found after downloading");
+    }
   } catch (error) {
     console.error("❌ Error fetching instruments:", error.message);
     // FALLBACK TO CACHE IF AVAILABLE
@@ -87,7 +114,7 @@ export const fetchAllInstruments = async (accessToken) => {
       const cacheData = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
       return cacheData.instruments;
     }
-    return [];
+    return SEEDED_STOCKS;
   }
 };
 
@@ -122,3 +149,49 @@ export const searchInstruments = (query) => {
     return [];
   }
 };
+
+// Get instrument key and company name for a trading symbol
+export const getInstrumentDetails = (symbol) => {
+  try {
+    if (!symbol) return null;
+    const sym = String(symbol).trim().toUpperCase();
+
+    let items = [];
+    if (fs.existsSync(CACHE_FILE)) {
+      const cacheData = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
+      items = cacheData.instruments || [];
+    }
+
+    if (!items.length) {
+      items = SEEDED_STOCKS;
+    }
+
+    // Prefer NSE EQ first
+    let match = items.find((it) => {
+      const trading = (it.trading_symbol || it.tradingSymbol || "").toUpperCase();
+      const exchange = (it.exchange || "").toUpperCase();
+      const type = (it.instrument_type || it.instrumentType || "").toUpperCase();
+      return trading === sym && (exchange === "NSE" && (type === "EQ" || type === "EQUITY"));
+    });
+
+    // If not found, any match for the symbol
+    if (!match) {
+      match = items.find((it) => {
+        const trading = (it.trading_symbol || it.tradingSymbol || "").toUpperCase();
+        return trading === sym;
+      });
+    }
+
+    if (match) {
+      return {
+        instrument_key: match.instrument_key || match.instrumentKey,
+        name: match.name || match.company_name || match.trading_symbol || match.tradingSymbol,
+      };
+    }
+    return null;
+  } catch (e) {
+    console.error("getInstrumentDetails error:", e.message);
+    return null;
+  }
+};
+

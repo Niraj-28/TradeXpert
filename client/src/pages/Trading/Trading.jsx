@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useMarket } from "../../context/MarketContext";
+import { socket } from "../../services/socket";
 import { getWatchlist } from "../../services/watchlistService";
 import { searchStocks } from "../../services/marketApi";
 import { getHoldings } from "../../services/holdingService";
@@ -176,6 +177,16 @@ const Trading = () => {
   // Clear ticks on switching stock
   useEffect(() => {
     setLiveTicks([]);
+  }, [selectedSymbol]);
+
+  // Register dynamic view-stock in backend dynamically
+  useEffect(() => {
+    if (selectedSymbol) {
+      socket.emit("view-stock", selectedSymbol);
+    }
+    return () => {
+      socket.emit("unview-stock");
+    };
   }, [selectedSymbol]);
 
   // Simulate ticks for custom symbols not in core feed
