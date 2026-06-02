@@ -5918,4 +5918,234 @@ section .grid.grid-cols-4 > div p {
   font-size: 12px;
 }
 
+/* ========================================
+   ORDER EXECUTION NOTIFICATIONS DRAWERS
+======================================== */
+
+.profile-notification-badge-dot {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 9px;
+  height: 9px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35);
+  animation: pulse-dot 1.8s infinite ease-in-out;
+}
+
+@keyframes pulse-dot {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+  }
+  70% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 5px rgba(239, 68, 68, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+.notification-badge-count {
+  background-color: #ef4444;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  line-height: 1;
+  display: inline-block;
+}
+
+.notifications-subdrawer {
+  display: flex;
+  flex-direction: column;
+  min-height: 220px;
+  max-height: 350px;
+}
+
+.subdrawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+}
+
+.subdrawer-header h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--brand-dark);
+  margin: 0;
+}
+
+.subdrawer-back-btn {
+  border: none;
+  background: transparent;
+  color: var(--brand-accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  display: inline-flex;
+  align-items: center;
+}
+
+.subdrawer-back-btn:hover {
+  background: rgba(64, 138, 113, 0.08);
+}
+
+.subdrawer-clear-btn {
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.subdrawer-clear-btn:hover {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.notifications-list-viewport {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 8px;
+  padding-right: 4px;
+}
+
+.notifications-list-viewport::-webkit-scrollbar {
+  width: 4px;
+}
+
+.notifications-list-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.notifications-list-viewport::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+.notifications-list-viewport::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.notifications-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  color: #64748b;
+  text-align: center;
+}
+
+.notifications-empty-state p {
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+.notification-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(64, 138, 113, 0.03);
+  border: 1px solid rgba(40, 90, 72, 0.06);
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.notification-item:hover {
+  background: rgba(64, 138, 113, 0.06);
+  border-color: rgba(40, 90, 72, 0.12);
+}
+
+.notification-message {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #334155;
+  font-weight: 500;
+  margin: 0 0 4px 0;
+  word-break: break-word;
+}
+
+.notification-time {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 500;
+  display: block;
+}
+
+/* ========================================
+   EXCHANGE AND PRICE MODE TOGGLES
+======================================== */
+
+.exchange-selector-pills {
+  display: flex;
+  gap: 8px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.exchange-selector-pills .exchange-pill-btn {
+  border: none;
+  background: transparent;
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  padding: 8px 6px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.exchange-selector-pills .exchange-pill-btn.active {
+  background: #ffffff;
+  color: #00b074;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+}
+
+/* ========================================
+   MARKETS SEARCH BAR ALIGNMENT
+======================================== */
+
+.market-table-header {
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 14px;
+  margin-bottom: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.market-table-header-left {
+  flex: 1;
+  min-width: 250px;
+}
+
+.market-table-header-search {
+  width: 380px;
+  max-width: 100%;
+}
+
+.market-table-header-search .discover-search-container {
+  margin-bottom: 0;
+}
+
 

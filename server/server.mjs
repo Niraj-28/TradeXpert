@@ -37,6 +37,8 @@ const io = new Server(server, {
 
 });
 
+app.set("io", io);
+
 app.use(cors());
 
 app.use(express.json());
@@ -56,6 +58,13 @@ initializeMarketPolling(io);
 
 io.on("connection", (socket) => {
   console.log("✅ Client Connected:", socket.id);
+
+  socket.on("join-user-room", (userId) => {
+    if (userId) {
+      socket.join(userId.toString());
+      console.log(`👤 Socket ${socket.id} joined user room: ${userId}`);
+    }
+  });
 
   socket.on("view-stock", (symbol) => {
     if (symbol) {

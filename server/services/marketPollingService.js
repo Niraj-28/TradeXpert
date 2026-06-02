@@ -22,20 +22,37 @@ const chunkArray = (arr, size) => {
   return chunks;
 };
 
-const symbolMap = {
-  // INDICES
+const POPULAR_SYMBOLS = [
+  "RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "SBIN", "BHARTIARTL", 
+  "ITC", "LT", "TATASTEEL", "TATAMOTORS", "WIPRO", "AXISBANK", "KOTAKBANK", 
+  "HINDUNILVR", "ADANIENT", "BAJFINANCE", "MARUTI", "SUNPHARMA", "M&M", 
+  "ONGC", "POWERGRID", "NTPC", "COALINDIA", "ADANIPORTS", "ULTRACEMCO", 
+  "GRASIM", "JSWSTEEL", "LTIM", "HINDALCO"
+];
+
+const indicesMap = {
   "NSE_INDEX|Nifty 50": "NIFTY 50",
   "NSE_INDEX|Nifty Bank": "BANK NIFTY",
   "BSE_INDEX|SENSEX": "SENSEX",
   "NSE_INDEX|Nifty Fin Service": "FIN NIFTY",
+};
 
-  // STOCKS
-  "NSE_EQ|INE002A01018": "RELIANCE",
-  "NSE_EQ|INE467B01029": "TCS",
-  "NSE_EQ|INE009A01021": "INFY",
-  "NSE_EQ|INE040A01034": "HDFCBANK",
-  "NSE_EQ|INE090A01021": "ICICIBANK",
-  "NSE_EQ|INE062A01020": "SBIN",
+let popularInstrumentsMap = null;
+
+const getPopularInstrumentsMap = () => {
+  if (popularInstrumentsMap) return popularInstrumentsMap;
+  
+  const mapping = {};
+  for (const sym of POPULAR_SYMBOLS) {
+    const details = getInstrumentDetails(sym);
+    if (details && details.instrument_key) {
+      mapping[details.instrument_key] = sym;
+    } else {
+      mapping[`NSE_EQ|${sym}`] = sym;
+    }
+  }
+  popularInstrumentsMap = mapping;
+  return popularInstrumentsMap;
 };
 
 // Persistent simulated prices store for fallback
@@ -46,12 +63,6 @@ const coreBasePrices = {
   "BANK NIFTY": 48200.0,
   "SENSEX": 74000.0,
   "FIN NIFTY": 21500.0,
-  "RELIANCE": 2450.0,
-  "TCS": 3850.0,
-  "INFY": 1420.0,
-  "HDFCBANK": 1520.0,
-  "ICICIBANK": 1120.0,
-  "SBIN": 780.0,
 };
 
 const getOrInitializeSimulatedPrice = (symbol, instrumentKey) => {
@@ -95,6 +106,41 @@ const getOrInitializeSimulatedPrice = (symbol, instrumentKey) => {
   return data;
 };
 
+const stockSectors = {
+  TCS: "IT", INFY: "IT", WIPRO: "IT", LTIM: "IT",
+  HDFCBANK: "BANKING", ICICIBANK: "BANKING", SBIN: "BANKING", AXISBANK: "BANKING", KOTAKBANK: "BANKING",
+  TATAMOTORS: "AUTO", MARUTI: "AUTO", "M&M": "AUTO",
+  SUNPHARMA: "PHARMA",
+  RELIANCE: "ENERGY", ONGC: "ENERGY", NTPC: "ENERGY", POWERGRID: "ENERGY", COALINDIA: "ENERGY",
+  TATASTEEL: "METAL", JSWSTEEL: "METAL", HINDALCO: "METAL",
+  LT: "INFRASTRUCTURE", ULTRACEMCO: "INFRASTRUCTURE", GRASIM: "INFRASTRUCTURE",
+  ITC: "CONSUMER GOODS", HINDUNILVR: "CONSUMER GOODS", LICI: "INSURANCE",
+  ADANIENT: "CONGLOMERATES", ADANIPORTS: "INFRASTRUCTURE", JIOFIN: "FINANCIAL SERVICES"
+};
+
+const calculateSectorPerformance = (stockData) => {
+  const sectorChanges = {};
+  const sectorCounts = {};
+
+  stockData.forEach((item) => {
+    const sector = stockSectors[item.symbol?.toUpperCase()];
+    if (sector) {
+      const change = parseFloat(item.percent ?? item.change ?? 0);
+      if (!isNaN(change)) {
+        sectorChanges[sector] = (sectorChanges[sector] || 0) + change;
+        sectorCounts[sector] = (sectorCounts[sector] || 0) + 1;
+      }
+    }
+  });
+
+  const sectorsList = Object.keys(sectorChanges).map((sec) => ({
+    sector: sec,
+    change: Number((sectorChanges[sec] / sectorCounts[sec]).toFixed(2)),
+  }));
+
+  return sectorsList.sort((a, b) => b.change - a.change);
+};
+
 function emitMarketData(formattedData) {
   const indexSymbols = new Set([
     "NIFTY 50",
@@ -103,29 +149,12 @@ function emitMarketData(formattedData) {
     "FIN NIFTY",
   ]);
 
-  const companyMap = {
-    RELIANCE: "Reliance Industries",
-    TCS: "Tata Consultancy Services",
-    INFY: "Infosys",
-    HDFCBANK: "HDFC Bank",
-    ICICIBANK: "ICICI Bank",
-    SBIN: "State Bank of India",
-  };
-
-  const sectorFallback = [
-    { sector: "IT", change: 1.2 },
-    { sector: "BANKING", change: -0.4 },
-    { sector: "AUTO", change: 0.8 },
-    { sector: "PHARMA", change: 1.5 },
-    { sector: "ENERGY", change: -0.2 },
-  ];
-
   const indicesData = formattedData
     .filter((item) => indexSymbols.has(item.symbol))
     .map((item) => ({
       name: item.symbol,
       value: `₹${item.price}`,
-      change: Number(item.change),
+      change: Number(item.percent),
     }));
 
   const stockData = formattedData.filter(
@@ -135,49 +164,73 @@ function emitMarketData(formattedData) {
   const trendingData = stockData.slice(0, 6).map((item) => ({
     symbol: item.symbol,
     price: item.price,
-    change: item.change,
+    change: item.percent,
   }));
 
-  const marketTableData = stockData.map((item) => ({
-    symbol: item.symbol,
-    company: companyMap[item.symbol] || item.symbol,
-    price: item.price,
-    change: item.change,
-    volume: item.volume || "—",
-  }));
+  const marketTableData = stockData.map((item) => {
+    const details = getInstrumentDetails(item.symbol);
+    return {
+      symbol: item.symbol,
+      company: details?.name || item.symbol,
+      price: item.price,
+      change: item.percent,
+      volume: item.volume || "—",
+    };
+  });
 
   const gainersData = [...stockData]
-    .sort((a, b) => parseFloat(b.change) - parseFloat(a.change))
+    .sort((a, b) => parseFloat(b.percent) - parseFloat(a.percent))
     .slice(0, 3)
     .map((item) => ({
       symbol: item.symbol,
       price: item.price,
-      change: item.change,
+      change: item.percent,
     }));
 
   const losersData = [...stockData]
-    .sort((a, b) => parseFloat(a.change) - parseFloat(b.change))
+    .sort((a, b) => parseFloat(a.percent) - parseFloat(b.percent))
     .slice(0, 3)
     .map((item) => ({
       symbol: item.symbol,
       price: item.price,
-      change: item.change,
+      change: item.percent,
     }));
+
+  const dynamicSectors = calculateSectorPerformance(stockData);
 
   ioInstance.emit("market-indices", indicesData);
   ioInstance.emit("trending-stocks", trendingData);
   ioInstance.emit("market-table", marketTableData);
   ioInstance.emit("top-gainers", gainersData);
   ioInstance.emit("top-losers", losersData);
-  ioInstance.emit("sector-performance", sectorFallback);
+  ioInstance.emit("sector-performance", dynamicSectors);
   ioInstance.emit("marketData", formattedData);
+
+  // Check and trigger pending limit orders
+  try {
+    const { checkPendingLimitOrders } = require("./orderExecutionService.cjs");
+    for (const item of formattedData) {
+      if (!indexSymbols.has(item.symbol)) {
+        checkPendingLimitOrders(item.symbol, parseFloat(item.price), ioInstance).catch(err => {
+          console.error("Error checking limits in background:", err.message);
+        });
+      }
+    }
+  } catch (e) {
+    console.error("Failed to load limit order execution service in background:", e.message);
+  }
 }
 
 function simulateAndEmitPrices(activeSymbolsMap) {
   const allSymbols = {};
   
-  // Populate from symbolMap
-  for (const [key, val] of Object.entries(symbolMap)) {
+  const popularMap = getPopularInstrumentsMap();
+  // Populate from indicesMap
+  for (const [key, val] of Object.entries(indicesMap)) {
+    allSymbols[key] = val;
+  }
+  // Populate from popularMap
+  for (const [key, val] of Object.entries(popularMap)) {
     allSymbols[key] = val;
   }
   // Populate from activeSymbolsMap (user custom stocks)
@@ -252,8 +305,10 @@ async function fetchMarketData() {
     return;
   }
 
+  const popularMap = getPopularInstrumentsMap();
   const instrumentsToPoll = [
-    ...Object.keys(symbolMap),
+    ...Object.keys(indicesMap),
+    ...Object.keys(popularMap),
     ...Object.keys(dynamicSymbolMap),
   ];
   const uniqueInstruments = [...new Set(instrumentsToPoll)];
@@ -297,10 +352,10 @@ async function fetchMarketData() {
       ];
 
       const symbolLookup =
-        symbolMap[normalizedKey] ||
-        symbolMap[key] ||
-        symbolMap[normalizedKey.toLowerCase()] ||
-        symbolMap[key.toLowerCase()] ||
+        indicesMap[normalizedKey] ||
+        indicesMap[key] ||
+        popularMap[normalizedKey] ||
+        popularMap[key] ||
         dynamicSymbolMap[key] ||
         dynamicSymbolMap[normalizedKey];
 
@@ -322,18 +377,19 @@ async function fetchMarketData() {
       let baseSymbol = tryValues.find(isValidSymbol) || symbolLookup || fallbackFromKey || key;
       baseSymbol = String(baseSymbol).trim();
 
-      const priceValue = item.last_price ?? item.close ?? item.ltp ?? 0;
-      const changeValue = item.net_change ?? item.change ?? 0;
-      const percentValue = item.percent_change ?? item.change_percentage ?? 0;
+      const priceValue = Number(item.last_price ?? item.close ?? item.ltp ?? 0);
+      const changeValue = Number(item.net_change ?? item.change ?? 0);
+      const prevClose = priceValue - changeValue;
+      const percentValue = prevClose !== 0 ? (changeValue / prevClose) * 100 : 0;
 
       return {
         symbol: baseSymbol || String(key),
         instrument: key,
-        price: Number(priceValue).toFixed(2),
-        change: Number(changeValue).toFixed(2),
-        percent: Number(percentValue).toFixed(2),
-        high: item.ohlc?.high || Number(priceValue) * 1.01,
-        low: item.ohlc?.low || Number(priceValue) * 0.99,
+        price: priceValue.toFixed(2),
+        change: changeValue.toFixed(2),
+        percent: percentValue.toFixed(2),
+        high: item.ohlc?.high || priceValue * 1.01,
+        low: item.ohlc?.low || priceValue * 0.99,
         open: item.ohlc?.open || priceValue,
         close: item.ohlc?.close || priceValue,
       };

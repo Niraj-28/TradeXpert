@@ -58,19 +58,31 @@ const orderSchema =
       },
 
       status: {
-
         type: String,
-
         enum: [
-
           "PENDING",
           "EXECUTED",
           "CANCELLED",
-
         ],
-
         default: "PENDING",
+      },
 
+      exchange: {
+        type: String,
+        enum: [
+          "NSE",
+          "BSE",
+        ],
+        default: "NSE",
+      },
+
+      priceMode: {
+        type: String,
+        enum: [
+          "MARKET",
+          "LIMIT",
+        ],
+        default: "MARKET",
       },
 
       executedAt: Date,

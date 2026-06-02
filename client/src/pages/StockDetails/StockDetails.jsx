@@ -270,6 +270,7 @@ const StockDetails = () => {
   const [priceMode, setPriceMode] = useState("Market"); // Market | Limit
   const [tradeQty, setTradeQty] = useState(1);
   const [limitPrice, setLimitPrice] = useState(0);
+  const [exchange, setExchange] = useState("NSE"); // NSE | BSE
   const [placingOrder, setPlacingOrder] = useState(false);
 
   // Simulated cash and holdings
@@ -368,6 +369,19 @@ const StockDetails = () => {
     }
     return () => {
       socket.emit("unview-stock");
+    };
+  }, [symbol]);
+
+  // Listen to background order execution
+  useEffect(() => {
+    const handleOrderExecuted = (data) => {
+      if (data && data.symbol?.toUpperCase() === symbol.toUpperCase()) {
+        fetchUserData();
+      }
+    };
+    socket.on("order-executed", handleOrderExecuted);
+    return () => {
+      socket.off("order-executed", handleOrderExecuted);
     };
   }, [symbol]);
 
@@ -509,15 +523,17 @@ const StockDetails = () => {
         type: tradeType,
         quantity: Number(tradeQty),
         price: Number(execPrice),
+        exchange: exchange,
+        priceMode: priceMode.toUpperCase()
       });
 
-      toast.success(`Virtual order submitted: ${tradeType} ${tradeQty} shares of ${symbol.toUpperCase()}`);
-      
-      // Auto execute simulation delay
-      setTimeout(() => {
-        toast.success(`Order Filled: Executed ${tradeQty} shares at ₹${execPrice.toFixed(2)}`, { icon: "📈" });
-        fetchUserData();
-      }, 2000);
+      if (priceMode === "Limit") {
+        toast.success(`Limit order placed at ₹${Number(execPrice).toFixed(2)} on ${exchange}`);
+      } else {
+        toast.success(`Market order submitted: ${tradeType} ${tradeQty} shares on ${exchange}`);
+      }
+
+      fetchUserData();
 
     } catch (err) {
       toast.error(err.response?.data?.message || "Virtual execution failed");
@@ -971,10 +987,26 @@ const StockDetails = () => {
                 </div>
               </div>
 
+              {/* Exchange Selector */}
+              <div className="ticket-form-section">
+                <div className="exchange-selector-pills">
+                  {["NSE", "BSE"].map((ex) => (
+                    <button
+                      key={ex}
+                      type="button"
+                      onClick={() => setExchange(ex)}
+                      className={`exchange-pill-btn ${exchange === ex ? "active" : ""}`}
+                    >
+                      {ex}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Quantity */}
               <div className="ticket-form-section">
                 <div className="field-input-wrapper">
-                  <label className="field-label">Qty NSE</label>
+                  <label className="field-label">Qty {exchange}</label>
                   <input
                     type="number"
                     min="1"

@@ -28,17 +28,8 @@ const MarketsPage = () => {
         {/* TRENDING STOCKS */}
         <TrendingStocks />
 
-        {/* DISCOVER & SEARCH SECTION */}
+        {/* LIVE MARKET DASHBOARD SECTION */}
         <div className="discover-market-section">
-          <div className="market-section-header">
-            <h1 className="market-section-title">Search & Discovery</h1>
-            <p className="market-section-subtitle">
-              Look up active NSE/BSE tickers, view pricing details, and place quick orders
-            </p>
-          </div>
-
-          <DiscoverStocks onTrade={handleInitiateTrade} />
-          
           <MarketTable onTrade={handleInitiateTrade} />
         </div>
 

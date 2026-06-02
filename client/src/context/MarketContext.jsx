@@ -9,6 +9,39 @@ import { socket } from "../services/socket";
 
 const MarketContext = createContext();
 
+const mergeStockHistory = (prevStocks, nextData) => {
+  if (!Array.isArray(nextData)) return prevStocks;
+  return nextData.map((newStock) => {
+    if (!newStock || !newStock.symbol) return newStock;
+    const sym = newStock.symbol.toUpperCase();
+    const prevStock = Array.isArray(prevStocks) ? prevStocks.find((s) => s.symbol?.toUpperCase() === sym) : null;
+    const prevHistory = prevStock?.history || [];
+    const price = parseFloat(newStock.price);
+    let history = [...prevHistory];
+    if (!isNaN(price)) {
+      if (history.length === 0) {
+        const change = parseFloat(newStock.change) || 0;
+        const prevPrice = price / (1 + change / 100);
+        history = [];
+        for (let i = 0; i < 10; i++) {
+          const t = i / 9;
+          const noise = (Math.random() * 0.2 - 0.1) / 100;
+          const val = prevPrice + (price - prevPrice) * t;
+          history.push(Number((val * (1 + noise)).toFixed(2)));
+        }
+      } else {
+        if (history[history.length - 1] !== price) {
+          history.push(price);
+        }
+      }
+    }
+    return {
+      ...newStock,
+      history: history.slice(-15),
+    };
+  });
+};
+
 export const MarketProvider = ({ children }) => {
   const [connected, setConnected] = useState(false);
 
@@ -107,7 +140,7 @@ export const MarketProvider = ({ children }) => {
     socket.on("market-table", (data) => {
       console.log("TABLE:", data);
 
-      setMarketStocks(data);
+      setMarketStocks((prev) => mergeStockHistory(prev, data));
     });
 
     socket.on("sector-performance", (data) => {
@@ -220,7 +253,7 @@ export const MarketProvider = ({ children }) => {
 
       setIndices(indicesData);
       setTrendingStocks(trendingData);
-      setMarketStocks(marketTableData);
+      setMarketStocks((prev) => mergeStockHistory(prev, marketTableData));
       setTopGainers(gainersData);
       setTopLosers(losersData);
     };
@@ -247,7 +280,7 @@ export const MarketProvider = ({ children }) => {
     });
 
     socket.on("market-table", (data) => {
-      if (Array.isArray(data)) setMarketStocks(data);
+      if (Array.isArray(data)) setMarketStocks((prev) => mergeStockHistory(prev, data));
     });
 
     socket.on("top-gainers", (data) => {

@@ -10,6 +10,7 @@ import {
 import { useState, useEffect, useRef } from "react";
 import { searchStocks } from "../../services/marketApi";
 import { useAuth } from "../../context/AuthContext";
+import { socket } from "../../services/socket";
 import toast from "react-hot-toast";
 import logo from "../../assets/Logo.png";
 
@@ -24,6 +25,17 @@ const Navbar = () => {
   const [searching, setSearching] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
+  // Notifications state (loaded from / synced to localStorage)
+  const [notifications, setNotifications] = useState(() => {
+    try {
+      const saved = localStorage.getItem("trade_notifications");
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [showNotifications, setShowNotifications] = useState(false);
+
   // Click outside to close search dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -34,6 +46,45 @@ const Navbar = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Listen to order execution notifications
+  useEffect(() => {
+    if (user && (user.id || user._id)) {
+      const uid = user.id || user._id;
+      socket.emit("join-user-room", uid);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const handleOrderExecuted = (data) => {
+      toast.success(data.message, { icon: "📈", duration: 5000 });
+      setNotifications((prev) => {
+        const next = [
+          {
+            id: data.id || Math.random().toString(),
+            message: data.message,
+            time: data.time || new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }),
+            read: false,
+          },
+          ...prev,
+        ];
+        localStorage.setItem("trade_notifications", JSON.stringify(next.slice(0, 50)));
+        return next.slice(0, 50);
+      });
+    };
+
+    socket.on("order-executed", handleOrderExecuted);
+    return () => {
+      socket.off("order-executed", handleOrderExecuted);
+    };
+  }, []);
+
+  // Reset notifications subview when avatar dropdown closes
+  useEffect(() => {
+    if (!open) {
+      setShowNotifications(false);
+    }
+  }, [open]);
 
   const handleSearchChange = async (e) => {
     const val = e.target.value;
@@ -63,9 +114,32 @@ const Navbar = () => {
     setOpen(false);
   };
 
+  const handleOpenNotifications = (e) => {
+    e.stopPropagation();
+    setShowNotifications(true);
+    // Mark all as read
+    setNotifications((prev) => {
+      const next = prev.map((n) => ({ ...n, read: true }));
+      localStorage.setItem("trade_notifications", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const handleClearNotifications = (e) => {
+    e.stopPropagation();
+    setNotifications([]);
+    localStorage.removeItem("trade_notifications");
+  };
+
+  const handleBackToMenu = (e) => {
+    e.stopPropagation();
+    setShowNotifications(false);
+  };
+
   // Get user avatar initials
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : "N";
   const userFullName = user?.name || "Niraj Kotadiya";
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <header className="navbar">
@@ -195,56 +269,95 @@ const Navbar = () => {
           <div
             className="profile-box"
             onClick={() => setOpen(!open)}
+            style={{ position: "relative" }}
           >
             {userInitial}
+            {unreadCount > 0 && <span className="profile-notification-badge-dot" />}
           </div>
 
           {open && (
             <div className="profile-dropdown">
-
-              {/* USER */}
-              <div className="dropdown-user">
-
-                <div className="dropdown-avatar">
-                  {userInitial}
+              {showNotifications ? (
+                /* NOTIFICATIONS SUB-DRAWER */
+                <div className="notifications-subdrawer">
+                  <div className="subdrawer-header">
+                    <button className="subdrawer-back-btn" onClick={handleBackToMenu}>
+                      ← Back
+                    </button>
+                    <h4>Notifications</h4>
+                    {notifications.length > 0 && (
+                      <button className="subdrawer-clear-btn" onClick={handleClearNotifications}>
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div className="dropdown-divider"></div>
+                  
+                  <div className="notifications-list-viewport">
+                    {notifications.length === 0 ? (
+                      <div className="notifications-empty-state">
+                        <Bell size={20} className="text-slate-500 mb-1" />
+                        <p>No new notifications</p>
+                      </div>
+                    ) : (
+                      notifications.map((n) => (
+                        <div key={n.id} className="notification-item">
+                          <p className="notification-message">{n.message}</p>
+                          <span className="notification-time">{n.time}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
+              ) : (
+                /* ORIGINAL USER PROFILE MENU */
+                <>
+                  {/* USER */}
+                  <div className="dropdown-user">
+                    <div className="dropdown-avatar">
+                      {userInitial}
+                    </div>
+                    <div>
+                      <h4>{userFullName}</h4>
+                      <p>Trader</p>
+                    </div>
+                  </div>
 
-                <div>
-                  <h4>{userFullName}</h4>
-                  <p>Trader</p>
-                </div>
+                  <div className="dropdown-divider"></div>
 
-              </div>
+                  {/* PROFILE */}
+                  <NavLink
+                    to="/profile"
+                    className="dropdown-link"
+                    onClick={() => setOpen(false)}
+                  >
+                    <button className="dropdown-item">
+                      <User size={16} />
+                      Profile
+                    </button>
+                  </NavLink>
 
-              <div className="dropdown-divider"></div>
+                  {/* NOTIFICATION */}
+                  <button className="dropdown-item" onClick={handleOpenNotifications}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Bell size={16} />
+                        <span>Notifications</span>
+                      </div>
+                      {unreadCount > 0 && (
+                        <span className="notification-badge-count">{unreadCount}</span>
+                      )}
+                    </div>
+                  </button>
 
-              {/* PROFILE */}
-
-              <NavLink
-                to="/profile"
-                className="dropdown-link"
-                onClick={() => setOpen(false)}
-              >
-                <button className="dropdown-item">
-                  <User size={16} />
-                  Profile
-                </button>
-              </NavLink>
-
-              {/* NOTIFICATION */}
-
-              <button className="dropdown-item" onClick={() => setOpen(false)}>
-                <Bell size={16} />
-                Notifications
-              </button>
-
-              {/* LOGOUT */}
-
-              <button className="dropdown-item logout" onClick={handleLogoutClick}>
-                <LogOut size={16} />
-                Logout
-              </button>
-
+                  {/* LOGOUT */}
+                  <button className="dropdown-item logout" onClick={handleLogoutClick}>
+                    <LogOut size={16} />
+                    Logout
+                  </button>
+                </>
+              )}
             </div>
           )}
 

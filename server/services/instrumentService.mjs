@@ -60,6 +60,25 @@ const SEEDED_STOCKS = [
   { instrument_key: "NSE_EQ|JSWSTEEL", trading_symbol: "JSWSTEEL", name: "JSW Steel Limited", exchange: "NSE" }
 ];
 
+let cachedInstruments = null;
+
+const loadInstrumentsIntoMemory = () => {
+  if (cachedInstruments) return cachedInstruments;
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      const cacheData = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
+      cachedInstruments = cacheData.instruments || [];
+      console.log(`⚡ [INSTRUMENTS] Loaded ${cachedInstruments.length} instruments into memory cache.`);
+    }
+  } catch (err) {
+    console.error("❌ [INSTRUMENTS] Error loading instruments cache from disk:", err.message);
+  }
+  if (!cachedInstruments || !cachedInstruments.length) {
+    cachedInstruments = SEEDED_STOCKS;
+  }
+  return cachedInstruments;
+};
+
 // FETCH ALL INSTRUMENTS FROM UPSTOX
 export const fetchAllInstruments = async (accessToken) => {
   try {
@@ -69,7 +88,8 @@ export const fetchAllInstruments = async (accessToken) => {
       const cacheAge = Date.now() - cacheData.timestamp;
       if (cacheAge < CACHE_DURATION) {
         console.log("✅ Using cached instruments");
-        return cacheData.instruments;
+        cachedInstruments = cacheData.instruments;
+        return cachedInstruments;
       }
     }
 
@@ -103,6 +123,7 @@ export const fetchAllInstruments = async (accessToken) => {
       // SAVE TO CACHE
       fs.writeFileSync(CACHE_FILE, JSON.stringify({ timestamp: Date.now(), instruments }));
       console.log(`✅ Saved ${instruments.length} equity instruments to cache.`);
+      cachedInstruments = instruments;
       return instruments;
     } else {
       throw new Error("No equity instruments found after downloading");
@@ -111,10 +132,14 @@ export const fetchAllInstruments = async (accessToken) => {
     console.error("❌ Error fetching instruments:", error.message);
     // FALLBACK TO CACHE IF AVAILABLE
     if (fs.existsSync(CACHE_FILE)) {
-      const cacheData = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
-      return cacheData.instruments;
+      try {
+        const cacheData = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
+        cachedInstruments = cacheData.instruments;
+        return cachedInstruments;
+      } catch (e) {}
     }
-    return SEEDED_STOCKS;
+    cachedInstruments = SEEDED_STOCKS;
+    return cachedInstruments;
   }
 };
 
@@ -122,17 +147,7 @@ export const fetchAllInstruments = async (accessToken) => {
 export const searchInstruments = (query) => {
   try {
     const q = String(query || "").trim().toLowerCase();
-
-    let items = [];
-    if (fs.existsSync(CACHE_FILE)) {
-      const cacheData = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
-      items = cacheData.instruments || [];
-    }
-
-    // Seed fallback stocks if cache is not created or empty
-    if (!items.length) {
-      items = SEEDED_STOCKS;
-    }
+    const items = loadInstrumentsIntoMemory();
 
     const results = items.filter((it) => {
       const trading = (it.trading_symbol || it.tradingSymbol || "").toLowerCase();
@@ -155,16 +170,7 @@ export const getInstrumentDetails = (symbol) => {
   try {
     if (!symbol) return null;
     const sym = String(symbol).trim().toUpperCase();
-
-    let items = [];
-    if (fs.existsSync(CACHE_FILE)) {
-      const cacheData = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
-      items = cacheData.instruments || [];
-    }
-
-    if (!items.length) {
-      items = SEEDED_STOCKS;
-    }
+    const items = loadInstrumentsIntoMemory();
 
     // Prefer NSE EQ first
     let match = items.find((it) => {

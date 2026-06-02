@@ -23,6 +23,8 @@ exports.placeOrder =
         type,
         quantity,
         price,
+        exchange,
+        priceMode,
 
       } = req.body;
 
@@ -73,6 +75,9 @@ exports.placeOrder =
         }
       }
 
+      const normalizedPriceMode = priceMode ? priceMode.toUpperCase() : "MARKET";
+      const normalizedExchange = exchange ? exchange.toUpperCase() : "NSE";
+
       // CREATE ORDER
 
       const order =
@@ -80,7 +85,7 @@ exports.placeOrder =
 
           user: req.user.id,
 
-          symbol,
+          symbol: symbol.toUpperCase(),
 
           type,
 
@@ -88,145 +93,30 @@ exports.placeOrder =
 
           price,
 
+          exchange: normalizedExchange,
+
+          priceMode: normalizedPriceMode,
+
           status: "PENDING",
 
         });
 
-      // SIMULATE EXECUTION
+      // SIMULATE EXECUTION FOR MARKET ORDERS
 
-      setTimeout(async () => {
-
-        try {
-
-          // EXECUTE ORDER
-
-          order.status =
-            "EXECUTED";
-
-          order.executedAt =
-            new Date();
-
-          await order.save();
-
-          // FIND HOLDING
-
-          let holding =
-            await Holding.findOne({
-
-              user: req.user.id,
-
-              symbol,
-
-            });
-
-          const user = await User.findById(req.user.id);
-          const execCost = Number(price) * Number(quantity);
-
-          // BUY ORDER
-
-          if (type === "BUY") {
-
-            if (holding) {
-
-              // UPDATE EXISTING HOLDING
-
-              const totalQty =
-
-                holding.quantity +
-                Number(quantity);
-
-              const totalCost =
-
-                holding.avgPrice *
-                  holding.quantity +
-                execCost;
-
-              holding.quantity =
-                totalQty;
-
-              holding.avgPrice =
-                totalCost /
-                totalQty;
-
-              await holding.save();
-
-            } else {
-
-              // CREATE NEW HOLDING
-
-              await Holding.create({
-
-                user: req.user.id,
-
-                symbol,
-
-                quantity:
-                  Number(quantity),
-
-                avgPrice:
-                  Number(price),
-
-              });
-
+      if (normalizedPriceMode === "MARKET") {
+        setTimeout(async () => {
+          try {
+            const freshOrder = await Order.findById(order._id);
+            if (freshOrder && freshOrder.status === "PENDING") {
+              const io = req.app.get("io");
+              const { executeOrder } = require("../services/orderExecutionService.cjs");
+              await executeOrder(freshOrder, price, io);
             }
-
-            if (user) {
-              user.balance = Math.max(0, (user.balance ?? 1000000) - execCost);
-              await user.save();
-            }
-
+          } catch (error) {
+            console.error("Market Order Execution Error:", error.message);
           }
-
-          // SELL ORDER
-
-          if (type === "SELL") {
-
-            if (holding) {
-
-              holding.quantity -=
-                Number(quantity);
-
-              // REMOVE HOLDING IF ZERO
-
-              if (
-                holding.quantity <=
-                0
-              ) {
-
-                await Holding.findByIdAndDelete(
-
-                  holding._id
-
-                );
-
-              } else {
-
-                await holding.save();
-
-              }
-
-            }
-
-            if (user) {
-              user.balance = (user.balance ?? 1000000) + execCost;
-              await user.save();
-            }
-
-          }
-
-        } catch (error) {
-
-          console.log(
-
-            "Execution Error:",
-
-            error.message
-
-          );
-
-        }
-
-      }, 2000);
+        }, 2000);
+      }
 
       // RESPONSE
 
@@ -235,7 +125,9 @@ exports.placeOrder =
         success: true,
 
         message:
-          "Order placed successfully",
+          normalizedPriceMode === "LIMIT"
+            ? `Limit order placed successfully at ₹${Number(price).toFixed(2)}`
+            : "Order placed successfully",
 
         order,
 

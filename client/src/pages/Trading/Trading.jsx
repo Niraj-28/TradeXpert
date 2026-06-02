@@ -67,6 +67,8 @@ const Trading = () => {
   const [tradeType, setTradeType] = useState("BUY");
   const [tradeQty, setTradeQty] = useState(5);
   const [tradePrice, setTradePrice] = useState(0);
+  const [exchange, setExchange] = useState("NSE"); // NSE | BSE
+  const [priceMode, setPriceMode] = useState("Market"); // Market | Limit
   const [submittingOrder, setSubmittingOrder] = useState(false);
 
   // Bottom tabs state ("positions" or "orders")
@@ -159,10 +161,14 @@ const Trading = () => {
     };
   }, [selectedSymbol, liveStock, simulatedPrices]);
 
-  // Set trade price input when stock details change
+  // Set trade price input when stock details change or price mode changes
   useEffect(() => {
-    setTradePrice(activeStockDetails.price);
-  }, [activeStockDetails.price]);
+    if (priceMode === "Limit") {
+      setTradePrice((prev) => (prev === 0 ? activeStockDetails.price : prev));
+    } else {
+      setTradePrice(activeStockDetails.price);
+    }
+  }, [activeStockDetails.price, priceMode]);
 
   // Dynamic price tick compiler for charting
   useEffect(() => {
@@ -188,6 +194,30 @@ const Trading = () => {
       socket.emit("unview-stock");
     };
   }, [selectedSymbol]);
+
+  // Listen to background order execution
+  useEffect(() => {
+    const handleOrderExecuted = () => {
+      const refreshData = async () => {
+        try {
+          const holdingsData = await getHoldings();
+          setHoldings(holdingsData.holdings || []);
+          const ordersData = await getOrders();
+          setOrders(ordersData.orders || []);
+          const profile = await getUserProfile();
+          setCashBalance(profile.balance !== undefined ? profile.balance : 1000000);
+        } catch (err) {
+          console.error("Error refreshing terminal data on order executed:", err);
+        }
+      };
+      refreshData();
+    };
+
+    socket.on("order-executed", handleOrderExecuted);
+    return () => {
+      socket.off("order-executed", handleOrderExecuted);
+    };
+  }, []);
 
   // Simulate ticks for custom symbols not in core feed
   useEffect(() => {
@@ -282,7 +312,8 @@ const Trading = () => {
       return;
     }
 
-    const cost = tradeQty * tradePrice;
+    const execPrice = priceMode === "Market" ? activeStockDetails.price : tradePrice;
+    const cost = tradeQty * execPrice;
     if (tradeType === "BUY" && cost > portfolioSummary.cash) {
       toast.error("Insufficient virtual cash margin available");
       return;
@@ -299,23 +330,23 @@ const Trading = () => {
         symbol: selectedSymbol.toUpperCase(),
         type: tradeType,
         quantity: Number(tradeQty),
-        price: Number(tradePrice),
+        price: Number(execPrice),
+        exchange: exchange,
+        priceMode: priceMode.toUpperCase()
       });
 
-      toast.success(
-        `Order Placed: ${tradeType} ${tradeQty} shares of ${selectedSymbol}!`
-      );
-      
+      if (priceMode === "Limit") {
+        toast.success(`Limit order placed at ₹${Number(execPrice).toFixed(2)} on ${exchange}`);
+      } else {
+        toast.success(`Market order submitted: ${tradeType} ${tradeQty} shares on ${exchange}`);
+      }
+
       // Refresh order book and positions
-      setTimeout(async () => {
-        const holdingsData = await getHoldings();
-        setHoldings(holdingsData.holdings || []);
-        
-        const ordersData = await getOrders();
-        setOrders(ordersData.orders || []);
-        
-        toast.success(`Simulation Order Executed!`, { icon: "📊" });
-      }, 2000);
+      const holdingsData = await getHoldings();
+      setHoldings(holdingsData.holdings || []);
+      
+      const ordersData = await getOrders();
+      setOrders(ordersData.orders || []);
 
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to submit simulation order");
@@ -568,7 +599,39 @@ const Trading = () => {
               </div>
 
               <div className="form-input-container">
-                <label className="form-label">Shares Quantity</label>
+                <label className="form-label">Exchange</label>
+                <div className="product-selector-pills">
+                  {["NSE", "BSE"].map((ex) => (
+                    <button
+                      key={ex}
+                      type="button"
+                      onClick={() => setExchange(ex)}
+                      className={`pill-btn ${exchange === ex ? "active" : ""}`}
+                    >
+                      {ex}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="form-input-container">
+                <label className="form-label">Order Type</label>
+                <div className="product-selector-pills">
+                  {["Market", "Limit"].map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setPriceMode(mode)}
+                      className={`pill-btn ${priceMode === mode ? "active" : ""}`}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="form-input-container">
+                <label className="form-label">Shares Qty {exchange}</label>
                 <input
                   type="number"
                   min="1"
@@ -580,16 +643,25 @@ const Trading = () => {
               </div>
 
               <div className="form-input-container">
-                <label className="form-label">Trigger Price (₹)</label>
-                <input
-                  type="number"
-                  step="0.05"
-                  min="0.05"
-                  value={tradePrice}
-                  onChange={(e) => setTradePrice(parseFloat(e.target.value) || 0)}
-                  className="form-input"
-                  required
-                />
+                <label className="form-label">Price (₹)</label>
+                {priceMode === "Market" ? (
+                  <input
+                    type="text"
+                    disabled
+                    value={`Market (₹${activeStockDetails.price.toFixed(2)})`}
+                    className="form-input text-slate-400 bg-slate-50 cursor-not-allowed"
+                  />
+                ) : (
+                  <input
+                    type="number"
+                    step="0.05"
+                    min="0.05"
+                    value={tradePrice}
+                    onChange={(e) => setTradePrice(parseFloat(e.target.value) || 0)}
+                    className="form-input"
+                    required
+                  />
+                )}
               </div>
 
               <div className="estimated-cost-card">
