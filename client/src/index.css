@@ -1,26 +1,97 @@
-@import "@fontsource/poppins";
-@import "@fontsource/inter";
-
 @import "tailwindcss";
+@import "./App.css";
 
-:root {
-  --primary: #58E6B3;
-  --secondary: #1FA37A;
+@theme {
+  --color-brand-dark: #091413;
+  --color-brand-primary: #285A48;
+  --color-brand-accent: #408A71;
+  --color-brand-mint: #B0E4CC;
 
-  --bg: #F8FAFC;
-  --card: #FFFFFF;
-
-  --text-primary: #111827;
-  --text-secondary: #6B7280;
-
-  --border: #E5E7EB;
-
-  --success: #22C55E;
-  --danger: #EF4444;
+  /* Overwrite default emerald palette to map directly to our new colors */
+  --color-emerald-50: #f0fbf7;
+  --color-emerald-100: #e1f7ed;
+  --color-emerald-200: #c2eedc;
+  --color-emerald-300: #B0E4CC;
+  --color-emerald-400: #66b59c;
+  --color-emerald-500: #408A71;
+  --color-emerald-600: #285A48;
+  --color-emerald-700: #1b4234;
+  --color-emerald-800: #0f271f;
+  --color-emerald-900: #091413;
 }
 
-body {
-  font-family: "Inter", sans-serif;
-  background-color: var(--bg);
-  color: var(--text-primary);
+:root {
+  --brand-dark: #091413;
+  --brand-primary: #285A48;
+  --brand-accent: #408A71;
+  --brand-mint: #B0E4CC;
+}
+
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100vh;
+
+  font-family: "Poppins", sans-serif;
+
+  background: #ffffff;
+
+  overflow-x: hidden;
+}
+
+a {
+  text-decoration: none;
+}
+
+button,
+input {
+  font-family: "Poppins", sans-serif;
+}
+
+/* Global Button Styles */
+button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Global Link Styles */
+a {
+  color: var(--brand-accent);
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--brand-primary);
+}
+
+/* Selection Color */
+::selection {
+  background-color: var(--brand-accent);
+  color: white;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--brand-accent);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-primary);
 }

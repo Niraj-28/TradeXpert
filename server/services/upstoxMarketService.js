@@ -1,301 +1,263 @@
-const WebSocket = require("ws");
+import axios from "axios";
+import WebSocket from "ws";
+import protobuf from "protobufjs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { getInstrumentDetails } from "./instrumentService.mjs";
 
-const protobuf = require("protobufjs");
+const POPULAR_SYMBOLS = [
+  "RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "SBIN", "BHARTIARTL", 
+  "ITC", "LT", "TATASTEEL", "TATAMOTORS", "WIPRO", "AXISBANK", "KOTAKBANK", 
+  "HINDUNILVR", "ADANIENT", "BAJFINANCE", "MARUTI", "SUNPHARMA", "M&M", 
+  "ONGC", "POWERGRID", "NTPC", "COALINDIA", "ADANIPORTS", "ULTRACEMCO", 
+  "GRASIM", "JSWSTEEL", "LTIM", "HINDALCO"
+];
 
-const path = require("path");
-
-const stocksMap = {
-
-  // INDICES
-
-  "NSE_INDEX|Nifty 50":
-    "NIFTY 50",
-
-  "BSE_INDEX|SENSEX":
-    "SENSEX",
-
-  "NSE_INDEX|Nifty Bank":
-    "BANKNIFTY",
-
-  "NSE_INDEX|Nifty Fin Service":
-    "FINNIFTY",
-
-  // STOCKS
-
-  "NSE_EQ|INE002A01018":
-    "RELIANCE",
-
-  "NSE_EQ|INE467B01029":
-    "TCS",
-
-  "NSE_EQ|INE009A01021":
-    "INFY",
-
-  "NSE_EQ|INE040A01034":
-    "HDFCBANK",
-
-  "NSE_EQ|INE090A01021":
-    "ICICIBANK",
-
-  "NSE_EQ|INE062A01020":
-    "SBIN",
-
+const indicesMap = {
+  "NSE_INDEX|Nifty 50": "NIFTY 50",
+  "NSE_INDEX|Nifty Bank": "BANK NIFTY",
+  "BSE_INDEX|SENSEX": "SENSEX",
+  "NSE_INDEX|Nifty Fin Service": "FIN NIFTY",
 };
 
-const startUpstoxMarketFeed =
-  async (io) => {
+let popularInstrumentsMap = null;
 
-    try {
+const getPopularInstrumentsMap = () => {
+  if (popularInstrumentsMap) return popularInstrumentsMap;
+  
+  const mapping = {};
+  for (const sym of POPULAR_SYMBOLS) {
+    const details = getInstrumentDetails(sym);
+    if (details && details.instrument_key) {
+      mapping[details.instrument_key] = sym;
+    } else {
+      mapping[`NSE_EQ|${sym}`] = sym;
+    }
+  }
+  popularInstrumentsMap = mapping;
+  return popularInstrumentsMap;
+};
 
-      const token =
+const stockSectors = {
+  TCS: "IT", INFY: "IT", WIPRO: "IT", LTIM: "IT",
+  HDFCBANK: "BANKING", ICICIBANK: "BANKING", SBIN: "BANKING", AXISBANK: "BANKING", KOTAKBANK: "BANKING",
+  TATAMOTORS: "AUTO", MARUTI: "AUTO", "M&M": "AUTO",
+  SUNPHARMA: "PHARMA",
+  RELIANCE: "ENERGY", ONGC: "ENERGY", NTPC: "ENERGY", POWERGRID: "ENERGY", COALINDIA: "ENERGY",
+  TATASTEEL: "METAL", JSWSTEEL: "METAL", HINDALCO: "METAL",
+  LT: "INFRASTRUCTURE", ULTRACEMCO: "INFRASTRUCTURE", GRASIM: "INFRASTRUCTURE",
+  ITC: "CONSUMER GOODS", HINDUNILVR: "CONSUMER GOODS", LICI: "INSURANCE",
+  ADANIENT: "CONGLOMERATES", ADANIPORTS: "INFRASTRUCTURE", JIOFIN: "FINANCIAL SERVICES"
+};
 
-        process.env.UPSTOX_ACCESS_TOKEN;
+const calculateSectorPerformance = (stockData) => {
+  const sectorChanges = {};
+  const sectorCounts = {};
 
-      // AUTHORIZE
+  stockData.forEach((item) => {
+    const sector = stockSectors[item.symbol?.toUpperCase()];
+    if (sector) {
+      const change = parseFloat(item.change ?? 0);
+      if (!isNaN(change)) {
+        sectorChanges[sector] = (sectorChanges[sector] || 0) + change;
+        sectorCounts[sector] = (sectorCounts[sector] || 0) + 1;
+      }
+    }
+  });
 
-      const response =
-        await axios.get(
+  const sectorsList = Object.keys(sectorChanges).map((sec) => ({
+    sector: sec,
+    change: Number((sectorChanges[sec] / sectorCounts[sec]).toFixed(2)),
+  }));
 
-          "https://api.upstox.com/v3/feed/market-data-feed/authorize",
+  return sectorsList.sort((a, b) => b.change - a.change);
+};
 
-          {
+const startUpstoxMarketFeed = async (io) => {
+  const token = process.env.UPSTOX_ACCESS_TOKEN;
+  if (!token) {
+    console.log("⚠️ UPSTOX_ACCESS_TOKEN is missing. Skipping Upstox market feed startup.");
+    return;
+  }
 
-            headers: {
+  try {
+    // AUTHORIZE
+    const response = await axios.get("https://api.upstox.com/v3/feed/market-data-feed/authorize", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Api-Version": "3.0",
+      },
+    });
 
-              Authorization:
-                `Bearer ${token}`,
+    const wsUrl = response.data.data.authorized_redirect_uri;
+    console.log("Upstox Feed Authorized");
 
-              Accept:
-                "application/json",
+    // LOAD PROTO
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const protoPath = path.resolve(__dirname, "../proto/MarketDataFeed.proto");
 
-              "Api-Version":
-                "3.0",
+    const root = await protobuf.load(protoPath);
+    const FeedResponse = root.lookupType("com.upstox.marketdatafeeder.rpc.proto.FeedResponse") || root.lookupType("FeedResponse");
 
-            },
+    // CREATE WS
+    const ws = new WebSocket(wsUrl);
 
-          }
+    ws.on("open", () => {
+      console.log("Upstox WebSocket Connected");
 
-        );
+      // SUBSCRIBE
+      const popularMap = getPopularInstrumentsMap();
+      const keysToSubscribe = [
+        ...Object.keys(indicesMap),
+        ...Object.keys(popularMap),
+      ];
 
-      const wsUrl =
-
-        response.data.data
-          .authorized_redirect_uri;
-
-      console.log(
-        "Upstox Feed Authorized"
+      ws.send(
+        JSON.stringify({
+          guid: "tradexpert",
+          method: "sub",
+          data: {
+            mode: "ltpc",
+            instrumentKeys: keysToSubscribe,
+          },
+        })
       );
+    });
 
-      // LOAD PROTO
+    ws.on("message", (buffer) => {
+      try {
+        const decoded = FeedResponse.decode(new Uint8Array(buffer));
+        const object = FeedResponse.toObject(decoded, {
+          longs: String,
+          enums: String,
+          bytes: String,
+        });
 
-      const root =
-        await protobuf.load(
+        const feeds = object.feeds || {};
+        const popularMap = getPopularInstrumentsMap();
+        const allStocksMap = {
+          ...indicesMap,
+          ...popularMap,
+        };
 
-          path.join(
-            __dirname,
-            "../proto/MarketDataFeed.proto"
-          )
-        );
+        const marketData = Object.entries(feeds).map(([key, value]) => {
+          const ltp = value.ltpc?.ltp ?? 0;
+          const close = value.ltpc?.cp ?? 0;
+          const change = close ? (((ltp - close) / close) * 100) : 0;
 
-      const FeedResponse =
+          const symbol =
+            allStocksMap[key] ||
+            key.split("|").pop()?.replace(/_/g, " ").trim() ||
+            key;
 
-        root.lookupType(
-
-          "com.upstox.marketdatafeeder.rpc.proto.FeedResponse"
-        );
-
-      // CREATE WS
-
-      const ws =
-        new WebSocket(wsUrl);
-
-      ws.on("open", () => {
-
-        console.log(
-          "Upstox WebSocket Connected"
-        );
-
-        // SUBSCRIBE
-
-        ws.send(
-
-          JSON.stringify({
-
-            guid: "tradexpert",
-
-            method: "sub",
-
-            data: {
-
-              mode: "ltpc",
-
-              instrumentKeys:
-
-                Object.keys(
-
-                  stocksMap
-
-                ),
-
+          return {
+            symbol,
+            instrumentKey: key,
+            price: Number(ltp),
+            change: Number(change),
+            ohlc: {
+              open: Number(close),
+              high: Number(ltp) + 10,
+              low: Number(ltp) - 10,
+              close: Number(close),
             },
+          };
+        });
 
-          })
+        // Emit processed events
+        io.emit("marketData", marketData);
 
-        );
+        const indexSymbols = new Set([
+          "NIFTY 50",
+          "BANK NIFTY",
+          "BANKNIFTY",
+          "SENSEX",
+          "FIN NIFTY",
+          "FINNIFTY",
+        ]);
 
-      });
+        const indicesData = marketData
+          .filter((item) => indexSymbols.has(item.symbol))
+          .map((item) => ({
+            name: item.symbol,
+            value: Number(item.price),
+            change: Number(item.change),
+          }));
 
-      ws.on(
+        const stockData = marketData.filter((item) => !indexSymbols.has(item.symbol));
 
-        "message",
+        const trendingData = stockData.slice(0, 6).map((item) => ({
+          symbol: item.symbol,
+          price: item.price,
+          change: Number(item.change),
+        }));
 
-        (buffer) => {
+        const gainersData = [...stockData]
+          .sort((a, b) => parseFloat(b.change) - parseFloat(a.change))
+          .slice(0, 3)
+          .map((item) => ({
+            symbol: item.symbol,
+            price: item.price,
+            change: Number(item.change),
+          }));
 
-          try {
+        const losersData = [...stockData]
+          .sort((a, b) => parseFloat(a.change) - parseFloat(b.change))
+          .slice(0, 3)
+          .map((item) => ({
+            symbol: item.symbol,
+            price: item.price,
+            change: Number(item.change),
+          }));
 
-            const decoded =
+        const marketTableData = stockData.map((item) => {
+          const details = getInstrumentDetails(item.symbol);
+          return {
+            symbol: item.symbol,
+            company: details?.name || item.symbol,
+            price: item.price,
+            change: Number(item.change),
+            volume: "—",
+          };
+        });
 
-              FeedResponse.decode(
+        const dynamicSectors = calculateSectorPerformance(stockData);
 
-                new Uint8Array(
-                  buffer
-                )
-              );
+        io.emit("market-indices", indicesData);
+        io.emit("trending-stocks", trendingData);
+        io.emit("market-table", marketTableData);
+        io.emit("top-gainers", gainersData);
+        io.emit("top-losers", losersData);
+        io.emit("sector-performance", dynamicSectors);
 
-            const object =
-
-              FeedResponse.toObject(
-
-                decoded,
-
-                {
-
-                  longs: String,
-                  enums: String,
-                  bytes: String,
-
-                }
-
-              );
-
-            const feeds =
-
-              object.feeds || {};
-
-            const marketData =
-
-              Object.entries(
-                feeds
-              ).map(
-
-                ([key, value]) => {
-
-                  const ltp =
-                    value.ltpc?.ltp || 0;
-
-                  const close =
-                    value.ltpc?.cp || 0;
-
-                  const change =
-                    close
-
-                      ? (
-                          ((ltp -
-                            close) /
-                            close) *
-                          100
-                        ).toFixed(2)
-
-                      : 0;
-
-                  return {
-
-                    symbol:
-                      stocksMap[key],
-
-                    price:
-                      ltp.toFixed(2),
-
-                    change:
-                      Number(change),
-
-                    ohlc: {
-
-                      open:
-                        close.toFixed(
-                          2
-                        ),
-
-                      high:
-                        (
-                          ltp + 10
-                        ).toFixed(2),
-
-                      low:
-                        (
-                          ltp - 10
-                        ).toFixed(2),
-
-                      close:
-                        close.toFixed(
-                          2
-                        ),
-
-                    },
-
-                  };
-
-                }
-
-              );
-
-            io.emit(
-
-              "marketData",
-
-              marketData
-
-            );
-
-          } catch (error) {
-
-            console.log(
-
-              "Decode Error:",
-              error.message
-
-            );
-
+        // Check pending limit orders
+        try {
+          const { checkPendingLimitOrders } = require("../services/orderExecutionService.cjs");
+          for (const item of marketData) {
+            if (!indexSymbols.has(item.symbol)) {
+              checkPendingLimitOrders(item.symbol, Number(item.price), io).catch(err => {
+                console.error("Error checking limits in Upstox WS:", err.message);
+              });
+            }
           }
-
+        } catch (err) {
+          console.error("Failed limit checking on Upstox WS message:", err.message);
         }
 
-      );
+      } catch (error) {
+        console.log("Decode Error:", error.message);
+      }
+    });
 
-      ws.on("close", () => {
+    ws.on("close", () => {
+      console.log("Upstox Socket Closed");
+    });
 
-        console.log(
-          "Upstox Socket Closed"
-        );
+  } catch (error) {
+    console.log("UPSTOX ERROR:", error.response?.data || error.message);
+  }
+};
 
-      });
-
-    } catch (error) {
-
-      console.log(
-
-        "UPSTOX ERROR:",
-
-        error.response?.data ||
-
-          error.message
-
-      );
-
-    }
-
-  };
-
-module.exports =
-
-  startUpstoxMarketFeed;
+export default startUpstoxMarketFeed;

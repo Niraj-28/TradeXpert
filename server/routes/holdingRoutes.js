@@ -1,27 +1,12 @@
-const express = require(
-  "express"
-);
+import express from "express";
+import { createRequire } from "module";
 
-const router =
-  express.Router();
+const require = createRequire(import.meta.url);
+const protect = require("../middleware/authMiddleware.cjs");
+const { getHoldings } = require("../controllers/holdingController.cjs");
 
-const protect = require(
-  "../middleware/authMiddleware"
-);
+const router = express.Router();
 
-const {
+router.get("/", protect, getHoldings);
 
-  getHoldings,
-
-} = require(
-  "../controllers/holdingController"
-);
-
-router.get(
-  "/",
-  protect,
-  getHoldings
-);
-
-module.exports =
-  router;
+export default router;

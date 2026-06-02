@@ -2,22 +2,94 @@ syntax = "proto3";
 
 package com.upstox.marketdatafeeder.rpc.proto;
 
-message FeedResponse {
+message LTPC {
+  double ltp = 1;
+  double ltt = 2;
+  double ltq = 3;
+  double cp = 4;
+}
 
-  map<string, Feed> feeds = 1;
+message MarketLevel {
+  repeated Quote bidAskQuote = 1;
+}
 
+message Quote {
+  int32 bq = 1;
+  double bp = 2;
+  int32 bno = 3;
+  int32 aq = 4;
+  double ap = 5;
+  int32 ano = 6;
+}
+
+message OptionGreeks {
+  double op = 1;
+  double up = 2;
+  double iv = 3;
+  double delta = 4;
+  double theta = 5;
+  double gamma = 6;
+  double vega = 7;
+  double rho = 8;
+}
+
+message MarketOHLC {
+  repeated OHLC ohlc = 1;
+}
+
+message OHLC {
+  string interval = 1;
+  double open = 2;
+  double high = 3;
+  double low = 4;
+  double close = 5;
+  int64 volume = 6;
+  int64 ts = 7;
+}
+
+message ExtendedFeedDetails {
+  double atp = 1;
+  int64 vtt = 2;
+  double oi = 3;
+  double changeOi = 4;
+  double lastClose = 5;
+  double tbq = 6;
+  double tsq = 7;
+  double close = 8;
+  double lc = 9;
+  double uc = 10;
+  double yh = 11;
+  double yl = 12;
+}
+
+message MarketFullFeed {
+  LTPC ltpc = 1;
+  MarketLevel marketLevel = 2;
+  OptionGreeks optionGreeks = 3;
+  MarketOHLC marketOHLC = 4;
+  ExtendedFeedDetails eFeedDetails = 5;
+}
+
+message IndexFullFeed {
+  LTPC ltpc = 1;
+  MarketOHLC marketOHLC = 2;
+}
+
+message FullFeed {
+  oneof FullFeedUnion {
+    MarketFullFeed marketFF = 1;
+    IndexFullFeed indexFF = 2;
+  }
 }
 
 message Feed {
-
-  LTPC ltpc = 1;
-
+  oneof FeedUnion {
+    LTPC ltpc = 1;
+    FullFeed ff = 2;
+  }
 }
 
-message LTPC {
-
-  double ltp = 1;
-
-  double cp = 2;
-
+message FeedResponse {
+  string type = 1;
+  map<string, Feed> feeds = 2;
 }

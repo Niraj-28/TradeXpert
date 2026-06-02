@@ -1,47 +1,16 @@
-const express = require("express");
+import express from "express";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const authMiddleware = require("../middleware/authMiddleware.cjs");
+const { placeTrade, getTrades } = require("../controllers/tradeController.cjs");
 
 const router = express.Router();
 
-const {
-
-  placeTrade,
-
-  getTrades,
-
-} = require(
-
-  "../controllers/tradeController"
-
-);
-
-const authMiddleware = require(
-
-  "../middleware/authMiddleware"
-
-);
-
 // PLACE TRADE
-
-router.post(
-
-  "/place",
-
-  authMiddleware,
-
-  placeTrade
-
-);
+router.post("/place", authMiddleware, placeTrade);
 
 // GET TRADES
+router.get("/history", authMiddleware, getTrades);
 
-router.get(
-
-  "/history",
-
-  authMiddleware,
-
-  getTrades
-
-);
-
-module.exports = router;
+export default router;

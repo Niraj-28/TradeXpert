@@ -1,453 +1,404 @@
-import { useEffect, useState } from "react";
-
-import {
-  Search,
-  TrendingUp,
-  TrendingDown,
-  Trash2,
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useMarket } from "../../context/MarketContext";
+import { getWatchlist, addToWatchlist, removeFromWatchlist } from "../../services/watchlistService";
+import { searchStocks } from "../../services/marketApi";
+import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
+import { 
+  Search, Trash2, Plus, ArrowUpRight, ArrowDownRight, 
+  RefreshCw, Activity, AlertCircle, X, Check
 } from "lucide-react";
 
-import socket from "../../socket/socket";
+// Format currency
+const formatINR = (value) => {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
+// Seed deterministic prices for non-ticker stocks
+const getInitialPrice = (symbol) => {
+  let hash = 0;
+  for (let i = 0; i < symbol.length; i++) {
+    hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const basePrice = Math.abs(hash % 2900) + 100;
+  const changePercent = ((hash % 100) / 25) - 2;
+  const open = basePrice * (1 - changePercent / 100);
+  
+  return {
+    price: parseFloat(basePrice.toFixed(2)),
+    change: parseFloat(changePercent.toFixed(2)),
+    open: parseFloat(open.toFixed(2)),
+    close: parseFloat(open.toFixed(2)),
+  };
+};
 
 const Watchlist = () => {
+  const { marketStocks, connected } = useMarket();
+  const navigate = useNavigate();
+  const [watchlist, setWatchlist] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
 
-  const [marketData, setMarketData] =
-    useState([]);
+  // Client-side simulated prices for custom stocks
+  const [simulatedPrices, setSimulatedPrices] = useState({});
 
-  const [search, setSearch] =
-    useState("");
-
-  const [watchlist, setWatchlist] =
-    useState([
-
-      "RELIANCE",
-      "TCS",
-      "INFY",
-      "HDFCBANK",
-
-    ]);
-
-  // SOCKET
-
-  useEffect(() => {
-
-    socket.connect();
-
-    socket.on(
-      "marketData",
-      (data) => {
-
-        if (
-          Array.isArray(data)
-        ) {
-
-          setMarketData(data);
-
-        }
-
-      }
-    );
-
-    return () => {
-
-      socket.off(
-        "marketData"
-      );
-
-    };
-
-  }, []);
-
-  // FILTER STOCKS
-
-  const filteredStocks =
-
-    marketData.filter((stock) =>
-
-      stock.symbol
-        ?.toLowerCase()
-        .includes(
-          search.toLowerCase()
-        )
-
-    );
-
-  // ADD STOCK
-
-  const addToWatchlist = (
-    symbol
-  ) => {
-
-    if (
-      !watchlist.includes(
-        symbol
-      )
-    ) {
-
-      setWatchlist([
-
-        ...watchlist,
-
-        symbol,
-
-      ]);
-
+  const fetchWatchlistData = async () => {
+    try {
+      setLoading(true);
+      const data = await getWatchlist();
+      setWatchlist(data.watchlist || []);
+    } catch (error) {
+      console.error("Watchlist fetch error:", error);
+      toast.error("Failed to load your watchlist");
+    } finally {
+      setLoading(false);
     }
-
   };
 
-  // REMOVE STOCK
+  useEffect(() => {
+    fetchWatchlistData();
+  }, []);
 
-  const removeStock = (
-    symbol
-  ) => {
+  // Merge database watchlist with live market updates & simulated prices
+  const enrichedWatchlist = useMemo(() => {
+    return watchlist.map((item) => {
+      const liveStock = marketStocks.find(
+        (s) => s.symbol.toUpperCase() === item.symbol.toUpperCase()
+      );
 
-    setWatchlist(
+      if (liveStock) {
+        const price = parseFloat(liveStock.price) || 0;
+        const change = parseFloat(liveStock.change) || 0;
+        return {
+          ...item,
+          price,
+          change,
+          isLive: true,
+        };
+      }
 
-      watchlist.filter(
-        (item) =>
+      const sim = simulatedPrices[item.symbol.toUpperCase()] || getInitialPrice(item.symbol);
+      return {
+        ...item,
+        price: sim.price,
+        change: sim.change,
+        isLive: false,
+      };
+    });
+  }, [watchlist, marketStocks, simulatedPrices]);
 
-          item !== symbol
-      )
+  // Simulate price changes on every interval
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSimulatedPrices((prev) => {
+        const updated = { ...prev };
+        watchlist.forEach((item) => {
+          const sym = item.symbol.toUpperCase();
+          const isCore = marketStocks.some(
+            (s) => s.symbol.toUpperCase() === sym
+          );
+          
+          if (!isCore) {
+            const current = updated[sym] || getInitialPrice(sym);
+            const deltaPercent = (Math.random() * 0.24 - 0.12) / 100;
+            const newPrice = current.price * (1 + deltaPercent);
+            const initialData = getInitialPrice(sym);
+            const refClose = initialData.close;
+            const newChange = ((newPrice - refClose) / refClose) * 100;
 
-    );
+            updated[sym] = {
+              ...current,
+              price: parseFloat(newPrice.toFixed(2)),
+              change: parseFloat(newChange.toFixed(2)),
+            };
+          }
+        });
+        return updated;
+      });
+    }, 3000);
 
+    return () => clearInterval(timer);
+  }, [watchlist, marketStocks]);
+
+  // Search stocks dynamically
+  const handleSearchChange = async (e) => {
+    const val = e.target.value;
+    setSearchQuery(val);
+
+    if (!val.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      setSearching(true);
+      const data = await searchStocks(val);
+      setSearchResults(data || []);
+    } catch (error) {
+      console.error("Search error:", error);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  // Add stock to watchlist
+  const handleAddStock = async (symbol) => {
+    const upperSym = symbol.toUpperCase();
+    if (watchlist.some((w) => w.symbol.toUpperCase() === upperSym)) {
+      toast.error("Stock is already on your watchlist");
+      return;
+    }
+
+    try {
+      await addToWatchlist(upperSym);
+      toast.success(`${upperSym} added to watchlist`);
+      fetchWatchlistData();
+      setSearchQuery("");
+      setSearchResults([]);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to add stock");
+    }
+  };
+
+  // Remove stock from watchlist
+  const handleRemoveStock = async (id, symbol) => {
+    try {
+      await removeFromWatchlist(id);
+      toast.success(`${symbol} removed from watchlist`);
+      setWatchlist((prev) => prev.filter((item) => item._id !== id));
+    } catch (error) {
+      toast.error("Failed to remove stock");
+    }
+  };
+
+  // Mini Sparkline Line Generator for cards
+  const generateSparklinePoints = (change) => {
+    const steps = 6;
+    const points = [];
+    const height = 30;
+    const width = 100;
+    
+    let currentVal = height / 2;
+    points.push(`0,${currentVal}`);
+    
+    const direction = change >= 0 ? -1 : 1;
+    
+    for (let i = 1; i <= steps; i++) {
+      const x = (width / steps) * i;
+      const noise = (Math.random() * 8 - 4);
+      const trend = direction * (Math.abs(change) * 2) * (i / steps);
+      const y = Math.min(Math.max(height / 2 + trend + noise, 3), height - 3);
+      points.push(`${x},${y}`);
+    }
+    
+    return points.join(" ");
   };
 
   return (
-
-    <div className="min-h-screen bg-[#F4F7FB] px-5 lg:px-8 py-6">
-
-      {/* HEADER */}
-
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-8">
-
-        <div>
-
-          <p className="text-[14px] text-[#64748B] font-medium">
-
-            Realtime Market Tracking
-
-          </p>
-
-          <h1 className="mt-2 text-[42px] font-bold tracking-tight text-[#0F172A]">
-
-            Watchlist
-
-          </h1>
-
-        </div>
-
-        {/* SEARCH */}
-
-        <div className="relative w-full lg:w-[420px]">
-
-          <Search
-            size={20}
-            className="absolute left-5 top-1/2 -translate-y-1/2 text-[#64748B]"
-          />
-
-          <input
-            type="text"
-            placeholder="Search stocks..."
-            value={search}
-            onChange={(e) =>
-              setSearch(
-                e.target.value
-              )
-            }
-            className="w-full h-14 pl-14 pr-5 rounded-2xl border border-[#E8ECF2] bg-white outline-none focus:border-[#10B981]"
-          />
-
-        </div>
-
-      </div>
-
-      {/* SEARCH RESULTS */}
-
-      {search.length > 0 && (
-
-        <div className="bg-white rounded-[30px] border border-[#E8ECF2] p-6 mb-8 shadow-[0_6px_24px_rgba(15,23,42,0.06)]">
-
-          <h2 className="text-[26px] font-bold tracking-tight text-[#0F172A]">
-
-            Search Results
-
-          </h2>
-
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-
-            {filteredStocks.map((stock) => {
-
-              const positive =
-
-                stock.change >= 0;
-
-              return (
-
-                <div
-                  key={stock.symbol}
-                  className="rounded-[24px] border border-[#EEF2F7] p-5 hover:bg-[#FAFBFC] transition-all"
-                >
-
-                  <div className="flex items-start justify-between">
-
-                    <div>
-
-                      <h3 className="text-[24px] font-bold tracking-tight text-[#0F172A]">
-
-                        {stock.symbol}
-
-                      </h3>
-
-                      <p className="mt-1 text-[13px] text-[#64748B]">
-
-                        NSE Market
-
-                      </p>
-
-                    </div>
-
-                    <div
-                      className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-[13px] font-bold ${
-                        positive
-
-                          ? "bg-green-100 text-green-700"
-
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-
-                      {positive ? (
-
-                        <TrendingUp
-                          size={16}
-                        />
-
-                      ) : (
-
-                        <TrendingDown
-                          size={16}
-                        />
-
-                      )}
-
-                      {stock.change}%
-
-                    </div>
-
-                  </div>
-
-                  <div className="mt-6">
-
-                    <h1 className="text-[42px] font-bold tracking-tight text-[#0F172A]">
-
-                      ₹
-                      {stock.price}
-
-                    </h1>
-
-                  </div>
-
-                  <button
-                    onClick={() =>
-                      addToWatchlist(
-                        stock.symbol
-                      )
-                    }
-                    className="mt-6 w-full h-12 rounded-2xl bg-[#0F172A] text-white text-[14px] font-bold hover:opacity-90 transition-all"
-                  >
-
-                    Add to Watchlist
-
-                  </button>
-
-                </div>
-
-              );
-
-            })}
-
-          </div>
-
-        </div>
-
-      )}
-
-      {/* WATCHLIST */}
-
-      <div className="bg-white rounded-[30px] border border-[#E8ECF2] p-6 shadow-[0_6px_24px_rgba(15,23,42,0.06)]">
-
-        <div className="flex items-center justify-between mb-8">
-
+    <div className="watchlist-layout-container">
+      <div className="watchlist-main-content" style={{ width: "100%", maxWidth: "1200px", margin: "0 auto" }}>
+        
+        {/* HEADER */}
+        <div className="watchlist-header-panel">
           <div>
-
-            <p className="text-[13px] text-[#64748B] font-medium">
-
-              Your Market Tracking
-
+            <h1 className="watchlist-title">My Watchlist</h1>
+            <p className="watchlist-subtitle">
+              Monitor and trade your favorite financial instruments
             </p>
-
-            <h2 className="mt-2 text-[30px] font-bold tracking-tight text-[#0F172A]">
-
-              My Watchlist
-
-            </h2>
-
           </div>
-
-          <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-green-100 text-green-700">
-
-            <div className="h-2.5 w-2.5 rounded-full bg-green-500 animate-pulse" />
-
-            <span className="text-[13px] font-bold">
-
-              Live
-
+          
+          <div className="connection-status-container">
+            <span className={`status-dot ${connected ? "online" : "offline"}`}></span>
+            <span className="status-text">
+              {connected ? "Live Upstox Feed" : "Simulated Feed"}
             </span>
-
           </div>
-
         </div>
 
-        {/* LIST */}
-
-        <div className="space-y-5">
-
-          {watchlist.map((symbol) => {
-
-            const stock =
-              marketData.find(
-                (item) =>
-
-                  item.symbol ===
-                  symbol
-              );
-
-            if (!stock)
-              return null;
-
-            const positive =
-
-              stock.change >= 0;
-
-            return (
-
-              <div
-                key={symbol}
-                className="rounded-[24px] border border-[#EEF2F7] p-5 hover:bg-[#FAFBFC] transition-all"
+        {/* SEARCH BAR CONTAINER */}
+        <div className="watchlist-search-container">
+          <div className="watchlist-search-wrapper">
+            <Search className="search-icon-inside" size={20} />
+            <input
+              type="text"
+              placeholder="Search & add stocks (e.g. RELIANCE, TATASTEEL, INFY)..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="watchlist-search-input"
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => { setSearchQuery(""); setSearchResults([]); }}
+                className="clear-search-btn"
               >
+                <X size={18} />
+              </button>
+            )}
+          </div>
 
-                <div className="flex items-center justify-between">
+          {/* Autocomplete Dropdown */}
+          <AnimatePresence>
+            {searchQuery && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="watchlist-search-dropdown"
+              >
+                {searching ? (
+                  <div className="dropdown-loading">
+                    <RefreshCw className="animate-spin text-emerald-500" size={20} />
+                    <span>Searching markets...</span>
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  searchResults.map((stock) => {
+                    const isAdded = watchlist.some(
+                      (w) => w.symbol.toUpperCase() === stock.trading_symbol.toUpperCase()
+                    );
+                    return (
+                      <div key={stock.instrument_key} className="search-result-item">
+                        <div 
+                          className="result-left"
+                          onClick={() => navigate(`/stocks/${stock.trading_symbol.toUpperCase()}`)}
+                          style={{ cursor: "pointer" }}
+                        >
+                          <span className="result-symbol">{stock.trading_symbol}</span>
+                          <span className="result-name">{stock.name || "Equity Stock"}</span>
+                          <span className="result-exchange-badge">{stock.exchange}</span>
+                        </div>
+                        <button
+                          onClick={() => handleAddStock(stock.trading_symbol)}
+                          disabled={isAdded}
+                          className={`add-watchlist-btn ${isAdded ? "added" : ""}`}
+                        >
+                          {isAdded ? (
+                            <>
+                              <Check size={14} /> Added
+                            </>
+                          ) : (
+                            <>
+                              <Plus size={14} /> Add
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="dropdown-empty">
+                    <AlertCircle size={20} />
+                    <span>No instruments found matching "{searchQuery}"</span>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
-                  {/* LEFT */}
-
-                  <div>
-
-                    <h3 className="text-[28px] font-bold tracking-tight text-[#0F172A]">
-
-                      {stock.symbol}
-
-                    </h3>
-
-                    <div
-                      className={`mt-3 flex items-center gap-2 text-[14px] font-bold ${
-                        positive
-
-                          ? "text-green-600"
-
-                          : "text-red-600"
-                      }`}
-                    >
-
-                      {positive ? (
-
-                        <TrendingUp
-                          size={18}
-                        />
-
-                      ) : (
-
-                        <TrendingDown
-                          size={18}
-                        />
-
-                      )}
-
-                      {stock.change}%
-
+        {/* WATCHLIST GRID */}
+        {loading ? (
+          <div className="watchlist-loading-state">
+            <RefreshCw className="animate-spin text-emerald-400" size={32} />
+            <p>Loading your watchlist...</p>
+          </div>
+        ) : enrichedWatchlist.length === 0 ? (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="watchlist-empty-state"
+          >
+            <div className="empty-state-icon-box">
+              <Activity size={48} className="text-emerald-500" />
+            </div>
+            <h2>Your Watchlist is Empty</h2>
+            <p>
+              Use the search bar above to discover stock instruments and add them to your watchlist.
+            </p>
+          </motion.div>
+        ) : (
+          <motion.div 
+            layout
+            className="watchlist-cards-grid"
+          >
+            <AnimatePresence mode="popLayout">
+              {enrichedWatchlist.map((stock) => {
+                const isPositive = stock.change >= 0;
+                
+                return (
+                  <motion.div
+                    layout
+                    key={stock._id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.25 }}
+                    onClick={() => navigate(`/stocks/${stock.symbol.toUpperCase()}`)}
+                    className={`watchlist-stock-card ${isPositive ? "card-pos" : "card-neg"}`}
+                    style={{ cursor: "pointer" }}
+                  >
+                    {/* Top Row */}
+                    <div className="card-top-row">
+                      <div className="symbol-exchange-container">
+                        <span className="card-symbol">{stock.symbol}</span>
+                        <span className="card-exchange-pill">NSE</span>
+                        {!stock.isLive && (
+                          <span className="card-simulated-pill">Sim</span>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveStock(stock._id, stock.symbol);
+                        }}
+                        className="card-remove-btn"
+                        title="Remove from watchlist"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
 
-                  </div>
+                    {/* Sparkline Row */}
+                    <div className="card-sparkline-row">
+                      <svg className="sparkline-svg" width="100" height="30">
+                        <polyline
+                          fill="none"
+                          stroke={isPositive ? "#00b074" : "#ff4d4d"}
+                          strokeWidth="2.2"
+                          points={generateSparklinePoints(stock.change)}
+                        />
+                      </svg>
+                    </div>
 
-                  {/* CENTER */}
-
-                  <div className="text-center">
-
-                    <p className="text-[13px] text-[#64748B]">
-
-                      Live Price
-
-                    </p>
-
-                    <h2 className="mt-2 text-[38px] font-bold tracking-tight text-[#0F172A]">
-
-                      ₹
-                      {stock.price}
-
-                    </h2>
-
-                  </div>
-
-                  {/* RIGHT */}
-
-                  <div className="flex items-center gap-3">
-
-                    <button className="h-12 px-6 rounded-2xl bg-green-500 hover:bg-green-600 text-white text-[13px] font-bold transition-all">
-
-                      Buy
-
-                    </button>
-
-                    <button className="h-12 px-6 rounded-2xl bg-red-500 hover:bg-red-600 text-white text-[13px] font-bold transition-all">
-
-                      Sell
-
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        removeStock(
-                          symbol
-                        )
-                      }
-                      className="h-12 w-12 rounded-2xl border border-[#EEF2F7] flex items-center justify-center text-red-500 hover:bg-red-50 transition-all"
-                    >
-
-                      <Trash2
-                        size={20}
-                      />
-
-                    </button>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-            );
-
-          })}
-
-        </div>
-
+                    {/* Bottom Row */}
+                    <div className="card-bottom-row">
+                      <div className="card-price-value">
+                        {formatINR(stock.price)}
+                      </div>
+                      <div className={`card-change-badge ${isPositive ? "positive" : "negative"}`}>
+                        {isPositive ? (
+                          <ArrowUpRight size={14} className="inline mr-0.5" />
+                        ) : (
+                          <ArrowDownRight size={14} className="inline mr-0.5" />
+                        )}
+                        {Math.abs(stock.change).toFixed(2)}%
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </motion.div>
+        )}
       </div>
-
     </div>
-
   );
-
 };
 
 export default Watchlist;

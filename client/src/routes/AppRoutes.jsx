@@ -1,30 +1,37 @@
 import {
   Routes,
   Route,
+  Navigate,
 } from "react-router-dom";
 
-import Home from "../pages/Home/Home";
+import MainLayout from "../layouts/MainLayout";
 
 import Login from "../pages/Login/Login";
-
 import Register from "../pages/Register/Register";
+import ResetPassword from "../pages/ResetPassword/ResetPassword";
 
-import Dashboard from "../pages/Dashboard/Dashboard";
-
+import MarketsPage from "../pages/Markets/MarketsPage";
+import Portfolio from "../pages/Portfolio/Portfolio";
+import Trading from "../pages/Trading/Trading";
+import Watchlist from "../pages/Watchlist/Watchlist";
+import Orders from "../pages/Orders/Orders";
+import News from "../pages/News/News";
+import Profile from "../pages/Profile/Profile";
+import StockDetails from "../pages/StockDetails/StockDetails";
 import ProtectedRoute from "./ProtectedRoute";
-
+import Home from "../pages/Home/Home";
 
 const AppRoutes = () => {
-
   return (
-
     <Routes>
 
+      {/* HOME PAGE LANDING */}
       <Route
         path="/"
         element={<Home />}
       />
 
+      {/* AUTH */}
       <Route
         path="/login"
         element={<Login />}
@@ -36,18 +43,73 @@ const AppRoutes = () => {
       />
 
       <Route
-        path="/dashboard"
+        path="/reset-password"
+        element={<ResetPassword />}
+      />
+
+      {/* MAIN APP */}
+      <Route 
         element={
           <ProtectedRoute>
-
-            <Dashboard />
-
+            <MainLayout />
           </ProtectedRoute>
+        }
+      >
+
+        <Route
+          path="/markets"
+          element={<MarketsPage />}
+        />
+
+        <Route
+          path="/portfolio"
+          element={<Portfolio />}
+        />
+
+        <Route
+          path="/watchlist"
+          element={<Watchlist />}
+        />
+
+        <Route
+          path="/trading"
+          element={<Trading />}
+        />
+
+        <Route
+          path="/stocks/:symbol"
+          element={<StockDetails />}
+        />
+
+        <Route
+          path="/orders"
+          element={<Orders />}
+        />
+
+        <Route
+          path="/news"
+          element={<News />}
+        />
+
+        <Route
+          path="/profile"
+          element={<Profile />}
+        />
+
+      </Route>
+
+      {/* FALLBACK */}
+      <Route
+        path="*"
+        element={
+          <Navigate
+            to="/markets"
+            replace
+          />
         }
       />
 
     </Routes>
-
   );
 };
 

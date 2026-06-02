@@ -1,519 +1,270 @@
-import {
-
-  Newspaper,
-  TrendingUp,
-  Globe2,
-  Clock3,
-
+import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { 
+  Newspaper, Clock, ExternalLink, TrendingUp, TrendingDown, 
+  ArrowUpRight, ArrowDownRight, Compass, ShieldAlert, Award
 } from "lucide-react";
 
+// Format currency
+const formatINR = (value) => {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
+// Static mock indices list for news sidebar
+const mockIndices = [
+  { name: "NIFTY 50", price: 22458.30, change: 184.20, pct: 0.83, isPositive: true },
+  { name: "SENSEX", price: 73910.15, change: 590.10, pct: 0.81, isPositive: true },
+  { name: "NIFTY BANK", price: 47920.40, change: -128.50, pct: -0.27, isPositive: false },
+  { name: "NIFTY IT", price: 34812.90, change: 485.60, pct: 1.41, isPositive: true }
+];
+
+const mockArticles = [
+  {
+    id: 1,
+    category: "Stocks",
+    title: "Reliance Shares Hit Record High Following Retail Ventures Expansion Announcement",
+    source: "Bloomberg Quint",
+    time: "45 mins ago",
+    summary: "Shares of Reliance Industries surged over 3.5% to hit an all-time high today. The market rally follows the company's board approval of a multi-billion dollar investment plan in its retail and green energy arms, boosting investor confidence.",
+    author: "Rohan Sen",
+    symbol: "RELIANCE",
+    isFeatured: true,
+  },
+  {
+    id: 2,
+    category: "Economy",
+    title: "India GDP Growth Beats Estimates, Rises to 7.8% in Q4 Citing Robust Manufacturing",
+    source: "Economic Times",
+    time: "2 hours ago",
+    summary: "The Indian economy expanded at a faster-than-expected rate of 7.8% in the final quarter of the fiscal year, driven by strong manufacturing output and robust private consumption, solidifying India's position as the fastest-growing major economy.",
+    author: "Pooja Mehta",
+    symbol: null,
+    isFeatured: false,
+  },
+  {
+    id: 3,
+    category: "Stocks",
+    title: "Tata Steel Share Price Rallies as Global Steel Demand Forecasts Rise",
+    source: "Moneycontrol",
+    time: "4 hours ago",
+    summary: "Tata Steel witnessed active buying in early trade after a global report predicted a recovery in European demand. Brokerage firms maintain a positive outlook with revised target prices for the metal major.",
+    author: "Amit Verma",
+    symbol: "TATASTEEL",
+    isFeatured: false,
+  },
+  {
+    id: 4,
+    category: "Global Markets",
+    title: "Nasdaq Futures Slide as US Federal Reserve Hints at Sustained High Interest Rates",
+    source: "Reuters",
+    time: "5 hours ago",
+    summary: "Tech heavy Nasdaq futures fell in pre-market trade following Fed minutes showing policymakers remain concerned about inflation. Analysts suggest rate cuts might be delayed until late 2026.",
+    author: "Sarah Jenkins",
+    symbol: null,
+    isFeatured: false,
+  },
+  {
+    id: 5,
+    category: "Corporate Actions",
+    title: "Infosys Announces Final Dividend of ₹28 per Share Alongside Board Expansion",
+    source: "Business Standard",
+    time: "7 hours ago",
+    summary: "IT bellwether Infosys announced a strong final dividend payout along with its earnings release. The firm also inducted new independent directors to support its cybersecurity and AI expansion roadmap.",
+    author: "Vikram Malhotra",
+    symbol: "INFY",
+    isFeatured: false,
+  },
+  {
+    id: 6,
+    category: "Stocks",
+    title: "State Bank of India Profit Beats Estimates, NII Grows by 14% Year-over-Year",
+    source: "Livemint",
+    time: "1 day ago",
+    summary: "SBI reported a stellar net profit for the quarter, largely beating consensus estimates. Net Interest Income (NII) registered robust double-digit growth, while asset quality remained exceptionally stable.",
+    author: "Ravi Teja",
+    symbol: "SBIN",
+    isFeatured: false,
+  }
+];
+
 const News = () => {
+  const navigate = useNavigate();
+  const [activeCategory, setActiveCategory] = useState("All News");
 
-  const featuredNews = [
+  // Filtering logic
+  const filteredArticles = useMemo(() => {
+    if (activeCategory === "All News") return mockArticles;
+    return mockArticles.filter(a => a.category.toLowerCase() === activeCategory.toLowerCase());
+  }, [activeCategory]);
 
-    {
+  const featuredArticle = useMemo(() => {
+    // Find featured article in active filter or default to first
+    const feat = filteredArticles.find(a => a.isFeatured);
+    return feat || filteredArticles[0];
+  }, [filteredArticles]);
 
-      title:
-        "Reliance Industries Hits New 52-Week High Amid Strong Q2 Earnings",
-
-      source:
-        "Economic Times",
-
-      time:
-        "2 hours ago",
-
-      category:
-        "Stocks",
-
-    },
-
-    {
-
-      title:
-        "NIFTY Crosses 24,800 Mark As Banking Stocks Rally",
-
-      source:
-        "Moneycontrol",
-
-      time:
-        "1 hour ago",
-
-      category:
-        "Markets",
-
-    },
-
-  ];
-
-  const latestNews = [
-
-    {
-
-      title:
-        "TCS Expands AI Partnership With Global Enterprises",
-
-      source:
-        "Bloomberg",
-
-      time:
-        "15 mins ago",
-
-    },
-
-    {
-
-      title:
-        "Infosys Announces Strategic Cloud Transformation Deal",
-
-      source:
-        "CNBC",
-
-      time:
-        "25 mins ago",
-
-    },
-
-    {
-
-      title:
-        "BankNifty Sees Volatility Ahead Of RBI Policy Meeting",
-
-      source:
-        "Reuters",
-
-      time:
-        "40 mins ago",
-
-    },
-
-    {
-
-      title:
-        "Indian Markets Open Higher Tracking Global Cues",
-
-      source:
-        "Financial Express",
-
-      time:
-        "55 mins ago",
-
-    },
-
-  ];
+  const regularArticles = useMemo(() => {
+    if (!featuredArticle) return [];
+    return filteredArticles.filter(a => a.id !== featuredArticle.id);
+  }, [filteredArticles, featuredArticle]);
 
   return (
-
-    <div className="min-h-screen bg-[#F4F7FB] px-5 lg:px-8 py-6">
-
-      {/* HEADER */}
-
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-8">
-
-        <div>
-
-          <p className="text-[14px] text-[#64748B] font-medium">
-
-            Financial Intelligence Hub
-
-          </p>
-
-          <h1 className="mt-2 text-[42px] font-bold tracking-tight text-[#0F172A]">
-
-            Market News
-
-          </h1>
-
-        </div>
-
-        {/* LIVE NEWS */}
-
-        <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-red-100 text-red-700 w-fit">
-
-          <div className="h-3 w-3 rounded-full bg-red-500 animate-pulse" />
-
-          <span className="text-[14px] font-bold">
-
-            Breaking News Live
-
-          </span>
-
-        </div>
-
-      </div>
-
-      {/* FEATURED NEWS */}
-
-      <section className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
-
-        {featuredNews.map(
-          (news, index) => (
-
-            <div
-              key={index}
-              className="relative overflow-hidden bg-white rounded-[32px] border border-[#E8ECF2] p-7 shadow-[0_6px_24px_rgba(15,23,42,0.06)]"
-            >
-
-              {/* TOP */}
-
-              <div className="flex items-center justify-between">
-
-                <div className="flex items-center gap-3">
-
-                  <div className="h-12 w-12 rounded-2xl bg-[#0F172A] text-white flex items-center justify-center">
-
-                    <TrendingUp
-                      size={24}
-                    />
-
-                  </div>
-
-                  <div>
-
-                    <p className="text-[13px] text-[#64748B]">
-
-                      Featured Story
-
-                    </p>
-
-                    <h3 className="mt-1 text-[18px] font-bold text-[#0F172A]">
-
-                      {
-                        news.category
-                      }
-
-                    </h3>
-
-                  </div>
-
-                </div>
-
-                <div className="px-4 py-2 rounded-2xl bg-[#F4F7FB] text-[13px] font-bold text-[#0F172A]">
-
-                  LIVE
-
-                </div>
-
+    <div className="news-page-container">
+      {/* 2-COLUMN VIEWPORT LAYOUT */}
+      <div className="news-grid-wrapper">
+        
+        {/* LEFT COLUMN: ARTICLES STREAM */}
+        <div className="news-articles-main-column">
+          
+          {/* Page Hero Header */}
+          <div className="news-hero-title-card">
+            <div className="hero-left">
+              <div className="hero-title-row">
+                <Newspaper className="hero-news-icon text-[#37c98b]" size={28} />
+                <h1>Market Insights</h1>
               </div>
+              <p>Real-time financial journalism, corporate announcements, and macroeconomic reports</p>
+            </div>
+          </div>
 
-              {/* TITLE */}
+          {/* Categories Tab Bar */}
+          <div className="news-categories-tabs-bar">
+            {["All News", "Stocks", "Economy", "Global Markets", "Corporate Actions"].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`category-tab-btn ${activeCategory === cat ? "active" : ""}`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
 
-              <h2 className="mt-8 text-[30px] leading-[42px] font-bold tracking-tight text-[#0F172A]">
-
-                {news.title}
-
-              </h2>
-
-              {/* FOOTER */}
-
-              <div className="mt-10 flex items-center justify-between">
-
-                <div className="flex items-center gap-3">
-
-                  <Globe2
-                    size={18}
-                    className="text-[#64748B]"
-                  />
-
-                  <span className="text-[14px] font-semibold text-[#0F172A]">
-
-                    {news.source}
-
+          {/* Featured Article Card */}
+          {featuredArticle && (
+            <div className="featured-news-card">
+              <div className="featured-card-body">
+                <div className="article-meta-row">
+                  <span className="category-badge">{featuredArticle.category}</span>
+                  <span className="dot">•</span>
+                  <span className="time-badge">
+                    <Clock size={11} className="inline mr-1" />
+                    {featuredArticle.time}
                   </span>
-
                 </div>
+                
+                <h2 className="featured-title">{featuredArticle.title}</h2>
+                <p className="featured-summary">{featuredArticle.summary}</p>
 
-                <div className="flex items-center gap-2 text-[#64748B]">
-
-                  <Clock3
-                    size={16}
-                  />
-
-                  <span className="text-[13px]">
-
-                    {news.time}
-
-                  </span>
-
+                <div className="featured-footer">
+                  <span className="source-label">Source: {featuredArticle.source}</span>
+                  
+                  {featuredArticle.symbol && (
+                    <button
+                      onClick={() => navigate(`/stocks/${featuredArticle.symbol.toUpperCase()}`)}
+                      className="nav-to-stock-btn"
+                    >
+                      Trade {featuredArticle.symbol}
+                      <ArrowUpRight size={13} className="ml-1" />
+                    </button>
+                  )}
                 </div>
-
               </div>
-
             </div>
+          )}
 
-          )
-        )}
-
-      </section>
-
-      {/* MAIN GRID */}
-
-      <section className="grid grid-cols-1 2xl:grid-cols-12 gap-6">
-
-        {/* LEFT */}
-
-        <div className="2xl:col-span-8">
-
-          <div className="bg-white rounded-[30px] border border-[#E8ECF2] p-6 shadow-[0_6px_24px_rgba(15,23,42,0.06)]">
-
-            {/* HEADER */}
-
-            <div className="flex items-center gap-3 mb-8">
-
-              <Newspaper
-                className="text-[#0F172A]"
-              />
-
-              <h2 className="text-[30px] font-bold tracking-tight text-[#0F172A]">
-
-                Latest Market Updates
-
-              </h2>
-
-            </div>
-
-            {/* NEWS LIST */}
-
-            <div className="space-y-5">
-
-              {latestNews.map(
-                (
-                  item,
-                  index
-                ) => (
-
-                  <div
-                    key={index}
-                    className="rounded-[24px] border border-[#EEF2F7] p-6 hover:bg-[#FAFBFC] transition-all"
-                  >
-
-                    <div className="flex items-start justify-between gap-5">
-
-                      {/* LEFT */}
-
-                      <div>
-
-                        <h3 className="text-[24px] leading-[34px] font-bold tracking-tight text-[#0F172A]">
-
-                          {item.title}
-
-                        </h3>
-
-                        <div className="mt-5 flex items-center gap-6">
-
-                          <div className="flex items-center gap-2">
-
-                            <Globe2
-                              size={16}
-                              className="text-[#64748B]"
-                            />
-
-                            <span className="text-[14px] font-semibold text-[#0F172A]">
-
-                              {
-                                item.source
-                              }
-
-                            </span>
-
-                          </div>
-
-                          <div className="flex items-center gap-2 text-[#64748B]">
-
-                            <Clock3
-                              size={15}
-                            />
-
-                            <span className="text-[13px]">
-
-                              {
-                                item.time
-                              }
-
-                            </span>
-
-                          </div>
-
-                        </div>
-
-                      </div>
-
-                      {/* TAG */}
-
-                      <div className="px-4 py-2 rounded-2xl bg-[#F4F7FB] text-[13px] font-bold text-[#0F172A] whitespace-nowrap">
-
-                        Market News
-
-                      </div>
-
+          {/* Regular Articles Stream */}
+          <div className="news-articles-list">
+            {regularArticles.length > 0 ? (
+              regularArticles.map((article) => (
+                <div key={article.id} className="news-row-card">
+                  <div className="news-row-body">
+                    <div className="article-meta-row">
+                      <span className="category-badge-simple">{article.category}</span>
+                      <span className="dot">•</span>
+                      <span className="source-label">{article.source}</span>
+                      <span className="dot">•</span>
+                      <span className="time-badge">
+                        <Clock size={11} className="inline mr-1" />
+                        {article.time}
+                      </span>
                     </div>
 
+                    <h3 className="article-title">{article.title}</h3>
+                    <p className="article-summary-simple">{article.summary}</p>
+
+                    {article.symbol && (
+                      <div className="article-actions-row">
+                        <button
+                          onClick={() => navigate(`/stocks/${article.symbol.toUpperCase()}`)}
+                          className="trade-stock-tag-btn"
+                        >
+                          {article.symbol} NSE
+                          <ArrowUpRight size={11} className="ml-1" />
+                        </button>
+                      </div>
+                    )}
                   </div>
-
-                )
-              )}
-
-            </div>
-
+                </div>
+              ))
+            ) : (
+              <div className="news-empty-state">
+                <span>No secondary stories in this category.</span>
+              </div>
+            )}
           </div>
 
         </div>
 
-        {/* RIGHT */}
+        {/* RIGHT COLUMN: SIDEBAR WIDGETS */}
+        <aside className="news-sidebar-column">
+          
+          {/* Live market indices widget */}
+          <div className="news-sidebar-widget">
+            <h3 className="widget-title">Market Indicators</h3>
+            <div className="indices-list-group">
+              {mockIndices.map((ind, idx) => (
+                <div key={idx} className="index-row-item">
+                  <div className="index-meta">
+                    <span className="index-name">{ind.name}</span>
+                    <span className="index-price">{ind.price.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className={`index-change ${ind.isPositive ? "up" : "down"}`}>
+                    {ind.isPositive ? (
+                      <ArrowUpRight size={13} className="mr-0.5" />
+                    ) : (
+                      <ArrowDownRight size={13} className="mr-0.5" />
+                    )}
+                    <span>
+                      {ind.isPositive ? "+" : ""}
+                      {ind.pct.toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-        <div className="2xl:col-span-4 space-y-6">
-
-          {/* MARKET SENTIMENT */}
-
-          <div className="bg-[#0F172A] rounded-[30px] p-6 text-white">
-
-            <p className="text-[13px] text-gray-400">
-
-              Market Mood
-
+          {/* Quick Disclaimer */}
+          <div className="news-sidebar-widget disclaimer-widget">
+            <div className="flex items-start gap-2 text-amber-600 mb-2">
+              <ShieldAlert size={16} className="mt-0.5 flex-shrink-0" />
+              <h4 className="text-xs font-bold uppercase tracking-wider">Trading Disclaimer</h4>
+            </div>
+            <p className="text-[11px] text-[#64748b] leading-relaxed">
+              All market news, data feeds, and pricing values are compiled for virtual simulation purposes. TradeXpert does not facilitate real-exchange capital placements.
             </p>
-
-            <h2 className="mt-2 text-[30px] font-bold tracking-tight">
-
-              Bullish Sentiment
-
-            </h2>
-
-            <div className="mt-8">
-
-              <div className="flex items-center justify-between mb-3">
-
-                <span className="text-[14px]">
-
-                  Investor Confidence
-
-                </span>
-
-                <span className="text-[14px] font-bold">
-
-                  82%
-
-                </span>
-
-              </div>
-
-              <div className="h-3 bg-white/10 rounded-full overflow-hidden">
-
-                <div className="h-full w-[82%] bg-green-500 rounded-full" />
-
-              </div>
-
-            </div>
-
-            <div className="mt-8 space-y-5">
-
-              <div>
-
-                <p className="text-[13px] text-gray-400">
-
-                  Trending Sector
-
-                </p>
-
-                <h3 className="mt-2 text-[22px] font-bold">
-
-                  Banking & AI Tech
-
-                </h3>
-
-              </div>
-
-              <div>
-
-                <p className="text-[13px] text-gray-400">
-
-                  Market Trend
-
-                </p>
-
-                <h3 className="mt-2 text-[22px] font-bold text-green-400">
-
-                  Strong Uptrend
-
-                </h3>
-
-              </div>
-
-            </div>
-
           </div>
 
-          {/* QUICK INSIGHTS */}
+        </aside>
 
-          <div className="bg-white rounded-[30px] border border-[#E8ECF2] p-6 shadow-[0_6px_24px_rgba(15,23,42,0.06)]">
-
-            <h2 className="text-[28px] font-bold tracking-tight text-[#0F172A]">
-
-              Quick Insights
-
-            </h2>
-
-            <div className="mt-8 space-y-5">
-
-              <div className="p-5 rounded-[22px] bg-[#F4F7FB]">
-
-                <p className="text-[13px] text-[#64748B]">
-
-                  Most Active Stock
-
-                </p>
-
-                <h3 className="mt-2 text-[22px] font-bold text-[#0F172A]">
-
-                  RELIANCE
-
-                </h3>
-
-              </div>
-
-              <div className="p-5 rounded-[22px] bg-[#F4F7FB]">
-
-                <p className="text-[13px] text-[#64748B]">
-
-                  Highest Volume
-
-                </p>
-
-                <h3 className="mt-2 text-[22px] font-bold text-[#0F172A]">
-
-                  HDFCBANK
-
-                </h3>
-
-              </div>
-
-              <div className="p-5 rounded-[22px] bg-[#F4F7FB]">
-
-                <p className="text-[13px] text-[#64748B]">
-
-                  Market Volatility
-
-                </p>
-
-                <h3 className="mt-2 text-[22px] font-bold text-red-500">
-
-                  Moderate
-
-                </h3>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </section>
-
+      </div>
     </div>
-
   );
-
 };
 
 export default News;
