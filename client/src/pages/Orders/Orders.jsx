@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo } from "react";
 import { getOrders } from "../../services/orderService";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
-import { 
-  FileText, Clock, CheckCircle, Search, RefreshCw 
+import {
+  FileText, Clock, CheckCircle, Search, RefreshCw
 } from "lucide-react";
+import StockLogo from "../../components/ui/StockLogo";
 
 // Format currency
 const formatINR = (value) => {
@@ -53,7 +54,6 @@ const Orders = () => {
       <div className="orders-hero">
         <div className="orders-hero-left">
           <div className="orders-hero-title-row">
-            <FileText className="hero-orders-icon text-[#37c98b]" size={28} />
             <h1>Order Book</h1>
           </div>
           <p>View transaction logs and virtual execution history</p>
@@ -103,7 +103,7 @@ const Orders = () => {
           </div>
           <h2>No Orders Found</h2>
           <p>
-            {orders.length === 0 
+            {orders.length === 0
               ? "You haven't placed any virtual trades yet."
               : "No orders match the selected filters."
             }
@@ -130,7 +130,7 @@ const Orders = () => {
                     const dateObj = new Date(o.createdAt);
                     const dateTimeStr = `${dateObj.toLocaleDateString("en-IN")} ${dateObj.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`;
                     const isBuy = o.type === "BUY";
-                    
+
                     return (
                       <motion.tr
                         layout
@@ -141,8 +141,13 @@ const Orders = () => {
                       >
                         <td className="order-time-col">{dateTimeStr}</td>
                         <td className="order-symbol-col">
-                          <span className="sym-bold">{o.symbol}</span>
-                          <span className="exchange-pill">NSE</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <StockLogo symbol={o.symbol} size={28} />
+                            <div style={{ display: "flex", flexDirection: "column" }}>
+                              <span className="sym-bold">{o.symbol}</span>
+                              <span className="exchange-pill" style={{ alignSelf: "flex-start", marginTop: "2px" }}>NSE</span>
+                            </div>
+                          </div>
                         </td>
                         <td className="order-type-col">
                           <span className={`order-type-badge ${isBuy ? "buy" : "sell"}`}>

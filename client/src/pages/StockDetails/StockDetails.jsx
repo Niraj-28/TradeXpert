@@ -12,9 +12,11 @@ import {
 import { 
   ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, 
   Check, Plus, RefreshCw, AlertCircle, Settings, ChevronDown, Bell, Star,
-  TrendingUp as BuyIcon, ShieldAlert, Award, Globe, Calendar, FileText
+  TrendingUp as BuyIcon, ShieldAlert, Award, Globe, Calendar, FileText,
+  Clock, ChevronRight, Activity
 } from "lucide-react";
 import toast from "react-hot-toast";
+import StockLogo from "../../components/ui/StockLogo";
 
 // Format currency
 const formatINR = (value) => {
@@ -25,18 +27,20 @@ const formatINR = (value) => {
   }).format(value);
 };
 
+
+
 // Deterministic mock data seed for custom stocks
 const getInitialStockStats = (symbol) => {
   let hash = 0;
   for (let i = 0; i < symbol.length; i++) {
     hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const basePrice = Math.abs(hash % 2900) + 100;
+  const open = Math.abs(hash % 2900) + 100;
   const changePercent = ((hash % 100) / 25) - 2; // -2% to +2%
-  const changeVal = basePrice * (changePercent / 100);
-  const open = basePrice - changeVal;
-  const high = Math.max(basePrice, open) * (1 + 0.012);
-  const low = Math.min(basePrice, open) * (1 - 0.012);
+  const changeVal = open * (changePercent / 100);
+  const price = open + changeVal;
+  const high = Math.max(price, open) * (1 + 0.012);
+  const low = Math.min(price, open) * (1 - 0.012);
   
   const yLow = low * 0.92;
   const yHigh = high * 1.15;
@@ -44,7 +48,7 @@ const getInitialStockStats = (symbol) => {
   return {
     symbol: symbol.toUpperCase(),
     companyName: symbol.toUpperCase() + " Technologies India",
-    price: parseFloat(basePrice.toFixed(2)),
+    price: parseFloat(price.toFixed(2)),
     change: parseFloat(changePercent.toFixed(2)),
     changeAmt: parseFloat(changeVal.toFixed(2)),
     open: parseFloat(open.toFixed(2)),
@@ -176,21 +180,22 @@ const CandleShape = (props) => {
   );
 };
 
-// Seed deterministic historical data (Line and Candle options)
-const generateHistoricalPoints = (symbol, timeframe, isCandle) => {
+// Seed deterministic historical data (Line and Candle options) scaled to currentPrice
+const generateStaticChartData = (symbol, timeframe, currentPrice, isCandle, openPrice, highPrice, lowPrice) => {
   let hash = 0;
   for (let i = 0; i < symbol.length; i++) {
     hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const basePrice = Math.abs(hash % 2900) + 100;
   
   let pointsCount = 30;
   let intervalDays = 1;
-
+  
   if (timeframe === "1W") {
     pointsCount = 7;
+    intervalDays = 1;
   } else if (timeframe === "1M") {
     pointsCount = 30;
+    intervalDays = 1;
   } else if (timeframe === "3M") {
     pointsCount = 45;
     intervalDays = 2;
@@ -198,55 +203,123 @@ const generateHistoricalPoints = (symbol, timeframe, isCandle) => {
     pointsCount = 12;
     intervalDays = 30;
   } else if (timeframe === "ALL") {
-    pointsCount = 20;
+    pointsCount = 24;
     intervalDays = 60;
+  } else if (timeframe === "1D") {
+    pointsCount = isCandle ? 15 : 20;
   }
-
-  const data = [];
-  let currentClose = basePrice * 0.92;
+  
   const now = new Date();
-
-  for (let i = pointsCount - 1; i >= 0; i--) {
-    const date = new Date(now.getTime() - i * intervalDays * 24 * 60 * 60 * 1000);
+  const data = [];
+  
+  if (timeframe === "1D") {
+    // 1D timeframe: generate intermediate points between openPrice and currentPrice,
+    // bounded by lowPrice and highPrice.
+    const open = openPrice || currentPrice * 0.99;
+    const close = currentPrice;
+    const high = highPrice || Math.max(open, close) * 1.01;
+    const low = lowPrice || Math.min(open, close) * 0.99;
+    const range = high - low || 1.0;
     
-    // Deterministic random walk
-    const seed = Math.sin(hash + i) * 1.8;
-    const trend = (i / pointsCount) * (hash % 12 - 6);
-    const pct = (seed + trend) / 100;
-    
-    const open = currentClose;
-    currentClose = currentClose * (1 + pct);
-    const close = currentClose;
-    
-    const high = Math.max(open, close) * (1 + Math.abs(Math.cos(hash * i) * 0.015));
-    const low = Math.min(open, close) * (1 - Math.abs(Math.sin(hash * i) * 0.015));
-
-    let label = "";
-    if (timeframe === "1W") {
-      label = date.toLocaleDateString("en-IN", { weekday: "short" });
-    } else if (timeframe === "1M" || timeframe === "3M") {
-      label = date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-    } else {
-      label = date.toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
+    for (let i = 0; i < pointsCount; i++) {
+      const t = i / (pointsCount - 1);
+      // Base linear interpolation
+      let price = open + (close - open) * t;
+      
+      // Add deterministic wave perturbation (0 at endpoints i=0 and i=pointsCount-1)
+      if (i > 0 && i < pointsCount - 1) {
+        const wave = Math.sin(Math.PI * t) * (
+          Math.sin(hash + i * 0.8) * 0.45 +
+          Math.cos(hash * 2 - i * 1.4) * 0.25 +
+          Math.sin(hash * 0.5 + i * 2.2) * 0.15
+        );
+        // Volatility scale
+        const vol = range * 0.3; // perturbation can go up to 30% of day's range
+        price += wave * vol;
+      }
+      
+      // Clamp to [low, high]
+      price = Math.max(low + range * 0.02, Math.min(high - range * 0.02, price));
+      
+      // At endpoints, be exact
+      if (i === 0) price = open;
+      if (i === pointsCount - 1) price = close;
+      
+      const time = new Date(now.getTime() - (pointsCount - 1 - i) * 20 * 60 * 1000);
+      const label = time.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+      
+      if (isCandle) {
+        const nextPrice = (i === pointsCount - 1) ? close : (open + (close - open) * ((i + 1) / (pointsCount - 1)));
+        const cOpen = price;
+        const cClose = nextPrice;
+        const cHigh = Math.max(cOpen, cClose) + (range * 0.05 * Math.abs(Math.sin(hash + i)));
+        const cLow = Math.min(cOpen, cClose) - (range * 0.05 * Math.abs(Math.cos(hash + i)));
+        data.push({
+          time: label,
+          open: parseFloat(cOpen.toFixed(2)),
+          close: parseFloat(cClose.toFixed(2)),
+          high: parseFloat(Math.min(high, cHigh).toFixed(2)),
+          low: parseFloat(Math.max(low, cLow).toFixed(2)),
+          range: [parseFloat(Math.min(cOpen, cClose).toFixed(2)), parseFloat(Math.max(cOpen, cClose).toFixed(2))]
+        });
+      } else {
+        data.push({
+          time: label,
+          price: parseFloat(price.toFixed(2)),
+        });
+      }
     }
-
-    if (isCandle) {
-      data.push({
-        time: label,
-        open: parseFloat(open.toFixed(2)),
-        close: parseFloat(close.toFixed(2)),
-        high: parseFloat(high.toFixed(2)),
-        low: parseFloat(low.toFixed(2)),
-        range: [parseFloat(Math.min(open, close).toFixed(2)), parseFloat(Math.max(open, close).toFixed(2))]
-      });
-    } else {
-      data.push({
-        time: label,
-        price: parseFloat(close.toFixed(2)),
-      });
+  } else {
+    // Longer timeframe: generate points backward from currentPrice
+    const factors = [1.0];
+    let currentFactor = 1.0;
+    
+    for (let i = 1; i < pointsCount; i++) {
+      // Deterministic return
+      const seed = Math.sin(hash - i) * 1.5;
+      const trend = (hash % 8 - 4) / 4.0; // -1 to +1
+      const r = (seed + trend * 0.5) / 100; // -2% to +2% per interval
+      currentFactor = currentFactor / (1 + r);
+      factors.unshift(currentFactor);
+    }
+    
+    // Calculate prices based on factors, scaled so the last one is exactly currentPrice
+    for (let i = 0; i < pointsCount; i++) {
+      const date = new Date(now.getTime() - (pointsCount - 1 - i) * intervalDays * 24 * 60 * 60 * 1000);
+      const pointPrice = currentPrice * factors[i];
+      
+      let label = "";
+      if (timeframe === "1W") {
+        label = date.toLocaleDateString("en-IN", { weekday: "short" });
+      } else if (timeframe === "1M" || timeframe === "3M") {
+        label = date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+      } else {
+        label = date.toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
+      }
+      
+      if (isCandle) {
+        const cOpen = pointPrice;
+        const cClose = (i === pointsCount - 1) ? currentPrice : currentPrice * factors[i+1];
+        const diff = Math.abs(cClose - cOpen) || 1;
+        const cHigh = Math.max(cOpen, cClose) + diff * 0.3 * Math.abs(Math.sin(hash + i));
+        const cLow = Math.min(cOpen, cClose) - diff * 0.3 * Math.abs(Math.cos(hash + i));
+        data.push({
+          time: label,
+          open: parseFloat(cOpen.toFixed(2)),
+          close: parseFloat(cClose.toFixed(2)),
+          high: parseFloat(cHigh.toFixed(2)),
+          low: parseFloat(cLow.toFixed(2)),
+          range: [parseFloat(Math.min(cOpen, cClose).toFixed(2)), parseFloat(Math.max(cOpen, cClose).toFixed(2))]
+        });
+      } else {
+        data.push({
+          time: label,
+          price: parseFloat(pointPrice.toFixed(2)),
+        });
+      }
     }
   }
-
+  
   return data;
 };
 
@@ -279,6 +352,7 @@ const StockDetails = () => {
   const [liveTicks, setLiveTicks] = useState([]);
   const [simulatedPrice, setSimulatedPrice] = useState(null);
 
+
   // Fetch initial cash and user position state
   const fetchUserData = async () => {
     try {
@@ -309,10 +383,11 @@ const StockDetails = () => {
     if (liveStock) {
       const price = parseFloat(liveStock.price) || 0;
       const change = parseFloat(liveStock.change) || 0;
-      const changeAmt = price * (change / 100);
-      const open = parseFloat(liveStock.open) || price - changeAmt;
-      const high = parseFloat(liveStock.high) || Math.max(price, open) * 1.01;
-      const low = parseFloat(liveStock.low) || Math.min(price, open) * 0.99;
+      const prevClose = price / (1 + change / 100);
+      const changeAmt = price - prevClose;
+      const open = parseFloat(liveStock.open) || prevClose;
+      const high = parseFloat(liveStock.high) || Math.max(price, open) * 1.015;
+      const low = parseFloat(liveStock.low) || Math.min(price, open) * 0.985;
       
       const seedStats = getInitialStockStats(symbol);
 
@@ -325,7 +400,7 @@ const StockDetails = () => {
         open,
         high,
         low,
-        prevClose: parseFloat(liveStock.close) || open,
+        prevClose,
         volume: liveStock.volume || "1.5M",
         w52Low: seedStats.w52Low,
         w52High: seedStats.w52High,
@@ -362,8 +437,9 @@ const StockDetails = () => {
     }
   }, [stockDetails.price, priceMode]);
 
-  // Register dynamic view-stock in backend dynamically
+  // Register dynamic view-stock in backend dynamically and scroll page to top
   useEffect(() => {
+    window.scrollTo(0, 0);
     if (symbol) {
       socket.emit("view-stock", symbol);
     }
@@ -399,58 +475,19 @@ const StockDetails = () => {
     }
   }, [symbol, liveStock]);
 
-  // Generate live ticks for 1D chart view
-  useEffect(() => {
-    const timeLabel = new Date().toLocaleTimeString("en-IN", { hour12: false }).slice(-8);
-    setLiveTicks((prev) => {
-      const ticks = [...prev, { time: timeLabel, price: stockDetails.price }];
-      return ticks.slice(-20);
-    });
-  }, [stockDetails.price]);
-
-  // Clear ticks on symbol switch
-  useEffect(() => {
-    setLiveTicks([]);
-  }, [symbol]);
-
   // Dynamic Chart Points compiler
   const chartData = useMemo(() => {
     const isCandle = chartType === "candle";
-    if (timeframe === "1D") {
-      if (isCandle) {
-        // Compile mock candles for 1D view
-        const base = stockDetails.price;
-        return Array.from({ length: 15 }, (_, i) => {
-          const factor = Math.sin(i * 0.6) * 12;
-          const open = base + factor;
-          const close = base + factor + (Math.cos(i) * 8);
-          const high = Math.max(open, close) + 5;
-          const low = Math.min(open, close) - 4;
-          return {
-            time: `${10 + Math.floor(i/2)}:${(i%2) * 30 || "00"}`,
-            open,
-            close,
-            high,
-            low,
-            range: [Math.min(open, close), Math.max(open, close)],
-          };
-        });
-      }
-      // Line chart 1D returns live ticks or seeded path
-      if (liveTicks.length > 1) {
-        return liveTicks;
-      }
-      return Array.from({ length: 12 }, (_, i) => {
-        const factor = Math.sin(i * 0.5) * 0.008;
-        return {
-          time: `${9 + Math.floor(i/2)}:${(i%2)*30 || "00"}`,
-          price: parseFloat((stockDetails.open * (1 + factor)).toFixed(2)),
-        };
-      });
-    }
-
-    return generateHistoricalPoints(symbol, timeframe, isCandle);
-  }, [symbol, timeframe, chartType, stockDetails, liveTicks]);
+    return generateStaticChartData(
+      symbol,
+      timeframe,
+      stockDetails.price,
+      isCandle,
+      stockDetails.open,
+      stockDetails.high,
+      stockDetails.low
+    );
+  }, [symbol, timeframe, chartType, stockDetails.price, stockDetails.open, stockDetails.high, stockDetails.low]);
 
   // Check if user holds active stock
   const userPosition = useMemo(() => {
@@ -555,9 +592,7 @@ const StockDetails = () => {
           
           {/* Header block */}
           <div className="stock-profile-header-card">
-            <div className="profile-logo-avatar">
-              {symbol.slice(0, 2).toUpperCase()}
-            </div>
+            <StockLogo symbol={symbol} size={64} />
             
             <div className="profile-text-block">
               <div className="profile-exchange-row">
@@ -834,62 +869,94 @@ const StockDetails = () => {
 
               {/* TECHNICALS TAB */}
               {activeTab === "Technicals" && (
-                <div className="technicals-tab-viewport">
-                  <div className="tech-summary-header mb-6">
-                    <span className="summary-label text-slate-400 text-xs font-semibold block mb-1">MARKET SENTIMENT</span>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-xl font-bold ${
-                        tabDetails.sentiment === "Bullish" ? "text-[#00b074]" : 
-                        tabDetails.sentiment === "Bearish" ? "text-[#ff4d4d]" : "text-amber-500"
-                      }`}>
+                <div className="premium-technicals-layout">
+                  <div className="sentiment-gauge-card">
+                    <span className="section-subtitle">MARKET SENTIMENT</span>
+                    <div className="sentiment-main-row">
+                      <span className={`sentiment-text-badge ${tabDetails.sentiment.toLowerCase()}`}>
                         {tabDetails.sentiment}
                       </span>
-                      <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-md font-semibold">EMA / SMA Sync</span>
+                      <span className="sync-badge">EMA / SMA Sync</span>
+                    </div>
+                    
+                    <div className="gauge-track-container">
+                      <div className="gauge-track">
+                        <div className="gauge-segment bearish" />
+                        <div className="gauge-segment neutral" />
+                        <div className="gauge-segment bullish" />
+                        <div 
+                          className="gauge-pointer" 
+                          style={{ 
+                            left: tabDetails.sentiment === "Bullish" ? "85%" : 
+                                  tabDetails.sentiment === "Bearish" ? "15%" : "50%" 
+                          }}
+                        />
+                      </div>
+                      <div className="gauge-labels-row">
+                        <span className="label-text text-bearish">Bearish</span>
+                        <span className="label-text text-neutral">Neutral</span>
+                        <span className="label-text text-bullish">Bullish</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* Moving Averages */}
-                    <div className="tech-section-block">
-                      <h4 className="text-sm font-bold text-slate-700 mb-3 border-b pb-2">Moving Averages</h4>
-                      <div className="space-y-3">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-500 font-medium">EMA (20)</span>
-                          <span className="font-bold text-[#0f172a]">{formatINR(tabDetails.ema20)}</span>
+                  <div className="technical-indicators-grid">
+                    {/* Moving Averages Card */}
+                    <div className="indicator-group-card">
+                      <div className="card-header">
+                        <TrendingUp size={16} className="header-icon text-[#00b074]" />
+                        <h4>Moving Averages</h4>
+                      </div>
+                      <div className="indicators-list">
+                        <div className="indicator-row">
+                          <span className="ind-name">EMA (20)</span>
+                          <span className="ind-val">{formatINR(tabDetails.ema20)}</span>
+                          <span className="ind-status buy">Bullish</span>
                         </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-500 font-medium">SMA (50)</span>
-                          <span className="font-bold text-[#0f172a]">{formatINR(tabDetails.sma50)}</span>
+                        <div className="indicator-row">
+                          <span className="ind-name">SMA (50)</span>
+                          <span className="ind-val">{formatINR(tabDetails.sma50)}</span>
+                          <span className="ind-status buy">Bullish</span>
                         </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-500 font-medium">SMA (100)</span>
-                          <span className="font-bold text-[#0f172a]">{formatINR(tabDetails.sma100)}</span>
+                        <div className="indicator-row">
+                          <span className="ind-name">SMA (100)</span>
+                          <span className="ind-val">{formatINR(tabDetails.sma100)}</span>
+                          <span className="ind-status buy">Bullish</span>
                         </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-500 font-medium">SMA (200)</span>
-                          <span className="font-bold text-[#0f172a]">{formatINR(tabDetails.sma200)}</span>
+                        <div className="indicator-row">
+                          <span className="ind-name">SMA (200)</span>
+                          <span className="ind-val">{formatINR(tabDetails.sma200)}</span>
+                          <span className="ind-status buy">Bullish</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Oscillators */}
-                    <div className="tech-section-block">
-                      <h4 className="text-sm font-bold text-slate-700 mb-3 border-b pb-2">Oscillators</h4>
-                      <div className="space-y-3">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-500 font-medium">RSI (14)</span>
-                          <div className="text-right">
-                            <span className="font-bold text-[#0f172a] block">{tabDetails.rsi}</span>
-                            <span className="text-[10px] text-slate-400 font-semibold">{tabDetails.rsiStatus}</span>
+                    {/* Oscillators Card */}
+                    <div className="indicator-group-card">
+                      <div className="card-header">
+                        <Activity size={16} className="header-icon text-indigo-500" />
+                        <h4>Oscillators</h4>
+                      </div>
+                      <div className="indicators-list">
+                        <div className="indicator-row">
+                          <span className="ind-name">RSI (14)</span>
+                          <div className="ind-val-wrapper">
+                            <span className="ind-val font-bold">{tabDetails.rsi}</span>
+                            <span className="ind-status-sub">{tabDetails.rsiStatus}</span>
                           </div>
+                          <span className={`ind-status ${tabDetails.rsi > 70 ? "sell" : tabDetails.rsi < 30 ? "buy" : "neutral"}`}>
+                            {tabDetails.rsi > 70 ? "Overbought" : tabDetails.rsi < 30 ? "Oversold" : "Neutral"}
+                          </span>
                         </div>
-                        <div className="flex justify-between text-xs border-t pt-2">
-                          <span className="text-slate-500 font-medium">MACD (12, 26)</span>
-                          <span className="font-bold text-[#00b074]">Buy Signal</span>
+                        <div className="indicator-row">
+                          <span className="ind-name">MACD (12, 26)</span>
+                          <span className="ind-val">—</span>
+                          <span className="ind-status buy">Buy Signal</span>
                         </div>
-                        <div className="flex justify-between text-xs border-t pt-2">
-                          <span className="text-slate-500 font-medium">Stochastic %K</span>
-                          <span className="font-bold text-slate-700">Neutral</span>
+                        <div className="indicator-row">
+                          <span className="ind-name">Stochastic %K</span>
+                          <span className="ind-val">—</span>
+                          <span className="ind-status neutral">Neutral</span>
                         </div>
                       </div>
                     </div>
@@ -899,19 +966,27 @@ const StockDetails = () => {
 
               {/* NEWS TAB */}
               {activeTab === "News" && (
-                <div className="news-tab-viewport space-y-6">
+                <div className="premium-news-layout">
                   {tabDetails.news.map((item, idx) => (
-                    <div key={`news-${idx}`} className="news-article-card border-b last:border-0 pb-4 last:pb-0">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded font-bold uppercase">{item.source}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">{item.time}</span>
+                    <div key={`news-${idx}`} className="news-feed-card">
+                      <div className="news-card-meta">
+                        <span className={`news-source-tag ${item.source.toLowerCase().replace(/\s+/g, '-')}`}>
+                          {item.source}
+                        </span>
+                        <span className="news-time-dot">•</span>
+                        <span className="news-time-label">
+                          <Clock size={11} className="inline mr-1 align-middle" />
+                          {item.time}
+                        </span>
                       </div>
-                      <h4 className="text-sm font-bold text-slate-800 hover:text-[#00b074] cursor-pointer transition-colors mb-1">
-                        {item.title}
-                      </h4>
-                      <p className="text-xs text-[#64748b] leading-relaxed">
-                        {item.summary}
-                      </p>
+                      <h3 className="news-card-title">{item.title}</h3>
+                      <p className="news-card-summary">{item.summary}</p>
+                      <div className="news-card-footer">
+                        <a href="#news-link" className="read-more-link" onClick={(e) => e.preventDefault()}>
+                          Read full analysis
+                          <ChevronRight size={14} className="arrow-icon ml-1 inline" />
+                        </a>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -919,27 +994,49 @@ const StockDetails = () => {
 
               {/* EVENTS TAB */}
               {activeTab === "Events" && (
-                <div className="events-tab-viewport">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-xs font-bold text-slate-400 uppercase pb-2">Event Type</th>
-                          <th className="text-xs font-bold text-slate-400 uppercase pb-2">Date</th>
-                          <th className="text-xs font-bold text-slate-400 uppercase pb-2">Details / Purpose</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tabDetails.events.map((e, idx) => (
-                          <tr key={`evt-${idx}`} className="border-b last:border-0">
-                            <td className="text-xs font-bold text-slate-700 py-3">{e.type}</td>
-                            <td className="text-xs font-medium text-[#00b074] py-3">{e.date}</td>
-                            <td className="text-xs text-slate-500 py-3">{e.purpose}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                <div className="premium-events-timeline">
+                  <div className="timeline-spine" />
+                  {tabDetails.events.map((e, idx) => {
+                    let icon = <FileText size={14} />;
+                    let typeClass = "meeting";
+                    if (e.type.includes("Dividend")) {
+                      icon = <Award size={14} />;
+                      typeClass = "dividend";
+                    } else if (e.type.includes("Action") || e.type.includes("Bonus")) {
+                      icon = <Settings size={14} />;
+                      typeClass = "action";
+                    } else if (e.type.includes("AGM")) {
+                      icon = <Globe size={14} />;
+                      typeClass = "agm";
+                    }
+                    
+                    const parts = e.date.split(" ");
+                    const month = parts[0] ? parts[0].slice(0, 3).toUpperCase() : "EVT";
+                    const day = parts[1] ? parts[1].replace(",", "") : "—";
+                    const year = parts[2] || "";
+
+                    return (
+                      <div key={`evt-${idx}`} className="timeline-node">
+                        <div className="event-date-badge">
+                          <span className="badge-month">{month}</span>
+                          <span className="badge-day">{day}</span>
+                          <span className="badge-year">{year}</span>
+                        </div>
+
+                        <div className={`timeline-bullet-icon ${typeClass}`}>
+                          {icon}
+                        </div>
+
+                        <div className="event-details-card">
+                          <div className="event-header-row">
+                            <span className={`event-type-tag ${typeClass}`}>{e.type}</span>
+                            <span className="event-date-string">{e.date}</span>
+                          </div>
+                          <p className="event-purpose-text">{e.purpose}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

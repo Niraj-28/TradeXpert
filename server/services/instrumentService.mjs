@@ -67,8 +67,12 @@ const loadInstrumentsIntoMemory = () => {
   try {
     if (fs.existsSync(CACHE_FILE)) {
       const cacheData = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
-      cachedInstruments = cacheData.instruments || [];
-      console.log(`⚡ [INSTRUMENTS] Loaded ${cachedInstruments.length} instruments into memory cache.`);
+      const rawList = cacheData.instruments || [];
+      cachedInstruments = rawList.filter((item) => {
+        const type = (item.instrument_type || item.instrumentType || "").toUpperCase();
+        return type === "EQ" || type === "EQUITY" || type === "BE" || type === "SM" || type === "ST";
+      });
+      console.log(`⚡ [INSTRUMENTS] Loaded ${cachedInstruments.length} equity instruments into memory cache.`);
     }
   } catch (err) {
     console.error("❌ [INSTRUMENTS] Error loading instruments cache from disk:", err.message);
@@ -109,8 +113,7 @@ export const fetchAllInstruments = async (accessToken) => {
       if (!Array.isArray(list)) return [];
       return list.filter((item) => {
         const type = (item.instrument_type || item.instrumentType || "").toUpperCase();
-        const segment = (item.segment || "").toUpperCase();
-        return type === "EQ" || type === "EQUITY" || segment === "NSE_EQ" || segment === "BSE_EQ";
+        return type === "EQ" || type === "EQUITY" || type === "BE" || type === "SM" || type === "ST";
       });
     };
 
@@ -147,18 +150,55 @@ export const fetchAllInstruments = async (accessToken) => {
 export const searchInstruments = (query) => {
   try {
     const q = String(query || "").trim().toLowerCase();
+    if (!q) return [];
+
     const items = loadInstrumentsIntoMemory();
 
-    const results = items.filter((it) => {
+    const matched = [];
+    for (const it of items) {
       const trading = (it.trading_symbol || it.tradingSymbol || "").toLowerCase();
       const name = (it.name || it.company_name || "").toLowerCase();
       const isin = (it.isin || "").toLowerCase();
       const key = (it.instrument_key || "").toLowerCase();
 
-      return trading.includes(q) || name.includes(q) || isin.includes(q) || key.includes(q);
+      if (trading.includes(q) || name.includes(q) || isin.includes(q) || key.includes(q)) {
+        matched.push(it);
+      }
+    }
+
+    // Sort to prioritize exact, prefix, and equity/high-quality matches
+    matched.sort((a, b) => {
+      const symbolA = (a.trading_symbol || a.tradingSymbol || "").toLowerCase();
+      const symbolB = (b.trading_symbol || b.tradingSymbol || "").toLowerCase();
+      
+      const nameA = (a.name || a.company_name || "").toLowerCase();
+      const nameB = (b.name || b.company_name || "").toLowerCase();
+
+      // 1. Exact matches on symbol
+      const exactA = symbolA === q ? 1 : 0;
+      const exactB = symbolB === q ? 1 : 0;
+      if (exactA !== exactB) return exactB - exactA;
+
+      // 2. Starts with match on symbol
+      const startsA = symbolA.startsWith(q) ? 1 : 0;
+      const startsB = symbolB.startsWith(q) ? 1 : 0;
+      if (startsA !== startsB) return startsB - startsA;
+
+      // 3. Name starts with query
+      const nameStartsA = nameA.startsWith(q) ? 1 : 0;
+      const nameStartsB = nameB.startsWith(q) ? 1 : 0;
+      if (nameStartsA !== nameStartsB) return nameStartsB - nameStartsA;
+
+      // 4. Symbol contains query
+      const containsSymA = symbolA.includes(q) ? 1 : 0;
+      const containsSymB = symbolB.includes(q) ? 1 : 0;
+      if (containsSymA !== containsSymB) return containsSymB - containsSymA;
+
+      // Fallback: alphabetical symbol
+      return symbolA.localeCompare(symbolB);
     });
 
-    return results.slice(0, 100);
+    return matched.slice(0, 100);
   } catch (e) {
     console.error("Search instruments error:", e.message);
     return [];

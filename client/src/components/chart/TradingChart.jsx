@@ -1,70 +1,106 @@
 import { useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
-// Helper to seed deterministic historical data based on stock symbol
-const generateHistoricalData = (symbol, timeframe) => {
+// Helper to seed deterministic historical data based on stock symbol scaled to currentPrice
+const generateStaticChartData = (symbol, timeframe, currentPrice, openPrice, highPrice, lowPrice) => {
   let hash = 0;
   for (let i = 0; i < symbol.length; i++) {
     hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const basePrice = Math.abs(hash % 2900) + 100;
   
   let pointsCount = 30;
   let intervalDays = 1;
-
+  
   if (timeframe === "1W") {
     pointsCount = 7;
+    intervalDays = 1;
   } else if (timeframe === "1M") {
     pointsCount = 30;
+    intervalDays = 1;
   } else if (timeframe === "1Y") {
     pointsCount = 12;
     intervalDays = 30;
+  } else if (timeframe === "1D") {
+    pointsCount = 20;
   }
-
-  const data = [];
-  let currentPrice = basePrice * 0.95;
+  
   const now = new Date();
-
-  for (let i = pointsCount - 1; i >= 0; i--) {
-    const date = new Date(now.getTime() - i * intervalDays * 24 * 60 * 60 * 1000);
+  const data = [];
+  
+  if (timeframe === "1D") {
+    const open = openPrice || currentPrice * 0.99;
+    const close = currentPrice;
+    const high = highPrice || Math.max(open, close) * 1.01;
+    const low = lowPrice || Math.min(open, close) * 0.99;
+    const range = high - low || 1.0;
     
-    // Deterministic fluctuation using hash and index
-    const seed = Math.sin(hash + i) * 1.5;
-    const trend = (i / pointsCount) * (hash % 10 - 5); // Add general upward/downward trend
-    const pct = (seed + trend) / 100;
-    currentPrice = currentPrice * (1 + pct);
-
-    let label = "";
-    if (timeframe === "1W") {
-      label = date.toLocaleDateString("en-IN", { weekday: "short" });
-    } else if (timeframe === "1M") {
-      label = date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-    } else if (timeframe === "1Y") {
-      label = date.toLocaleDateString("en-IN", { month: "short" });
+    for (let i = 0; i < pointsCount; i++) {
+      const t = i / (pointsCount - 1);
+      let price = open + (close - open) * t;
+      
+      if (i > 0 && i < pointsCount - 1) {
+        const wave = Math.sin(Math.PI * t) * (
+          Math.sin(hash + i * 0.8) * 0.45 +
+          Math.cos(hash * 2 - i * 1.4) * 0.25 +
+          Math.sin(hash * 0.5 + i * 2.2) * 0.15
+        );
+        const vol = range * 0.3;
+        price += wave * vol;
+      }
+      
+      price = Math.max(low + range * 0.02, Math.min(high - range * 0.02, price));
+      
+      if (i === 0) price = open;
+      if (i === pointsCount - 1) price = close;
+      
+      const time = new Date(now.getTime() - (pointsCount - 1 - i) * 20 * 60 * 1000);
+      const label = time.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+      
+      data.push({
+        time: label,
+        price: parseFloat(price.toFixed(2)),
+      });
     }
-
-    data.push({
-      time: label,
-      price: parseFloat(currentPrice.toFixed(2)),
-    });
+  } else {
+    const factors = [1.0];
+    let currentFactor = 1.0;
+    
+    for (let i = 1; i < pointsCount; i++) {
+      const seed = Math.sin(hash - i) * 1.5;
+      const trend = (hash % 8 - 4) / 4.0;
+      const r = (seed + trend * 0.5) / 100;
+      currentFactor = currentFactor / (1 + r);
+      factors.unshift(currentFactor);
+    }
+    
+    for (let i = 0; i < pointsCount; i++) {
+      const date = new Date(now.getTime() - (pointsCount - 1 - i) * intervalDays * 24 * 60 * 60 * 1000);
+      const pointPrice = currentPrice * factors[i];
+      
+      let label = "";
+      if (timeframe === "1W") {
+        label = date.toLocaleDateString("en-IN", { weekday: "short" });
+      } else if (timeframe === "1M") {
+        label = date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+      } else {
+        label = date.toLocaleDateString("en-IN", { month: "short" });
+      }
+      
+      data.push({
+        time: label,
+        price: parseFloat(pointPrice.toFixed(2)),
+      });
+    }
   }
-
+  
   return data;
 };
-
-const TradingChart = ({ symbol = "RELIANCE", timeframe = "1D", liveTicks = [] }) => {
+ 
+const TradingChart = ({ symbol = "RELIANCE", timeframe = "1D", currentPrice = 1300, openPrice = null, highPrice = null, lowPrice = null }) => {
   // Memoize data calculation
   const chartData = useMemo(() => {
-    if (timeframe === "1D") {
-      // Return live scrolling ticks formatted for Recharts
-      return liveTicks.map((t, idx) => ({
-        time: t.time || `${idx * 3}s`,
-        price: t.price,
-      }));
-    }
-    // Return generated historical points
-    return generateHistoricalData(symbol, timeframe);
-  }, [symbol, timeframe, liveTicks]);
+    return generateStaticChartData(symbol, timeframe, currentPrice, openPrice, highPrice, lowPrice);
+  }, [symbol, timeframe, currentPrice, openPrice, highPrice, lowPrice]);
 
   // Determine trend direction (green/red)
   const isPositive = useMemo(() => {

@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  Newspaper, Clock, ExternalLink, TrendingUp, TrendingDown, 
+import {
+  Newspaper, Clock, ExternalLink, TrendingUp, TrendingDown,
   ArrowUpRight, ArrowDownRight, Compass, ShieldAlert, Award
 } from "lucide-react";
 
@@ -116,15 +116,14 @@ const News = () => {
     <div className="news-page-container">
       {/* 2-COLUMN VIEWPORT LAYOUT */}
       <div className="news-grid-wrapper">
-        
+
         {/* LEFT COLUMN: ARTICLES STREAM */}
         <div className="news-articles-main-column">
-          
+
           {/* Page Hero Header */}
           <div className="news-hero-title-card">
             <div className="hero-left">
               <div className="hero-title-row">
-                <Newspaper className="hero-news-icon text-[#37c98b]" size={28} />
                 <h1>Market Insights</h1>
               </div>
               <p>Real-time financial journalism, corporate announcements, and macroeconomic reports</p>
@@ -156,13 +155,13 @@ const News = () => {
                     {featuredArticle.time}
                   </span>
                 </div>
-                
+
                 <h2 className="featured-title">{featuredArticle.title}</h2>
                 <p className="featured-summary">{featuredArticle.summary}</p>
 
                 <div className="featured-footer">
                   <span className="source-label">Source: {featuredArticle.source}</span>
-                  
+
                   {featuredArticle.symbol && (
                     <button
                       onClick={() => navigate(`/stocks/${featuredArticle.symbol.toUpperCase()}`)}
@@ -222,7 +221,7 @@ const News = () => {
 
         {/* RIGHT COLUMN: SIDEBAR WIDGETS */}
         <aside className="news-sidebar-column">
-          
+
           {/* Live market indices widget */}
           <div className="news-sidebar-widget">
             <h3 className="widget-title">Market Indicators</h3>

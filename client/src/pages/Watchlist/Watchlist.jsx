@@ -5,10 +5,11 @@ import { getWatchlist, addToWatchlist, removeFromWatchlist } from "../../service
 import { searchStocks } from "../../services/marketApi";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
-import { 
-  Search, Trash2, Plus, ArrowUpRight, ArrowDownRight, 
+import {
+  Search, Trash2, Plus, ArrowUpRight, ArrowDownRight,
   RefreshCw, Activity, AlertCircle, X, Check
 } from "lucide-react";
+import StockLogo from "../../components/ui/StockLogo";
 
 // Format currency
 const formatINR = (value) => {
@@ -28,7 +29,7 @@ const getInitialPrice = (symbol) => {
   const basePrice = Math.abs(hash % 2900) + 100;
   const changePercent = ((hash % 100) / 25) - 2;
   const open = basePrice * (1 - changePercent / 100);
-  
+
   return {
     price: parseFloat(basePrice.toFixed(2)),
     change: parseFloat(changePercent.toFixed(2)),
@@ -104,7 +105,7 @@ const Watchlist = () => {
           const isCore = marketStocks.some(
             (s) => s.symbol.toUpperCase() === sym
           );
-          
+
           if (!isCore) {
             const current = updated[sym] || getInitialPrice(sym);
             const deltaPercent = (Math.random() * 0.24 - 0.12) / 100;
@@ -184,12 +185,12 @@ const Watchlist = () => {
     const points = [];
     const height = 30;
     const width = 100;
-    
+
     let currentVal = height / 2;
     points.push(`0,${currentVal}`);
-    
+
     const direction = change >= 0 ? -1 : 1;
-    
+
     for (let i = 1; i <= steps; i++) {
       const x = (width / steps) * i;
       const noise = (Math.random() * 8 - 4);
@@ -197,14 +198,14 @@ const Watchlist = () => {
       const y = Math.min(Math.max(height / 2 + trend + noise, 3), height - 3);
       points.push(`${x},${y}`);
     }
-    
+
     return points.join(" ");
   };
 
   return (
     <div className="watchlist-layout-container">
       <div className="watchlist-main-content" style={{ width: "100%", maxWidth: "1200px", margin: "0 auto" }}>
-        
+
         {/* HEADER */}
         <div className="watchlist-header-panel">
           <div>
@@ -213,13 +214,7 @@ const Watchlist = () => {
               Monitor and trade your favorite financial instruments
             </p>
           </div>
-          
-          <div className="connection-status-container">
-            <span className={`status-dot ${connected ? "online" : "offline"}`}></span>
-            <span className="status-text">
-              {connected ? "Live Upstox Feed" : "Simulated Feed"}
-            </span>
-          </div>
+
         </div>
 
         {/* SEARCH BAR CONTAINER */}
@@ -234,7 +229,7 @@ const Watchlist = () => {
               className="watchlist-search-input"
             />
             {searchQuery && (
-              <button 
+              <button
                 onClick={() => { setSearchQuery(""); setSearchResults([]); }}
                 className="clear-search-btn"
               >
@@ -246,7 +241,7 @@ const Watchlist = () => {
           {/* Autocomplete Dropdown */}
           <AnimatePresence>
             {searchQuery && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
@@ -264,14 +259,21 @@ const Watchlist = () => {
                     );
                     return (
                       <div key={stock.instrument_key} className="search-result-item">
-                        <div 
+                        <div
                           className="result-left"
                           onClick={() => navigate(`/stocks/${stock.trading_symbol.toUpperCase()}`)}
-                          style={{ cursor: "pointer" }}
+                          style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}
                         >
-                          <span className="result-symbol">{stock.trading_symbol}</span>
-                          <span className="result-name">{stock.name || "Equity Stock"}</span>
-                          <span className="result-exchange-badge">{stock.exchange}</span>
+                          <StockLogo symbol={stock.trading_symbol} size={28} />
+                          <div style={{ display: "flex", flexDirection: "column" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span className="result-symbol">{stock.trading_symbol}</span>
+                              <span className="result-exchange-badge">{stock.exchange}</span>
+                            </div>
+                            <span className="result-name" style={{ fontSize: "11px", color: "#64748b", marginTop: "1px" }}>
+                              {stock.name || "Equity Stock"}
+                            </span>
+                          </div>
                         </div>
                         <button
                           onClick={() => handleAddStock(stock.trading_symbol)}
@@ -309,7 +311,7 @@ const Watchlist = () => {
             <p>Loading your watchlist...</p>
           </div>
         ) : enrichedWatchlist.length === 0 ? (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="watchlist-empty-state"
@@ -323,14 +325,14 @@ const Watchlist = () => {
             </p>
           </motion.div>
         ) : (
-          <motion.div 
+          <motion.div
             layout
             className="watchlist-cards-grid"
           >
             <AnimatePresence mode="popLayout">
               {enrichedWatchlist.map((stock) => {
                 const isPositive = stock.change >= 0;
-                
+
                 return (
                   <motion.div
                     layout
@@ -344,13 +346,18 @@ const Watchlist = () => {
                     style={{ cursor: "pointer" }}
                   >
                     {/* Top Row */}
-                    <div className="card-top-row">
-                      <div className="symbol-exchange-container">
-                        <span className="card-symbol">{stock.symbol}</span>
-                        <span className="card-exchange-pill">NSE</span>
-                        {!stock.isLive && (
-                          <span className="card-simulated-pill">Sim</span>
-                        )}
+                    <div className="card-top-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div className="symbol-exchange-container" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <StockLogo symbol={stock.symbol} size={32} />
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span className="card-symbol">{stock.symbol}</span>
+                            <span className="card-exchange-pill">NSE</span>
+                          </div>
+                          {!stock.isLive && (
+                            <span className="card-simulated-pill" style={{ alignSelf: "flex-start", marginTop: "2px" }}>Sim</span>
+                          )}
+                        </div>
                       </div>
                       <button
                         onClick={(e) => {

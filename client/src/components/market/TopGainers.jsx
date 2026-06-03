@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useMarket } from "../../context/MarketContext";
 import { ArrowUpRight } from "lucide-react";
+import StockLogo from "../ui/StockLogo";
 
 const TopGainers = () => {
   const { topGainers } = useMarket();
@@ -8,7 +9,7 @@ const TopGainers = () => {
 
   const gainers = topGainers?.length
     ? topGainers
-    : Array.from({ length: 3 }, (_, index) => ({
+    : Array.from({ length: 5 }, (_, index) => ({
         symbol: `GAIN${index + 1}`,
         price: "—",
         change: 0,
@@ -33,8 +34,10 @@ const TopGainers = () => {
               key={`${stock.symbol}-${index}`} 
               className="mover-item-row clickable-row"
               onClick={() => navigate(`/stocks/${stock.symbol.toUpperCase()}`)}
+              style={{ display: "flex", alignItems: "center", gap: "10px" }}
             >
-              <div className="mover-stock-info">
+              <StockLogo symbol={stock.symbol} size={28} />
+              <div className="mover-stock-info" style={{ flex: 1 }}>
                 <span className="mover-stock-symbol">{stock.symbol}</span>
                 <span className="mover-stock-price">{displayPrice}</span>
               </div>

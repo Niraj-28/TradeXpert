@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { useMarket } from "../../context/MarketContext";
 import { getHoldings } from "../../services/holdingService";
 import PortfolioAnalytics from "../../components/portfolio/PortfolioAnalytics";
+import StockLogo from "../../components/ui/StockLogo";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { getUserProfile } from "../../services/authService";
-import { 
-  ArrowUpRight, ArrowDownRight, Briefcase, TrendingUp, 
-  TrendingDown, Activity, RefreshCw, AlertCircle, Sparkles 
+import {
+  ArrowUpRight, ArrowDownRight, Briefcase, TrendingUp,
+  TrendingDown, Activity, RefreshCw, AlertCircle, Sparkles
 } from "lucide-react";
 
 // Helper to format currency
@@ -26,12 +27,12 @@ const getInitialPrice = (symbol) => {
   for (let i = 0; i < symbol.length; i++) {
     hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const basePrice = Math.abs(hash % 2900) + 100; // Rs 100 - 3000
+  const open = Math.abs(hash % 2900) + 100; // Rs 100 - 3000
   const changePercent = ((hash % 100) / 25) - 2; // -2% to +2%
-  const open = basePrice * (1 - changePercent / 100);
-  
+  const price = open * (1 + changePercent / 100);
+
   return {
-    price: parseFloat(basePrice.toFixed(2)),
+    price: parseFloat(price.toFixed(2)),
     change: parseFloat(changePercent.toFixed(2)),
     open: parseFloat(open.toFixed(2)),
     close: parseFloat(open.toFixed(2)),
@@ -78,7 +79,7 @@ const Portfolio = () => {
           const isCore = marketStocks.some(
             (s) => s.symbol.toUpperCase() === sym
           );
-          
+
           if (!isCore) {
             const current = updated[sym] || getInitialPrice(sym);
             const deltaPercent = (Math.random() * 0.3 - 0.15) / 100; // ±0.15% fluctuation
@@ -126,7 +127,7 @@ const Portfolio = () => {
       const currentVal = holding.quantity * ltp;
       const totalPnL = currentVal - investedVal;
       const totalPnLPct = investedVal > 0 ? (totalPnL / investedVal) * 100 : 0;
-      
+
       // Daily PnL estimate (using change percent relative to price)
       const dayPnL = currentVal * (change / 100);
 
@@ -149,7 +150,7 @@ const Portfolio = () => {
     const totalCurrentValue = enrichedHoldings.reduce((sum, h) => sum + h.currentVal, 0);
     const totalPnL = totalCurrentValue - totalInvested;
     const totalPnLPct = totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0;
-    
+
     const cash = cashBalance;
     const totalPortfolioValue = totalCurrentValue + cash;
     const dayPnL = enrichedHoldings.reduce((sum, h) => sum + h.dayPnL, 0);
@@ -174,7 +175,6 @@ const Portfolio = () => {
       <div className="portfolio-hero">
         <div className="portfolio-hero-left">
           <div className="portfolio-hero-title-row">
-            <Briefcase className="hero-portfolio-icon text-[#37c98b]" size={28} />
             <h1>Virtual Portfolio</h1>
           </div>
           <p>Real-time valuation of your stock holdings and cash balance</p>
@@ -229,7 +229,7 @@ const Portfolio = () => {
           <p>Loading portfolio statistics...</p>
         </div>
       ) : holdings.length === 0 ? (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           className="watchlist-empty-state"
@@ -274,7 +274,7 @@ const Portfolio = () => {
                       {enrichedHoldings.map((r) => {
                         const isCardPos = r.totalPnL >= 0;
                         return (
-                          <motion.tr 
+                          <motion.tr
                             layout
                             key={r.symbol}
                             initial={{ opacity: 0 }}
@@ -284,9 +284,12 @@ const Portfolio = () => {
                             className="clickable-row"
                           >
                             <td>
-                              <div className="holdings-stock">
-                                <span className="holdings-symbol">{r.symbol}</span>
-                                <span className="holdings-name">NSE Equity</span>
+                              <div className="holdings-stock" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <StockLogo symbol={r.symbol} size={32} />
+                                <div style={{ display: "flex", flexDirection: "column" }}>
+                                  <span className="holdings-symbol">{r.symbol}</span>
+                                  <span className="holdings-name">NSE Equity</span>
+                                </div>
                               </div>
                             </td>
                             <td className="num">{r.quantity}</td>

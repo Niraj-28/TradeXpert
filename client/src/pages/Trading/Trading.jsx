@@ -9,6 +9,7 @@ import { getUserProfile } from "../../services/authService";
 import TradingChart from "../../components/chart/TradingChart";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
+import StockLogo from "../../components/ui/StockLogo";
 import { 
   Search, Plus, Check, RefreshCw, X, TrendingUp, TrendingDown, 
   ShoppingCart, BarChart2, Briefcase, FileText, Activity, AlertCircle, 
@@ -30,14 +31,14 @@ const getInitialPrice = (symbol) => {
   for (let i = 0; i < symbol.length; i++) {
     hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const basePrice = Math.abs(hash % 2900) + 100;
+  const open = Math.abs(hash % 2900) + 100;
   const changePercent = ((hash % 100) / 25) - 2;
-  const open = basePrice * (1 - changePercent / 100);
-  const high = Math.max(basePrice, open) * (1 + 0.012);
-  const low = Math.min(basePrice, open) * (1 - 0.012);
+  const price = open * (1 + changePercent / 100);
+  const high = Math.max(price, open) * (1 + 0.012);
+  const low = Math.min(price, open) * (1 - 0.012);
   
   return {
-    price: parseFloat(basePrice.toFixed(2)),
+    price: parseFloat(price.toFixed(2)),
     change: parseFloat(changePercent.toFixed(2)),
     open: parseFloat(open.toFixed(2)),
     high: parseFloat(high.toFixed(2)),
@@ -393,8 +394,10 @@ const Trading = () => {
                         setSearchResults([]);
                       }}
                       className={`selector-list-item ${selectedSymbol.toUpperCase() === stock.trading_symbol.toUpperCase() ? "active" : ""}`}
+                      style={{ display: "flex", alignItems: "center", gap: "10px" }}
                     >
-                      <div className="item-symbol-block">
+                      <StockLogo symbol={stock.trading_symbol} size={28} />
+                      <div className="item-symbol-block" style={{ flex: 1 }}>
                         <span className="item-sym">{stock.trading_symbol}</span>
                         <span className="item-name">{stock.name || "Stock"}</span>
                       </div>
@@ -419,8 +422,10 @@ const Trading = () => {
                         key={`${stock.symbol}-${idx}`}
                         onClick={() => setSelectedSymbol(stock.symbol)}
                         className={`selector-list-item ${selectedSymbol.toUpperCase() === stock.symbol.toUpperCase() ? "active" : ""}`}
+                        style={{ display: "flex", alignItems: "center", gap: "10px" }}
                       >
-                        <div className="item-symbol-block">
+                        <StockLogo symbol={stock.symbol} size={28} />
+                        <div className="item-symbol-block" style={{ flex: 1 }}>
                           <span className="item-sym">{stock.symbol}</span>
                           <span className="item-subtitle">NSE Equity</span>
                         </div>
@@ -447,13 +452,16 @@ const Trading = () => {
         {/* COLUMN 2: CENTER WORKSPACE (CHART & STATS) */}
         <main className="terminal-chart-workspace">
           {/* Workspace Ticker Header */}
-          <div className="workspace-ticker-header">
-            <div className="ticker-meta-block">
-              <h1 className="ticker-symbol-name">{activeStockDetails.symbol}</h1>
+          <div className="workspace-ticker-header" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <StockLogo symbol={selectedSymbol} size={40} />
+            <div className="ticker-meta-block" style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <h1 className="ticker-symbol-name" style={{ margin: 0 }}>{activeStockDetails.symbol}</h1>
+                {!activeStockDetails.isLive && (
+                  <span className="card-simulated-pill">Simulated</span>
+                )}
+              </div>
               <span className="ticker-full-name">{activeStockDetails.name}</span>
-              {!activeStockDetails.isLive && (
-                <span className="card-simulated-pill ml-2">Simulated</span>
-              )}
             </div>
 
             <div className="ticker-pricing-block">
@@ -485,7 +493,10 @@ const Trading = () => {
             <TradingChart 
               symbol={selectedSymbol} 
               timeframe={timeframe} 
-              liveTicks={liveTicks} 
+              currentPrice={activeStockDetails.price}
+              openPrice={activeStockDetails.open}
+              highPrice={activeStockDetails.high}
+              lowPrice={activeStockDetails.low}
             />
           </div>
 
@@ -747,9 +758,11 @@ const Trading = () => {
 
                         return (
                           <tr key={`${h.symbol}-${index}`} className="clickable-row" onClick={() => setSelectedSymbol(h.symbol)}>
-                            <td className="stock-sym-block">
-                              <span className="sym-text">{h.symbol}</span>
-                              <span className="ex-badge">NSE</span>
+                            <td>
+                              <div className="stock-sym-block-wrap">
+                                <span className="sym-text">{h.symbol}</span>
+                                <span className="ex-badge">NSE</span>
+                              </div>
                             </td>
                             <td className="num">{h.quantity}</td>
                             <td className="num">{formatINR(h.avgPrice)}</td>
@@ -799,8 +812,10 @@ const Trading = () => {
                         return (
                           <tr key={o._id}>
                             <td className="order-time-cell">{timeStr}</td>
-                            <td className="stock-sym-block">
-                              <span className="sym-text">{o.symbol}</span>
+                            <td>
+                              <div className="stock-sym-block-wrap">
+                                <span className="sym-text">{o.symbol}</span>
+                              </div>
                             </td>
                             <td>
                               <span className={`order-type-badge ${isBuy ? "buy" : "sell"}`}>

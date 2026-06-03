@@ -4,11 +4,12 @@ import { addToWatchlist } from "../../services/watchlistService";
 import toast from "react-hot-toast";
 import { Plus, Check, TrendingUp, ShoppingCart, BarChart2 } from "lucide-react";
 import DiscoverStocks from "./DiscoverStocks";
+import StockLogo from "../ui/StockLogo";
 
 const Sparkline = ({ data = [], width = 110, height = 30 }) => {
   if (!Array.isArray(data) || data.length < 2) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", width, height }}>
+      <div style={{ display: "inline-flex", justifyContent: "center", alignItems: "center", width, height }}>
         <svg width={width} height={height}>
           <line x1="0" y1={height / 2} x2={width} y2={height / 2} stroke="rgba(255, 255, 255, 0.15)" strokeWidth="1.5" strokeDasharray="3,3" />
         </svg>
@@ -36,7 +37,7 @@ const Sparkline = ({ data = [], width = 110, height = 30 }) => {
   const strokeColor = isPositive ? "#37c98b" : "#ff4d4d";
 
   return (
-    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", width, height }}>
+    <div style={{ display: "inline-flex", justifyContent: "center", alignItems: "center", width, height }}>
       <svg width={width} height={height} style={{ overflow: "visible" }}>
         <polyline
           fill="none"
@@ -72,12 +73,11 @@ const MarketTable = ({ onTrade }) => {
       <div className="market-table-header">
         <div className="market-table-header-left">
           <div className="title-with-icon">
-            <BarChart2 className="section-title-icon text-[#37c98b]" size={22} />
             <h2>Live Market Dashboard</h2>
           </div>
           <p>Real-time quotes and activity metrics from NSE/BSE equities</p>
         </div>
-        
+
         <div className="market-table-header-search">
           <DiscoverStocks onTrade={onTrade} />
         </div>
@@ -92,7 +92,6 @@ const MarketTable = ({ onTrade }) => {
               <th className="num-align">Price</th>
               <th className="num-align">Change</th>
               <th style={{ textAlign: "center", width: "120px" }}>Trend</th>
-              <th>Volume</th>
               <th className="actions-align">Actions</th>
             </tr>
           </thead>
@@ -108,9 +107,9 @@ const MarketTable = ({ onTrade }) => {
                   : `₹${Number(stock.price).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 
                 return (
-                  <tr 
-                    key={`${stock.symbol}-${index}`} 
-                    className="clickable-row" 
+                  <tr
+                    key={`${stock.symbol}-${index}`}
+                    className="clickable-row"
                     onClick={() => onTrade({
                       symbol: stock.symbol,
                       name: stock.company,
@@ -118,71 +117,77 @@ const MarketTable = ({ onTrade }) => {
                     }, "BUY")}
                   >
                     <td className="stock-symbol-cell">
-                      <span className="sym-text">{stock.symbol}</span>
-                      <span className="ex-badge">NSE</span>
+                      <div className="symbol-flex-wrap" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <StockLogo symbol={stock.symbol} size={32} />
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          <span className="sym-text">{stock.symbol}</span>
+                          <span className="ex-badge" style={{ alignSelf: "flex-start", marginTop: "2px" }}>NSE</span>
+                        </div>
+                      </div>
                     </td>
                     <td className="stock-company-cell">{stock.company}</td>
                     <td className="stock-price-cell num-align">{displayPrice}</td>
                     <td className={`stock-change-cell num-align ${isPositive ? "positive" : "negative"}`}>
                       {isPositive ? "+" : ""}{change.toFixed(2)}%
                     </td>
-                    <td className="stock-chart-cell" style={{ verticalAlign: "middle" }}>
+                    <td className="stock-chart-cell" style={{ verticalAlign: "middle", textAlign: "center" }}>
                       <Sparkline data={stock.history} />
                     </td>
-                    <td className="stock-volume-cell">{stock.volume || "—"}</td>
                     <td className="stock-actions-cell actions-align">
-                      {/* BUY Trade Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onTrade({
-                            symbol: stock.symbol,
-                            name: stock.company,
-                            price: parseFloat(stock.price) || 0,
-                          }, "BUY");
-                        }}
-                        className="market-action-btn buy"
-                      >
-                        <ShoppingCart size={13} />
-                        Buy
-                      </button>
+                      <div className="actions-flex-wrap">
+                        {/* BUY Trade Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onTrade({
+                              symbol: stock.symbol,
+                              name: stock.company,
+                              price: parseFloat(stock.price) || 0,
+                            }, "BUY");
+                          }}
+                          className="market-action-btn buy"
+                        >
+                          <ShoppingCart size={13} />
+                          Buy
+                        </button>
 
-                      {/* SELL Trade Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onTrade({
-                            symbol: stock.symbol,
-                            name: stock.company,
-                            price: parseFloat(stock.price) || 0,
-                          }, "SELL");
-                        }}
-                        className="market-action-btn sell"
-                      >
-                        <TrendingUp size={13} />
-                        Sell
-                      </button>
+                        {/* SELL Trade Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onTrade({
+                              symbol: stock.symbol,
+                              name: stock.company,
+                              price: parseFloat(stock.price) || 0,
+                            }, "SELL");
+                          }}
+                          className="market-action-btn sell"
+                        >
+                          <TrendingUp size={13} />
+                          Sell
+                        </button>
 
-                      {/* Add to Watchlist Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddWatchlist(stock.symbol);
-                        }}
-                        disabled={isAdded}
-                        className={`market-action-btn watch ${isAdded ? "added" : ""}`}
-                        title="Add to Watchlist"
-                      >
-                        {isAdded ? (
-                          <>
-                            <Check size={13} />
-                          </>
-                        ) : (
-                          <>
-                            <Plus size={13} />
-                          </>
-                        )}
-                      </button>
+                        {/* Add to Watchlist Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddWatchlist(stock.symbol);
+                          }}
+                          disabled={isAdded}
+                          className={`market-action-btn watch ${isAdded ? "added" : ""}`}
+                          title="Add to Watchlist"
+                        >
+                          {isAdded ? (
+                            <>
+                              <Check size={13} />
+                            </>
+                          ) : (
+                            <>
+                              <Plus size={13} />
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
