@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMarket } from "../../context/MarketContext";
 import { addToWatchlist } from "../../services/watchlistService";
+import { useAuth } from "../../context/AuthContext";
 import toast from "react-hot-toast";
 import { Plus, Check, TrendingUp, ShoppingCart, BarChart2 } from "lucide-react";
 import DiscoverStocks from "./DiscoverStocks";
@@ -54,9 +55,14 @@ const Sparkline = ({ data = [], width = 110, height = 30 }) => {
 
 const MarketTable = ({ onTrade }) => {
   const { marketStocks } = useMarket();
+  const { user } = useAuth();
   const [addedSymbols, setAddedSymbols] = useState(new Set());
 
   const handleAddWatchlist = async (symbol) => {
+    if (!user) {
+      toast.error("Please sign in to add stocks to your watchlist");
+      return;
+    }
     try {
       await addToWatchlist(symbol.toUpperCase());
       toast.success(`${symbol} added to watchlist`);
@@ -102,9 +108,9 @@ const MarketTable = ({ onTrade }) => {
                 const change = Number(stock.change ?? 0);
                 const isPositive = change >= 0;
                 const isAdded = addedSymbols.has(stock.symbol.toUpperCase());
-                const displayPrice = stock.price === "—" || stock.price === undefined
+                const displayPrice = stock.price === "—" || stock.price === undefined || isNaN(Number(stock.price))
                   ? "—"
-                  : `₹${Number(stock.price).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+                  : `₹${Number(stock.price).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
                 return (
                   <tr

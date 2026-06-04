@@ -5,6 +5,7 @@ import { socket } from "../../services/socket";
 import { getHoldings } from "../../services/holdingService";
 import { placeOrder } from "../../services/orderService";
 import { getUserProfile } from "../../services/authService";
+import { useAuth } from "../../context/AuthContext";
 import { 
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, 
   CartesianGrid, BarChart, Bar 
@@ -367,6 +368,7 @@ const StockDetails = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { marketStocks } = useMarket();
+  const { user } = useAuth();
 
   // Navigation query parameter (Buy vs Sell)
   const initialType = searchParams.get("type") === "SELL" ? "SELL" : "BUY";
@@ -427,6 +429,7 @@ const StockDetails = () => {
 
   // Fetch initial cash and user position state
   const fetchUserData = async () => {
+    if (!user) return;
     try {
       const data = await getHoldings();
       const currentHoldings = data.holdings || [];
@@ -440,8 +443,10 @@ const StockDetails = () => {
   };
 
   useEffect(() => {
-    fetchUserData();
-  }, []);
+    if (user) {
+      fetchUserData();
+    }
+  }, [user]);
 
   // Find stock in live feed
   const liveStock = useMemo(() => {
@@ -1152,144 +1157,171 @@ const StockDetails = () => {
 
         {/* RIGHT ORDER TICKET COLUMN */}
         <aside className="stock-trade-sidebar-column">
-          <div className="groww-order-ticket-container">
-            {/* Action tabs BUY/SELL */}
-            <div className="ticket-action-tab-header">
-              <button
-                type="button"
-                onClick={() => setTradeType("BUY")}
-                className={`tab-btn buy ${tradeType === "BUY" ? "active" : ""}`}
-              >
-                BUY
-              </button>
-              <button
-                type="button"
-                onClick={() => setTradeType("SELL")}
-                className={`tab-btn sell ${tradeType === "SELL" ? "active" : ""}`}
-              >
-                SELL
-              </button>
-            </div>
-
-            {/* Form inputs */}
-            <form onSubmit={handleExecuteTrade} className="groww-ticket-form">
-              
-              {/* Product Pills */}
-              <div className="ticket-form-section">
-                <div className="product-selector-pills">
-                  {["Delivery", "Intraday"].map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => setProductType(p)}
-                      className={`pill-btn ${productType === p ? "active" : ""}`}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
+          {user ? (
+            <div className="groww-order-ticket-container">
+              {/* Action tabs BUY/SELL */}
+              <div className="ticket-action-tab-header">
+                <button
+                  type="button"
+                  onClick={() => setTradeType("BUY")}
+                  className={`tab-btn buy ${tradeType === "BUY" ? "active" : ""}`}
+                >
+                  BUY
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTradeType("SELL")}
+                  className={`tab-btn sell ${tradeType === "SELL" ? "active" : ""}`}
+                >
+                  SELL
+                </button>
               </div>
 
-              {/* Exchange Selector */}
-              <div className="ticket-form-section">
-                <div className="exchange-selector-pills">
-                  {["NSE", "BSE"].map((ex) => (
-                    <button
-                      key={ex}
-                      type="button"
-                      onClick={() => setExchange(ex)}
-                      className={`exchange-pill-btn ${exchange === ex ? "active" : ""}`}
-                    >
-                      {ex}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Quantity */}
-              <div className="ticket-form-section">
-                <div className="field-input-wrapper">
-                  <label className="field-label">Qty {exchange}</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={tradeQty}
-                    onChange={(e) => setTradeQty(Math.max(1, parseInt(e.target.value) || 0))}
-                    className="field-input text-right"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Price Type and Input */}
-              <div className="ticket-form-section">
-                <div className="field-input-wrapper">
-                  <div className="field-label-dropdown-block">
-                    <label className="field-label">Price</label>
-                    <select 
-                      value={priceMode} 
-                      onChange={(e) => setPriceMode(e.target.value)}
-                      className="price-type-select"
-                    >
-                      <option value="Market">Market</option>
-                      <option value="Limit">Limit</option>
-                    </select>
+              {/* Form inputs */}
+              <form onSubmit={handleExecuteTrade} className="groww-ticket-form">
+                
+                {/* Product Pills */}
+                <div className="ticket-form-section">
+                  <div className="product-selector-pills">
+                    {["Delivery", "Intraday"].map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setProductType(p)}
+                        className={`pill-btn ${productType === p ? "active" : ""}`}
+                      >
+                        {p}
+                      </button>
+                    ))}
                   </div>
+                </div>
 
-                  {priceMode === "Market" ? (
-                    <div className="field-text-placeholder text-right">
-                      At Market (₹{stockDetails.price.toFixed(2)})
-                    </div>
-                  ) : (
+                {/* Exchange Selector */}
+                <div className="ticket-form-section">
+                  <div className="exchange-selector-pills">
+                    {["NSE", "BSE"].map((ex) => (
+                      <button
+                        key={ex}
+                        type="button"
+                        onClick={() => setExchange(ex)}
+                        className={`exchange-pill-btn ${exchange === ex ? "active" : ""}`}
+                      >
+                        {ex}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quantity */}
+                <div className="ticket-form-section">
+                  <div className="field-input-wrapper">
+                    <label className="field-label">Qty {exchange}</label>
                     <input
                       type="number"
-                      step="0.05"
-                      min="0.05"
-                      value={limitPrice}
-                      onChange={(e) => setLimitPrice(parseFloat(e.target.value) || 0)}
+                      min="1"
+                      value={tradeQty}
+                      onChange={(e) => setTradeQty(Math.max(1, parseInt(e.target.value) || 0))}
                       className="field-input text-right"
                       required
                     />
+                  </div>
+                </div>
+
+                {/* Price Type and Input */}
+                <div className="ticket-form-section">
+                  <div className="field-input-wrapper">
+                    <div className="field-label-dropdown-block">
+                      <label className="field-label">Price</label>
+                      <select 
+                        value={priceMode} 
+                        onChange={(e) => setPriceMode(e.target.value)}
+                        className="price-type-select"
+                      >
+                        <option value="Market">Market</option>
+                        <option value="Limit">Limit</option>
+                      </select>
+                    </div>
+
+                    {priceMode === "Market" ? (
+                      <div className="field-text-placeholder text-right">
+                        At Market (₹{stockDetails.price.toFixed(2)})
+                      </div>
+                    ) : (
+                      <input
+                        type="number"
+                        step="0.05"
+                        min="0.05"
+                        value={limitPrice}
+                        onChange={(e) => setLimitPrice(parseFloat(e.target.value) || 0)}
+                        className="field-input text-right"
+                        required
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* User Holding Info (Optional display if owns stock) */}
+                {userPosition ? (
+                  <div className="ticket-position-info">
+                    <span>Currently holding {userPosition.quantity} shares (Avg. ₹{userPosition.avgPrice.toFixed(2)})</span>
+                  </div>
+                ) : null}
+
+                {/* Balance & Approx Capital req */}
+                <div className="ticket-capital-info-block">
+                  <div className="info-row">
+                    <span className="label">Virtual Balance</span>
+                    <span className="val">{formatINR(cashBalance)}</span>
+                  </div>
+                  
+                  <div className="info-row border-t pt-2 mt-2">
+                    <span className="label font-semibold">Approx. Required</span>
+                    <span className="val font-bold text-[#0f172a]">{formatINR(totalCost)}</span>
+                  </div>
+                </div>
+
+                {/* Buy/Sell Button */}
+                <button
+                  type="submit"
+                  disabled={placingOrder}
+                  className={`ticket-submit-btn ${tradeType === "BUY" ? "btn-buy" : "btn-sell"}`}
+                >
+                  {placingOrder ? (
+                    <RefreshCw className="animate-spin inline" size={18} />
+                  ) : tradeType === "BUY" ? (
+                    "Buy"
+                  ) : (
+                    "Sell"
                   )}
-                </div>
+                </button>
+              </form>
+            </div>
+          ) : (
+            <div className="groww-order-ticket-container lock-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 24px', height: '100%', minHeight: '380px', background: '#ffffff', borderRadius: '12px', border: '1px solid rgba(40, 90, 72, 0.1)', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)' }}>
+              <div className="lock-icon-wrapper" style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(64, 138, 113, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px', color: 'var(--brand-accent)' }}>
+                <ShieldAlert size={28} />
               </div>
-
-              {/* User Holding Info (Optional display if owns stock) */}
-              {userPosition ? (
-                <div className="ticket-position-info">
-                  <span>Currently holding {userPosition.quantity} shares (Avg. ₹{userPosition.avgPrice.toFixed(2)})</span>
-                </div>
-              ) : null}
-
-              {/* Balance & Approx Capital req */}
-              <div className="ticket-capital-info-block">
-                <div className="info-row">
-                  <span className="label">Virtual Balance</span>
-                  <span className="val">{formatINR(cashBalance)}</span>
-                </div>
-                
-                <div className="info-row border-t pt-2 mt-2">
-                  <span className="label font-semibold">Approx. Required</span>
-                  <span className="val font-bold text-[#0f172a]">{formatINR(totalCost)}</span>
-                </div>
-              </div>
-
-              {/* Buy/Sell Button */}
-              <button
-                type="submit"
-                disabled={placingOrder}
-                className={`ticket-submit-btn ${tradeType === "BUY" ? "btn-buy" : "btn-sell"}`}
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--brand-dark)', marginBottom: '10px' }}>Sign In to Trade</h3>
+              <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '24px', lineHeight: '1.5' }}>
+                Create an account or sign in to start virtual trading with ₹10 Lakhs of simulated capital.
+              </p>
+              <button 
+                onClick={() => navigate("/login")} 
+                className="ticket-submit-btn btn-buy"
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
               >
-                {placingOrder ? (
-                  <RefreshCw className="animate-spin inline" size={18} />
-                ) : tradeType === "BUY" ? (
-                  "Buy"
-                ) : (
-                  "Sell"
-                )}
+                Sign In Now <ArrowUpRight size={16} />
               </button>
-            </form>
-          </div>
+              <button 
+                onClick={() => navigate("/register")} 
+                style={{ width: '100%', height: '40px', border: '1px solid rgba(40, 90, 72, 0.3)', background: 'transparent', color: 'var(--brand-primary)', fontSize: '13px', fontWeight: '600', borderRadius: '8px', cursor: 'pointer', marginTop: '12px', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(64, 138, 113, 0.05)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                Get Started Free
+              </button>
+            </div>
+          )}
         </aside>
 
       </div>

@@ -166,32 +166,36 @@ const Navbar = () => {
             Markets
           </NavLink>
 
-          <NavLink
-            to="/portfolio"
-            className={({ isActive }) =>
-              isActive ? "active" : ""
-            }
-          >
-            Portfolio
-          </NavLink>
+          {user && (
+            <>
+              <NavLink
+                to="/portfolio"
+                className={({ isActive }) =>
+                  isActive ? "active" : ""
+                }
+              >
+                Portfolio
+              </NavLink>
 
-          <NavLink
-            to="/watchlist"
-            className={({ isActive }) =>
-              isActive ? "active" : ""
-            }
-          >
-            Watchlist
-          </NavLink>
+              <NavLink
+                to="/watchlist"
+                className={({ isActive }) =>
+                  isActive ? "active" : ""
+                }
+              >
+                Watchlist
+              </NavLink>
 
-          <NavLink
-            to="/orders"
-            className={({ isActive }) =>
-              isActive ? "active" : ""
-            }
-          >
-            Orders
-          </NavLink>
+              <NavLink
+                to="/orders"
+                className={({ isActive }) =>
+                  isActive ? "active" : ""
+                }
+              >
+                Orders
+              </NavLink>
+            </>
+          )}
 
           <NavLink
             to="/news"
@@ -263,105 +267,149 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* PROFILE */}
-        <div className="profile-wrapper">
+        {/* PROFILE OR AUTH BUTTONS */}
+        {user ? (
+          <div className="profile-wrapper">
 
-          <div
-            className="profile-box"
-            onClick={() => setOpen(!open)}
-            style={{ position: "relative" }}
-          >
-            {userInitial}
-            {unreadCount > 0 && <span className="profile-notification-badge-dot" />}
-          </div>
+            <div
+              className="profile-box"
+              onClick={() => setOpen(!open)}
+              style={{ position: "relative" }}
+            >
+              {userInitial}
+              {unreadCount > 0 && <span className="profile-notification-badge-dot" />}
+            </div>
 
-          {open && (
-            <div className="profile-dropdown">
-              {showNotifications ? (
-                /* NOTIFICATIONS SUB-DRAWER */
-                <div className="notifications-subdrawer">
-                  <div className="subdrawer-header">
-                    <button className="subdrawer-back-btn" onClick={handleBackToMenu}>
-                      ← Back
-                    </button>
-                    <h4>Notifications</h4>
-                    {notifications.length > 0 && (
-                      <button className="subdrawer-clear-btn" onClick={handleClearNotifications}>
-                        Clear
+            {open && (
+              <div className="profile-dropdown">
+                {showNotifications ? (
+                  /* NOTIFICATIONS SUB-DRAWER */
+                  <div className="notifications-subdrawer">
+                    <div className="subdrawer-header">
+                      <button className="subdrawer-back-btn" onClick={handleBackToMenu}>
+                        ← Back
                       </button>
-                    )}
-                  </div>
-                  
-                  <div className="dropdown-divider"></div>
-                  
-                  <div className="notifications-list-viewport">
-                    {notifications.length === 0 ? (
-                      <div className="notifications-empty-state">
-                        <Bell size={20} className="text-slate-500 mb-1" />
-                        <p>No new notifications</p>
-                      </div>
-                    ) : (
-                      notifications.map((n) => (
-                        <div key={n.id} className="notification-item">
-                          <p className="notification-message">{n.message}</p>
-                          <span className="notification-time">{n.time}</span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              ) : (
-                /* ORIGINAL USER PROFILE MENU */
-                <>
-                  {/* USER */}
-                  <div className="dropdown-user">
-                    <div className="dropdown-avatar">
-                      {userInitial}
-                    </div>
-                    <div>
-                      <h4>{userFullName}</h4>
-                      <p>Trader</p>
-                    </div>
-                  </div>
-
-                  <div className="dropdown-divider"></div>
-
-                  {/* PROFILE */}
-                  <NavLink
-                    to="/profile"
-                    className="dropdown-link"
-                    onClick={() => setOpen(false)}
-                  >
-                    <button className="dropdown-item">
-                      <User size={16} />
-                      Profile
-                    </button>
-                  </NavLink>
-
-                  {/* NOTIFICATION */}
-                  <button className="dropdown-item" onClick={handleOpenNotifications}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Bell size={16} />
-                        <span>Notifications</span>
-                      </div>
-                      {unreadCount > 0 && (
-                        <span className="notification-badge-count">{unreadCount}</span>
+                      <h4>Notifications</h4>
+                      {notifications.length > 0 && (
+                        <button className="subdrawer-clear-btn" onClick={handleClearNotifications}>
+                          Clear
+                        </button>
                       )}
                     </div>
-                  </button>
+                    
+                    <div className="dropdown-divider"></div>
+                    
+                    <div className="notifications-list-viewport">
+                      {notifications.length === 0 ? (
+                        <div className="notifications-empty-state">
+                          <Bell size={20} className="text-slate-500 mb-1" />
+                          <p>No new notifications</p>
+                        </div>
+                      ) : (
+                        notifications.map((n) => (
+                          <div key={n.id} className="notification-item">
+                            <p className="notification-message">{n.message}</p>
+                            <span className="notification-time">{n.time}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* ORIGINAL USER PROFILE MENU */
+                  <>
+                    {/* USER */}
+                    <div className="dropdown-user">
+                      <div className="dropdown-avatar">
+                        {userInitial}
+                      </div>
+                      <div>
+                        <h4>{userFullName}</h4>
+                        <p>Trader</p>
+                      </div>
+                    </div>
 
-                  {/* LOGOUT */}
-                  <button className="dropdown-item logout" onClick={handleLogoutClick}>
-                    <LogOut size={16} />
-                    Logout
-                  </button>
-                </>
-              )}
-            </div>
-          )}
+                    <div className="dropdown-divider"></div>
 
-        </div>
+                    {/* PROFILE */}
+                    <NavLink
+                      to="/profile"
+                      className="dropdown-link"
+                      onClick={() => setOpen(false)}
+                    >
+                      <button className="dropdown-item">
+                        <User size={16} />
+                        Profile
+                      </button>
+                    </NavLink>
+
+                    {/* NOTIFICATION */}
+                    <button className="dropdown-item" onClick={handleOpenNotifications}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Bell size={16} />
+                          <span>Notifications</span>
+                        </div>
+                        {unreadCount > 0 && (
+                          <span className="notification-badge-count">{unreadCount}</span>
+                        )}
+                      </div>
+                    </button>
+
+                    {/* LOGOUT */}
+                    <button className="dropdown-item logout" onClick={handleLogoutClick}>
+                      <LogOut size={16} />
+                      Logout
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+          </div>
+        ) : (
+          <div className="navbar-auth-buttons" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <button
+              onClick={() => navigate("/login")}
+              className="nav-btn-text"
+              style={{
+                border: "none",
+                background: "transparent",
+                fontSize: "13px",
+                fontWeight: "500",
+                color: "var(--brand-dark)",
+                cursor: "pointer",
+                padding: "8px 16px",
+                borderRadius: "8px",
+                transition: "all 0.2s ease"
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--brand-accent)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--brand-dark)"; }}
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => navigate("/register")}
+              className="nav-btn-primary"
+              style={{
+                background: "var(--brand-accent)",
+                border: "none",
+                color: "#ffffff",
+                fontSize: "13px",
+                fontWeight: "600",
+                padding: "8px 20px",
+                borderRadius: "8px",
+                cursor: "pointer",
+                boxShadow: "0 4px 12px rgba(64, 138, 113, 0.15)",
+                transition: "all 0.2s ease"
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--brand-primary)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "var(--brand-accent)"; e.currentTarget.style.transform = "translateY(0)"; }}
+            >
+              Get Started
+            </button>
+          </div>
+        )}
 
       </div>
 

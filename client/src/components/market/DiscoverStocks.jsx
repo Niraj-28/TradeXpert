@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { searchStocks } from "../../services/marketApi";
 import { addToWatchlist } from "../../services/watchlistService";
+import { useAuth } from "../../context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { Search, Plus, Check, RefreshCw, X, TrendingUp } from "lucide-react";
@@ -11,6 +12,7 @@ const DiscoverStocks = ({ onTrade }) => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [addedSymbols, setAddedSymbols] = useState(new Set());
+  const { user } = useAuth();
 
   const handleSearch = async (val) => {
     setQuery(val);
@@ -32,6 +34,10 @@ const DiscoverStocks = ({ onTrade }) => {
   };
 
   const handleAddWatchlist = async (symbol) => {
+    if (!user) {
+      toast.error("Please sign in to add stocks to your watchlist");
+      return;
+    }
     try {
       await addToWatchlist(symbol.toUpperCase());
       toast.success(`${symbol} added to watchlist`);

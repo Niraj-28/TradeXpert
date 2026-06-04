@@ -25,9 +25,9 @@ const TopGainers = () => {
       <div className="mover-items-list">
         {gainers.map((stock, index) => {
           const change = Number(stock.change ?? 0);
-          const displayPrice = stock.price === "--" || stock.price === "—" || stock.price === undefined
+          const displayPrice = stock.price === "--" || stock.price === "—" || stock.price === undefined || isNaN(Number(stock.price))
             ? "—"
-            : `₹${Number(stock.price).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+            : `₹${Number(stock.price).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
           return (
             <div 

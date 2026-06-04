@@ -82,7 +82,7 @@ const TrendingStocks = () => {
 
           const displayPrice = price === 0 || isNaN(price)
             ? "—"
-            : `₹${price.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+            : `₹${price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
           const absVal = Math.abs(absChange).toFixed(2);
           const pctVal = Math.abs(changePercent).toFixed(2);
