@@ -1,6 +1,36 @@
 import { useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
+const getMarketTimeLabels = (pointsCount, now) => {
+  const marketStart = new Date(now);
+  marketStart.setHours(9, 15, 0, 0);
+  
+  const marketEnd = new Date(now);
+  marketEnd.setHours(15, 30, 0, 0);
+  
+  let chartEnd = marketEnd;
+  const currentHour = now.getHours();
+  const currentMin = now.getMinutes();
+  const isTodayMarketTime = (currentHour > 9 || (currentHour === 9 && currentMin >= 15)) && (currentHour < 15 || (currentHour === 15 && currentMin <= 30));
+  
+  if (isTodayMarketTime) {
+    chartEnd = now;
+  }
+  
+  const startMs = marketStart.getTime();
+  const endMs = chartEnd.getTime();
+  const diffMs = Math.max(1000, endMs - startMs);
+  const stepMs = diffMs / (pointsCount - 1);
+  
+  const labels = [];
+  for (let i = 0; i < pointsCount; i++) {
+    const time = new Date(startMs + i * stepMs);
+    const label = time.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+    labels.push(label);
+  }
+  return labels;
+};
+
 // Helper to seed deterministic historical data based on stock symbol scaled to currentPrice
 const generateStaticChartData = (symbol, timeframe, currentPrice, openPrice, highPrice, lowPrice) => {
   let hash = 0;
@@ -8,20 +38,26 @@ const generateStaticChartData = (symbol, timeframe, currentPrice, openPrice, hig
     hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
   }
   
-  let pointsCount = 30;
+  let pointsCount = 60;
   let intervalDays = 1;
   
-  if (timeframe === "1W") {
-    pointsCount = 7;
-    intervalDays = 1;
+  if (timeframe === "1D") {
+    pointsCount = 75;
+  } else if (timeframe === "1W") {
+    pointsCount = 50;
+    intervalDays = 0.2; // multiple points per day
   } else if (timeframe === "1M") {
-    pointsCount = 30;
+    pointsCount = 60;
+    intervalDays = 0.5;
+  } else if (timeframe === "3M") {
+    pointsCount = 90;
     intervalDays = 1;
   } else if (timeframe === "1Y") {
-    pointsCount = 12;
-    intervalDays = 30;
-  } else if (timeframe === "1D") {
-    pointsCount = 20;
+    pointsCount = 120;
+    intervalDays = 3;
+  } else if (timeframe === "ALL") {
+    pointsCount = 180;
+    intervalDays = 10;
   }
   
   const now = new Date();
@@ -33,6 +69,8 @@ const generateStaticChartData = (symbol, timeframe, currentPrice, openPrice, hig
     const high = highPrice || Math.max(open, close) * 1.01;
     const low = lowPrice || Math.min(open, close) * 0.99;
     const range = high - low || 1.0;
+    
+    const labels = getMarketTimeLabels(pointsCount, now);
     
     for (let i = 0; i < pointsCount; i++) {
       const t = i / (pointsCount - 1);
@@ -53,8 +91,7 @@ const generateStaticChartData = (symbol, timeframe, currentPrice, openPrice, hig
       if (i === 0) price = open;
       if (i === pointsCount - 1) price = close;
       
-      const time = new Date(now.getTime() - (pointsCount - 1 - i) * 20 * 60 * 1000);
-      const label = time.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+      const label = labels[i];
       
       data.push({
         time: label,
@@ -80,10 +117,10 @@ const generateStaticChartData = (symbol, timeframe, currentPrice, openPrice, hig
       let label = "";
       if (timeframe === "1W") {
         label = date.toLocaleDateString("en-IN", { weekday: "short" });
-      } else if (timeframe === "1M") {
+      } else if (timeframe === "1M" || timeframe === "3M") {
         label = date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
       } else {
-        label = date.toLocaleDateString("en-IN", { month: "short" });
+        label = date.toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
       }
       
       data.push({
@@ -145,10 +182,10 @@ const TradingChart = ({ symbol = "RELIANCE", timeframe = "1D", currentPrice = 13
               axisLine={false} 
               dx={-10}
               orientation="right"
-              formatter={(value) => `₹${value.toLocaleString("en-IN")}`}
+              formatter={(value) => "₹" + Number(value).toFixed(2)}
             />
             <Tooltip 
-              formatter={(value) => [`₹${value.toLocaleString("en-IN")}`, "Price"]}
+              formatter={(value) => ["₹" + Number(value).toFixed(2), "Price"]}
               contentStyle={{
                 borderRadius: "8px",
                 fontFamily: "Poppins, sans-serif",

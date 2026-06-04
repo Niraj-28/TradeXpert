@@ -13,3 +13,8 @@ export const searchStocks = async (
 
   return response.data;
 };
+
+export const getLiveNews = async () => {
+  const response = await axios.get(`${API}/news`);
+  return response.data;
+};

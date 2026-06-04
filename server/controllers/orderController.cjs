@@ -155,6 +155,9 @@ exports.getOrders =
 
     try {
 
+      const { cancelStalePendingOrders } = require("../services/orderExecutionService.cjs");
+      await cancelStalePendingOrders(req.user.id);
+
       const orders =
         await Order.find({
 

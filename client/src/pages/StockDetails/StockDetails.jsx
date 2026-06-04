@@ -17,12 +17,14 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import StockLogo from "../../components/ui/StockLogo";
+import { getLiveNews } from "../../services/marketApi";
 
 // Format currency
 const formatINR = (value) => {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
 };
@@ -69,6 +71,12 @@ const getStockTabDetails = (symbol, price) => {
     hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
   }
 
+  const getRelativeDateString = (offsetDays) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  };
+
   // Sentiment (e.g. Bullish, Bearish, Neutral)
   const sentimentIndex = Math.abs(hash % 3); // 0 = Bearish, 1 = Neutral, 2 = Bullish
   const sentiments = ["Bearish", "Neutral", "Bullish"];
@@ -113,10 +121,10 @@ const getStockTabDetails = (symbol, price) => {
 
   // Events
   const events = [
-    { type: "Board Meeting", date: "June 12, 2026", purpose: "Audited Financial Results & dividend consideration" },
-    { type: "Dividend Paid", date: "May 20, 2026", purpose: "Final Dividend of ₹" + ((Math.abs(hash) % 15) + 5) + ".50 per equity share" },
-    { type: "Corporate Action", date: "April 08, 2026", purpose: "1:1 Bonus Shares Issue Approval" },
-    { type: "AGM Scheduled", date: "August 24, 2026", purpose: "Annual General Meeting to approve auditor appointments" }
+    { type: "Board Meeting", date: getRelativeDateString(10), purpose: "Audited Financial Results & dividend consideration" },
+    { type: "Dividend Paid", date: getRelativeDateString(-15), purpose: "Final Dividend of ₹" + ((Math.abs(hash) % 15) + 5) + ".50 per equity share" },
+    { type: "Corporate Action", date: getRelativeDateString(-45), purpose: "1:1 Bonus Shares Issue Approval" },
+    { type: "AGM Scheduled", date: getRelativeDateString(30), purpose: "Annual General Meeting to approve auditor appointments" }
   ];
 
   return {
@@ -180,6 +188,36 @@ const CandleShape = (props) => {
   );
 };
 
+const getMarketTimeLabels = (pointsCount, now) => {
+  const marketStart = new Date(now);
+  marketStart.setHours(9, 15, 0, 0);
+  
+  const marketEnd = new Date(now);
+  marketEnd.setHours(15, 30, 0, 0);
+  
+  let chartEnd = marketEnd;
+  const currentHour = now.getHours();
+  const currentMin = now.getMinutes();
+  const isTodayMarketTime = (currentHour > 9 || (currentHour === 9 && currentMin >= 15)) && (currentHour < 15 || (currentHour === 15 && currentMin <= 30));
+  
+  if (isTodayMarketTime) {
+    chartEnd = now;
+  }
+  
+  const startMs = marketStart.getTime();
+  const endMs = chartEnd.getTime();
+  const diffMs = Math.max(1000, endMs - startMs);
+  const stepMs = diffMs / (pointsCount - 1);
+  
+  const labels = [];
+  for (let i = 0; i < pointsCount; i++) {
+    const time = new Date(startMs + i * stepMs);
+    const label = time.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+    labels.push(label);
+  }
+  return labels;
+};
+
 // Seed deterministic historical data (Line and Candle options) scaled to currentPrice
 const generateStaticChartData = (symbol, timeframe, currentPrice, isCandle, openPrice, highPrice, lowPrice) => {
   let hash = 0;
@@ -187,26 +225,26 @@ const generateStaticChartData = (symbol, timeframe, currentPrice, isCandle, open
     hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
   }
   
-  let pointsCount = 30;
+  let pointsCount = 60;
   let intervalDays = 1;
   
-  if (timeframe === "1W") {
-    pointsCount = 7;
-    intervalDays = 1;
+  if (timeframe === "1D") {
+    pointsCount = 75;
+  } else if (timeframe === "1W") {
+    pointsCount = 50;
+    intervalDays = 0.2; // multiple points per day
   } else if (timeframe === "1M") {
-    pointsCount = 30;
-    intervalDays = 1;
+    pointsCount = 60;
+    intervalDays = 0.5;
   } else if (timeframe === "3M") {
-    pointsCount = 45;
-    intervalDays = 2;
+    pointsCount = 90;
+    intervalDays = 1;
   } else if (timeframe === "1Y") {
-    pointsCount = 12;
-    intervalDays = 30;
+    pointsCount = 120;
+    intervalDays = 3;
   } else if (timeframe === "ALL") {
-    pointsCount = 24;
-    intervalDays = 60;
-  } else if (timeframe === "1D") {
-    pointsCount = isCandle ? 15 : 20;
+    pointsCount = 180;
+    intervalDays = 10;
   }
   
   const now = new Date();
@@ -220,6 +258,8 @@ const generateStaticChartData = (symbol, timeframe, currentPrice, isCandle, open
     const high = highPrice || Math.max(open, close) * 1.01;
     const low = lowPrice || Math.min(open, close) * 0.99;
     const range = high - low || 1.0;
+    
+    const labels = getMarketTimeLabels(pointsCount, now);
     
     for (let i = 0; i < pointsCount; i++) {
       const t = i / (pointsCount - 1);
@@ -245,13 +285,12 @@ const generateStaticChartData = (symbol, timeframe, currentPrice, isCandle, open
       if (i === 0) price = open;
       if (i === pointsCount - 1) price = close;
       
-      const time = new Date(now.getTime() - (pointsCount - 1 - i) * 20 * 60 * 1000);
-      const label = time.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+      const label = labels[i];
       
       if (isCandle) {
-        const nextPrice = (i === pointsCount - 1) ? close : (open + (close - open) * ((i + 1) / (pointsCount - 1)));
-        const cOpen = price;
-        const cClose = nextPrice;
+        const cClose = price;
+        const cOpen = (i === 0) ? (open - (close - open) * 0.05) : (data[i - 1] ? data[i - 1].close : open);
+        const diff = Math.abs(cClose - cOpen) || (range * 0.05);
         const cHigh = Math.max(cOpen, cClose) + (range * 0.05 * Math.abs(Math.sin(hash + i)));
         const cLow = Math.min(cOpen, cClose) - (range * 0.05 * Math.abs(Math.cos(hash + i)));
         data.push({
@@ -298,8 +337,8 @@ const generateStaticChartData = (symbol, timeframe, currentPrice, isCandle, open
       }
       
       if (isCandle) {
-        const cOpen = pointPrice;
-        const cClose = (i === pointsCount - 1) ? currentPrice : currentPrice * factors[i+1];
+        const cClose = pointPrice;
+        const cOpen = (i === 0) ? (pointPrice / (1 + (Math.sin(hash) * 0.8) / 100)) : (data[i - 1] ? data[i - 1].close : pointPrice);
         const diff = Math.abs(cClose - cOpen) || 1;
         const cHigh = Math.max(cOpen, cClose) + diff * 0.3 * Math.abs(Math.sin(hash + i));
         const cLow = Math.min(cOpen, cClose) - diff * 0.3 * Math.abs(Math.cos(hash + i));
@@ -336,6 +375,39 @@ const StockDetails = () => {
   const [chartType, setChartType] = useState("line"); // "line" | "candle"
   const [timeframe, setTimeframe] = useState("1D");
   const [activeTab, setActiveTab] = useState("Overview"); // Overview, Technicals, News, Events
+  const [newsList, setNewsList] = useState([]);
+
+  useEffect(() => {
+    // Initial load from mock fallback
+    const seedStats = getInitialStockStats(symbol);
+    const mockNews = getStockTabDetails(symbol, seedStats.price).news;
+    setNewsList(mockNews);
+    
+    const fetchLiveStockNews = async () => {
+      try {
+        const allNews = await getLiveNews();
+        const symUpper = symbol.toUpperCase();
+        const filtered = allNews.filter(article => {
+          const titleUpper = (article.title || "").toUpperCase();
+          const summaryUpper = (article.summary || "").toUpperCase();
+          const artSymbolUpper = (article.symbol || "").toUpperCase();
+          
+          return artSymbolUpper === symUpper || 
+                 titleUpper.includes(symUpper) || 
+                 summaryUpper.includes(symUpper);
+        });
+        
+        if (filtered.length > 0) {
+          setNewsList(filtered);
+        } else if (allNews && allNews.length > 0) {
+          setNewsList(allNews.slice(0, 4));
+        }
+      } catch (err) {
+        console.error("Failed to fetch live stock news:", err);
+      }
+    };
+    fetchLiveStockNews();
+  }, [symbol]);
 
   // Order Ticket states
   const [tradeType, setTradeType] = useState(initialType);
@@ -489,6 +561,28 @@ const StockDetails = () => {
     );
   }, [symbol, timeframe, chartType, stockDetails.price, stockDetails.open, stockDetails.high, stockDetails.low]);
 
+  const yDomain = useMemo(() => {
+    if (!chartData || chartData.length === 0) return ["auto", "auto"];
+    
+    let minVal = Infinity;
+    let maxVal = -Infinity;
+    
+    chartData.forEach(d => {
+      if (chartType === "candle") {
+        if (d.low < minVal) minVal = d.low;
+        if (d.high > maxVal) maxVal = d.high;
+      } else {
+        if (d.price < minVal) minVal = d.price;
+        if (d.price > maxVal) maxVal = d.price;
+      }
+    });
+    
+    if (minVal === Infinity || maxVal === -Infinity) return ["auto", "auto"];
+    
+    const padding = (maxVal - minVal) * 0.05 || 10;
+    return [Math.floor(minVal - padding), Math.ceil(maxVal + padding)];
+  }, [chartData, chartType]);
+
   // Check if user holds active stock
   const userPosition = useMemo(() => {
     return holdings.find(h => h.symbol.toUpperCase() === symbol.toUpperCase());
@@ -579,7 +673,12 @@ const StockDetails = () => {
     }
   };
 
-  const isPositive = stockDetails.change >= 0;
+  const isPositive = useMemo(() => {
+    if (!chartData || chartData.length < 2) return stockDetails.change >= 0;
+    const start = chartType === "candle" ? chartData[0].open : chartData[0].price;
+    const end = chartType === "candle" ? chartData[chartData.length - 1].close : chartData[chartData.length - 1].price;
+    return end >= start;
+  }, [chartData, chartType, stockDetails.change]);
   const totalCost = tradeQty * (priceMode === "Market" ? stockDetails.price : limitPrice);
 
   return (
@@ -653,16 +752,16 @@ const StockDetails = () => {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis dataKey="time" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
                     <YAxis 
-                      domain={["auto", "auto"]} 
+                      domain={yDomain} 
                       stroke="#94a3b8" 
                       fontSize={10} 
                       tickLine={false} 
                       axisLine={false} 
                       orientation="right" 
-                      formatter={(v) => `₹${v.toLocaleString("en-IN")}`}
+                      formatter={(v) => "₹" + Number(v).toFixed(2)}
                     />
                     <Tooltip 
-                      formatter={(v) => [`₹${v.toLocaleString("en-IN")}`, "LTP"]}
+                      formatter={(v) => ["₹" + Number(v).toFixed(2), "LTP"]}
                       contentStyle={{
                         borderRadius: "8px",
                         border: "1px solid #e8edf5",
@@ -685,19 +784,19 @@ const StockDetails = () => {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis dataKey="time" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
                     <YAxis 
-                      domain={["auto", "auto"]} 
+                      domain={yDomain} 
                       stroke="#94a3b8" 
                       fontSize={10} 
                       tickLine={false} 
                       axisLine={false} 
                       orientation="right"
-                      formatter={(v) => `₹${v.toLocaleString("en-IN")}`}
+                      formatter={(v) => "₹" + Number(v).toFixed(2)}
                     />
                     <Tooltip 
                       formatter={(v, name, props) => {
                         const { open, close, high, low } = props.payload;
                         return [
-                          `Open: ₹${open} | Close: ₹${close} | High: ₹${high} | Low: ₹${low}`,
+                          `Open: ₹${Number(open).toFixed(2)} | Close: ₹${Number(close).toFixed(2)} | High: ₹${Number(high).toFixed(2)} | Low: ₹${Number(low).toFixed(2)}`,
                           "Candle"
                         ];
                       }}
@@ -967,10 +1066,10 @@ const StockDetails = () => {
               {/* NEWS TAB */}
               {activeTab === "News" && (
                 <div className="premium-news-layout">
-                  {tabDetails.news.map((item, idx) => (
+                  {newsList.map((item, idx) => (
                     <div key={`news-${idx}`} className="news-feed-card">
                       <div className="news-card-meta">
-                        <span className={`news-source-tag ${item.source.toLowerCase().replace(/\s+/g, '-')}`}>
+                        <span className={`news-source-tag ${(item.source || "").toLowerCase().replace(/\s+/g, '-')}`}>
                           {item.source}
                         </span>
                         <span className="news-time-dot">•</span>
@@ -982,10 +1081,17 @@ const StockDetails = () => {
                       <h3 className="news-card-title">{item.title}</h3>
                       <p className="news-card-summary">{item.summary}</p>
                       <div className="news-card-footer">
-                        <a href="#news-link" className="read-more-link" onClick={(e) => e.preventDefault()}>
-                          Read full analysis
-                          <ChevronRight size={14} className="arrow-icon ml-1 inline" />
-                        </a>
+                        {item.link ? (
+                          <a href={item.link} target="_blank" rel="noopener noreferrer" className="read-more-link">
+                            Read full coverage
+                            <ChevronRight size={14} className="arrow-icon ml-1 inline" />
+                          </a>
+                        ) : (
+                          <a href="#news-link" className="read-more-link" onClick={(e) => e.preventDefault()}>
+                            Read full analysis
+                            <ChevronRight size={14} className="arrow-icon ml-1 inline" />
+                          </a>
+                        )}
                       </div>
                     </div>
                   ))}

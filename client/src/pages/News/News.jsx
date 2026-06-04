@@ -1,5 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useMarket } from "../../context/MarketContext";
+import { getLiveNews } from "../../services/marketApi";
 import {
   Newspaper, Clock, ExternalLink, TrendingUp, TrendingDown,
   ArrowUpRight, ArrowDownRight, Compass, ShieldAlert, Award
@@ -10,19 +12,12 @@ const formatINR = (value) => {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
 };
 
-// Static mock indices list for news sidebar
-const mockIndices = [
-  { name: "NIFTY 50", price: 22458.30, change: 184.20, pct: 0.83, isPositive: true },
-  { name: "SENSEX", price: 73910.15, change: 590.10, pct: 0.81, isPositive: true },
-  { name: "NIFTY BANK", price: 47920.40, change: -128.50, pct: -0.27, isPositive: false },
-  { name: "NIFTY IT", price: 34812.90, change: 485.60, pct: 1.41, isPositive: true }
-];
-
-const mockArticles = [
+const fallbackArticles = [
   {
     id: 1,
     category: "Stocks",
@@ -93,13 +88,35 @@ const mockArticles = [
 
 const News = () => {
   const navigate = useNavigate();
+  const { indices } = useMarket();
+  const [articles, setArticles] = useState([]);
   const [activeCategory, setActiveCategory] = useState("All News");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        const data = await getLiveNews();
+        setArticles(data || fallbackArticles);
+      } catch (err) {
+        console.error("Failed to load live news:", err);
+        setArticles(fallbackArticles);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchNews();
+
+    const interval = setInterval(fetchNews, 30000); // 30s polling
+    return () => clearInterval(interval);
+  }, []);
 
   // Filtering logic
   const filteredArticles = useMemo(() => {
-    if (activeCategory === "All News") return mockArticles;
-    return mockArticles.filter(a => a.category.toLowerCase() === activeCategory.toLowerCase());
-  }, [activeCategory]);
+    const list = articles.length > 0 ? articles : fallbackArticles;
+    if (activeCategory === "All News") return list;
+    return list.filter(a => a.category.toLowerCase() === activeCategory.toLowerCase());
+  }, [articles, activeCategory]);
 
   const featuredArticle = useMemo(() => {
     // Find featured article in active filter or default to first
@@ -126,7 +143,7 @@ const News = () => {
               <div className="hero-title-row">
                 <h1>Market Insights</h1>
               </div>
-              <p>Real-time financial journalism, corporate announcements, and macroeconomic reports</p>
+              <p>Real-time financial journalism, corporate announcements, and macroeconomic reports from the markets</p>
             </div>
           </div>
 
@@ -144,7 +161,11 @@ const News = () => {
           </div>
 
           {/* Featured Article Card */}
-          {featuredArticle && (
+          {loading ? (
+            <div style={{ display: "flex", justifyContent: "center", padding: "40px", color: "#64748b" }}>
+              Loading live market news...
+            </div>
+          ) : featuredArticle ? (
             <div className="featured-news-card">
               <div className="featured-card-body">
                 <div className="article-meta-row">
@@ -156,7 +177,16 @@ const News = () => {
                   </span>
                 </div>
 
-                <h2 className="featured-title">{featuredArticle.title}</h2>
+                <h2 className="featured-title">
+                  {featuredArticle.link ? (
+                    <a href={featuredArticle.link} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
+                      {featuredArticle.title}
+                      <ExternalLink size={14} className="inline ml-2 opacity-50" />
+                    </a>
+                  ) : (
+                    featuredArticle.title
+                  )}
+                </h2>
                 <p className="featured-summary">{featuredArticle.summary}</p>
 
                 <div className="featured-footer">
@@ -174,48 +204,59 @@ const News = () => {
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Regular Articles Stream */}
-          <div className="news-articles-list">
-            {regularArticles.length > 0 ? (
-              regularArticles.map((article) => (
-                <div key={article.id} className="news-row-card">
-                  <div className="news-row-body">
-                    <div className="article-meta-row">
-                      <span className="category-badge-simple">{article.category}</span>
-                      <span className="dot">•</span>
-                      <span className="source-label">{article.source}</span>
-                      <span className="dot">•</span>
-                      <span className="time-badge">
-                        <Clock size={11} className="inline mr-1" />
-                        {article.time}
-                      </span>
-                    </div>
-
-                    <h3 className="article-title">{article.title}</h3>
-                    <p className="article-summary-simple">{article.summary}</p>
-
-                    {article.symbol && (
-                      <div className="article-actions-row">
-                        <button
-                          onClick={() => navigate(`/stocks/${article.symbol.toUpperCase()}`)}
-                          className="trade-stock-tag-btn"
-                        >
-                          {article.symbol} NSE
-                          <ArrowUpRight size={11} className="ml-1" />
-                        </button>
+          {!loading && (
+            <div className="news-articles-list">
+              {regularArticles.length > 0 ? (
+                regularArticles.map((article) => (
+                  <div key={article.id} className="news-row-card">
+                    <div className="news-row-body">
+                      <div className="article-meta-row">
+                        <span className="category-badge-simple">{article.category}</span>
+                        <span className="dot">•</span>
+                        <span className="source-label">{article.source}</span>
+                        <span className="dot">•</span>
+                        <span className="time-badge">
+                          <Clock size={11} className="inline mr-1" />
+                          {article.time}
+                        </span>
                       </div>
-                    )}
+
+                      <h3 className="article-title">
+                        {article.link ? (
+                          <a href={article.link} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
+                            {article.title}
+                            <ExternalLink size={12} className="inline ml-1 opacity-50" />
+                          </a>
+                        ) : (
+                          article.title
+                        )}
+                      </h3>
+                      <p className="article-summary-simple">{article.summary}</p>
+
+                      {article.symbol && (
+                        <div className="article-actions-row">
+                          <button
+                            onClick={() => navigate(`/stocks/${article.symbol.toUpperCase()}`)}
+                            className="trade-stock-tag-btn"
+                          >
+                            {article.symbol} NSE
+                            <ArrowUpRight size={11} className="ml-1" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="news-empty-state">
+                  <span>No stories in this category.</span>
                 </div>
-              ))
-            ) : (
-              <div className="news-empty-state">
-                <span>No secondary stories in this category.</span>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
         </div>
 
@@ -226,25 +267,38 @@ const News = () => {
           <div className="news-sidebar-widget">
             <h3 className="widget-title">Market Indicators</h3>
             <div className="indices-list-group">
-              {mockIndices.map((ind, idx) => (
-                <div key={idx} className="index-row-item">
-                  <div className="index-meta">
-                    <span className="index-name">{ind.name}</span>
-                    <span className="index-price">{ind.price.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className={`index-change ${ind.isPositive ? "up" : "down"}`}>
-                    {ind.isPositive ? (
-                      <ArrowUpRight size={13} className="mr-0.5" />
-                    ) : (
-                      <ArrowDownRight size={13} className="mr-0.5" />
-                    )}
-                    <span>
-                      {ind.isPositive ? "+" : ""}
-                      {ind.pct.toFixed(2)}%
-                    </span>
-                  </div>
+              {indices && indices.length > 0 ? (
+                indices.map((ind, idx) => {
+                  const isPositive = ind.change >= 0;
+                  const displayValue = typeof ind.value === "number"
+                    ? ind.value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : ind.value;
+
+                  return (
+                    <div key={idx} className="index-row-item">
+                      <div className="index-meta">
+                        <span className="index-name">{ind.name}</span>
+                        <span className="index-price">₹{displayValue}</span>
+                      </div>
+                      <div className={`index-change ${isPositive ? "up" : "down"}`}>
+                        {isPositive ? (
+                          <ArrowUpRight size={13} className="mr-0.5" />
+                        ) : (
+                          <ArrowDownRight size={13} className="mr-0.5" />
+                        )}
+                        <span>
+                          {isPositive ? "+" : ""}
+                          {Number(ind.change).toFixed(2)}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ fontSize: "12px", color: "#64748b", padding: "10px 0" }}>
+                  Connecting to live indices feed...
                 </div>
-              ))}
+              )}
             </div>
           </div>
 

@@ -62,23 +62,49 @@ const SEEDED_STOCKS = [
 
 let cachedInstruments = null;
 
+const isRealStock = (item) => {
+  if (!item) return false;
+  const type = (item.instrument_type || item.instrumentType || "").toUpperCase();
+  const isEquityType = type === "EQ" || type === "EQUITY" || type === "BE" || type === "SM" || type === "ST";
+  if (!isEquityType) return false;
+
+  const isin = (item.isin || "").toUpperCase();
+  // Standard Indian equities (stocks) always have ISIN starting with "INE"
+  if (!isin.startsWith("INE")) return false;
+
+  const name = (item.name || item.company_name || "").toUpperCase();
+  const symbol = (item.trading_symbol || item.tradingSymbol || "").toUpperCase();
+
+  // Exclude mutual funds, ETFs, index funds, and gilt funds
+  if (
+    name.includes("MUTUAL FUND") ||
+    name.includes(" ETF") ||
+    name.endsWith(" ETF") ||
+    name.includes("GILT") ||
+    name.includes("GROWTH") ||
+    name.includes("INDEX FUND") ||
+    symbol.endsWith("BEES")
+  ) {
+    return false;
+  }
+
+  return true;
+};
+
 const loadInstrumentsIntoMemory = () => {
   if (cachedInstruments) return cachedInstruments;
   try {
     if (fs.existsSync(CACHE_FILE)) {
       const cacheData = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
       const rawList = cacheData.instruments || [];
-      cachedInstruments = rawList.filter((item) => {
-        const type = (item.instrument_type || item.instrumentType || "").toUpperCase();
-        return type === "EQ" || type === "EQUITY" || type === "BE" || type === "SM" || type === "ST";
-      });
+      cachedInstruments = rawList.filter(isRealStock);
       console.log(`⚡ [INSTRUMENTS] Loaded ${cachedInstruments.length} equity instruments into memory cache.`);
     }
   } catch (err) {
     console.error("❌ [INSTRUMENTS] Error loading instruments cache from disk:", err.message);
   }
   if (!cachedInstruments || !cachedInstruments.length) {
-    cachedInstruments = SEEDED_STOCKS;
+    cachedInstruments = SEEDED_STOCKS.filter(isRealStock);
   }
   return cachedInstruments;
 };
@@ -92,7 +118,7 @@ export const fetchAllInstruments = async (accessToken) => {
       const cacheAge = Date.now() - cacheData.timestamp;
       if (cacheAge < CACHE_DURATION) {
         console.log("✅ Using cached instruments");
-        cachedInstruments = cacheData.instruments;
+        cachedInstruments = cacheData.instruments.filter(isRealStock);
         return cachedInstruments;
       }
     }
@@ -111,10 +137,7 @@ export const fetchAllInstruments = async (accessToken) => {
 
     const filterEquity = (list) => {
       if (!Array.isArray(list)) return [];
-      return list.filter((item) => {
-        const type = (item.instrument_type || item.instrumentType || "").toUpperCase();
-        return type === "EQ" || type === "EQUITY" || type === "BE" || type === "SM" || type === "ST";
-      });
+      return list.filter(isRealStock);
     };
 
     const nseStocks = filterEquity(nseData);

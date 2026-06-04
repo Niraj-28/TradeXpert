@@ -80,8 +80,34 @@ async function executeOrder(order, currentPrice, io) {
   }
 }
 
+async function cancelStalePendingOrders(userId = null) {
+  try {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const query = {
+      status: "PENDING",
+      createdAt: { $lt: startOfToday },
+    };
+
+    if (userId) {
+      query.user = userId;
+    }
+
+    const result = await Order.updateMany(query, { $set: { status: "CANCELLED" } });
+    if (result.modifiedCount > 0) {
+      console.log(`🧹 [CLEANUP] Cancelled ${result.modifiedCount} stale pending orders created before today.`);
+    }
+  } catch (error) {
+    console.error("❌ [CLEANUP ERROR] Failed to cancel stale pending orders:", error.message);
+  }
+}
+
 async function checkPendingLimitOrders(symbol, currentPrice, io) {
   try {
+    // Proactively cancel any stale pending orders before checking execution
+    await cancelStalePendingOrders();
+
     const pendingOrders = await Order.find({
       symbol: symbol.toUpperCase(),
       status: "PENDING",
@@ -109,4 +135,5 @@ async function checkPendingLimitOrders(symbol, currentPrice, io) {
 module.exports = {
   executeOrder,
   checkPendingLimitOrders,
+  cancelStalePendingOrders,
 };
