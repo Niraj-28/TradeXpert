@@ -200,7 +200,7 @@ const Profile = () => {
               <User size={18} />
               <div>
                 <span>Username</span>
-                <h3>{profileData.username}</h3>
+                <h3>{profileData.username || "Not set"}</h3>
               </div>
             </div>
 

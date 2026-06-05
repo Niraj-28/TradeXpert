@@ -3,7 +3,7 @@ import { getOrders } from "../../services/orderService";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import {
-  FileText, Clock, CheckCircle, Search, RefreshCw
+  FileText, Clock, CheckCircle, Search, RefreshCw, X
 } from "lucide-react";
 import StockLogo from "../../components/ui/StockLogo";
 
@@ -78,7 +78,7 @@ const Orders = () => {
         </div>
 
         <div className="status-filters-group">
-          {["ALL", "EXECUTED", "PENDING"].map((status) => (
+          {["ALL", "EXECUTED", "PENDING", "CANCELLED"].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
@@ -161,6 +161,8 @@ const Orders = () => {
                           <span className={`order-status-badge ${o.status.toLowerCase()}`}>
                             {o.status === "EXECUTED" ? (
                               <CheckCircle size={11} className="inline mr-1" />
+                            ) : o.status === "CANCELLED" ? (
+                              <X size={11} className="inline mr-1" />
                             ) : (
                               <Clock size={11} className="inline mr-1" />
                             )}

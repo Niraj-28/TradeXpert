@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import logo from "../../assets/logo.png";
+import TransparentLogo from "../../components/ui/TransparentLogo";
 import { useMarket } from "../../context/MarketContext";
 import { useAuth } from "../../context/AuthContext";
 import Navbar from "../../components/layout/Navbar";
@@ -421,7 +421,7 @@ const Home = () => {
       <footer className="landing-footer-section">
         <div className="landing-footer-content">
           <div className="landing-footer-left">
-            <img src={logo} alt="TradeXpert" className="landing-logo" />
+            <TransparentLogo className="landing-logo" alt="TradeXpert" style={{ height: "34px" }} />
             <p className="description">
               TradeXpert is a virtual paper trading system created for simulation, education, and strategy testing. We do not place real-exchange trades or handle security assets.
             </p>

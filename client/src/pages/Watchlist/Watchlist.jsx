@@ -204,7 +204,7 @@ const Watchlist = () => {
 
   return (
     <div className="watchlist-layout-container">
-      <div className="watchlist-main-content" style={{ width: "100%", maxWidth: "1200px", margin: "0 auto" }}>
+      <div className="watchlist-main-content" style={{ width: "100%", maxWidth: "100%", margin: "0 auto" }}>
 
         {/* HEADER */}
         <div className="watchlist-header-panel">

@@ -5,6 +5,7 @@ import { socket } from "../../services/socket";
 import { getHoldings } from "../../services/holdingService";
 import { placeOrder } from "../../services/orderService";
 import { getUserProfile } from "../../services/authService";
+import { getWatchlist, addToWatchlist, removeFromWatchlist } from "../../services/watchlistService";
 import { useAuth } from "../../context/AuthContext";
 import { 
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, 
@@ -12,7 +13,7 @@ import {
 } from "recharts";
 import { 
   ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, 
-  Check, Plus, RefreshCw, AlertCircle, Settings, ChevronDown, Bell, Star,
+  Check, Plus, RefreshCw, AlertCircle, Settings, ChevronDown, Bell, Star, Bookmark,
   TrendingUp as BuyIcon, ShieldAlert, Award, Globe, Calendar, FileText,
   Clock, ChevronRight, Activity
 } from "lucide-react";
@@ -425,7 +426,7 @@ const StockDetails = () => {
   const [cashBalance, setCashBalance] = useState(1000000);
   const [liveTicks, setLiveTicks] = useState([]);
   const [simulatedPrice, setSimulatedPrice] = useState(null);
-
+  const [watchlist, setWatchlist] = useState([]);
 
   // Fetch initial cash and user position state
   const fetchUserData = async () => {
@@ -437,8 +438,39 @@ const StockDetails = () => {
       
       const profile = await getUserProfile();
       setCashBalance(profile.balance !== undefined ? profile.balance : 1000000);
+
+      const wlData = await getWatchlist();
+      setWatchlist(wlData.watchlist || []);
     } catch (error) {
       console.error("Failed to load user portfolio data:", error);
+    }
+  };
+
+  const isInWatchlist = useMemo(() => {
+    return watchlist.some((item) => item.symbol?.toUpperCase() === symbol?.toUpperCase());
+  }, [watchlist, symbol]);
+
+  const toggleWatchlist = async () => {
+    if (!user) {
+      toast.error("Please sign in to add stocks to your watchlist");
+      return;
+    }
+    try {
+      if (isInWatchlist) {
+        const item = watchlist.find((w) => w.symbol.toUpperCase() === symbol.toUpperCase());
+        if (item) {
+          await removeFromWatchlist(item._id);
+          toast.success(`${symbol.toUpperCase()} removed from watchlist`);
+          setWatchlist((prev) => prev.filter((w) => w._id !== item._id));
+        }
+      } else {
+        await addToWatchlist(symbol.toUpperCase());
+        toast.success(`${symbol.toUpperCase()} added to watchlist`);
+        const wlData = await getWatchlist();
+        setWatchlist(wlData.watchlist || []);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update watchlist");
     }
   };
 
@@ -716,6 +748,46 @@ const StockDetails = () => {
                 <span className="timeframe-indicator">1D</span>
               </div>
             </div>
+
+            {user && (
+              <button
+                type="button"
+                onClick={toggleWatchlist}
+                className={`stock-watchlist-toggle-btn ${isInWatchlist ? "active" : ""}`}
+                title={isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+                style={{
+                  background: "transparent",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "50%",
+                  width: "40px",
+                  height: "40px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: isInWatchlist ? "#00b074" : "#64748b",
+                  borderColor: isInWatchlist ? "#00b074" : "#cbd5e1",
+                  transition: "all 0.2s ease",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(0, 176, 116, 0.05)";
+                  if (!isInWatchlist) {
+                    e.currentTarget.style.color = "#00b074";
+                    e.currentTarget.style.borderColor = "#00b074";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  if (!isInWatchlist) {
+                    e.currentTarget.style.color = "#64748b";
+                    e.currentTarget.style.borderColor = "#cbd5e1";
+                  }
+                }}
+              >
+                <Bookmark size={20} fill={isInWatchlist ? "#00b074" : "none"} />
+              </button>
+            )}
           </div>
 
           {/* Interactive Chart Visualizer */}

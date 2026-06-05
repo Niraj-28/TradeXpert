@@ -12,7 +12,7 @@ import { searchStocks } from "../../services/marketApi";
 import { useAuth } from "../../context/AuthContext";
 import { socket } from "../../services/socket";
 import toast from "react-hot-toast";
-import logo from "../../assets/Logo.png";
+import TransparentLogo from "../../components/ui/TransparentLogo";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -148,11 +148,7 @@ const Navbar = () => {
       <div className="navbar-left">
 
         {/* LOGO */}
-        <img
-          src={logo}
-          alt="TradeXpert"
-          className="logo"
-        />
+        <TransparentLogo className="logo" alt="TradeXpert" style={{ height: "38px", width: "130px" }} />
 
         {/* MENU */}
         <nav className="navbar-center">
