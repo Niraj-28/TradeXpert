@@ -148,7 +148,7 @@ const Navbar = () => {
       <div className="navbar-left">
 
         {/* LOGO */}
-        <TransparentLogo className="logo" alt="TradeXpert" style={{ height: "38px", width: "130px" }} />
+        <TransparentLogo className="logo" alt="TradeXpert" style={{ height: "44px", width: "150px" }} />
 
         {/* MENU */}
         <nav className="navbar-center">
@@ -371,11 +371,11 @@ const Navbar = () => {
               style={{
                 border: "none",
                 background: "transparent",
-                fontSize: "13px",
+                fontSize: "14.5px",
                 fontWeight: "500",
                 color: "var(--brand-dark)",
                 cursor: "pointer",
-                padding: "8px 16px",
+                padding: "10px 20px",
                 borderRadius: "8px",
                 transition: "all 0.2s ease"
               }}
@@ -391,12 +391,12 @@ const Navbar = () => {
                 background: "var(--brand-accent)",
                 border: "none",
                 color: "#ffffff",
-                fontSize: "13px",
+                fontSize: "14.5px",
                 fontWeight: "600",
-                padding: "8px 20px",
+                padding: "10px 24px",
                 borderRadius: "8px",
                 cursor: "pointer",
-                boxShadow: "0 4px 12px rgba(64, 138, 113, 0.15)",
+                boxShadow: "0 4px 12px rgba(35, 83, 71, 0.15)",
                 transition: "all 0.2s ease"
               }}
               onMouseEnter={(e) => { e.currentTarget.style.background = "var(--brand-primary)"; e.currentTarget.style.transform = "translateY(-1px)"; }}

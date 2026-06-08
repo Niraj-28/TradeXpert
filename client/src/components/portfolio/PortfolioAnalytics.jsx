@@ -14,10 +14,12 @@ const COLORS = [
 
 const PortfolioAnalytics = ({ holdings = [], cash = 0 }) => {
   // Construct dynamic data slices
-  const chartData = holdings.map((h) => ({
-    name: h.symbol,
-    value: parseFloat(h.currentVal.toFixed(2)),
-  }));
+  const chartData = holdings
+    .filter((h) => h.currentVal > 0)
+    .map((h) => ({
+      name: h.symbol,
+      value: parseFloat(h.currentVal.toFixed(2)),
+    }));
 
   // Append cash as a slice if available
   if (cash > 0) {

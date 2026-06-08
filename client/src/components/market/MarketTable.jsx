@@ -10,7 +10,7 @@ import StockLogo from "../ui/StockLogo";
 const Sparkline = ({ data = [], width = 110, height = 30 }) => {
   if (!Array.isArray(data) || data.length < 2) {
     return (
-      <div style={{ display: "inline-flex", justifyContent: "center", alignItems: "center", width, height }}>
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "0 auto", width, height }}>
         <svg width={width} height={height}>
           <line x1="0" y1={height / 2} x2={width} y2={height / 2} stroke="rgba(255, 255, 255, 0.15)" strokeWidth="1.5" strokeDasharray="3,3" />
         </svg>
@@ -38,7 +38,7 @@ const Sparkline = ({ data = [], width = 110, height = 30 }) => {
   const strokeColor = isPositive ? "#37c98b" : "#ff4d4d";
 
   return (
-    <div style={{ display: "inline-flex", justifyContent: "center", alignItems: "center", width, height }}>
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "0 auto", width, height }}>
       <svg width={width} height={height} style={{ overflow: "visible" }}>
         <polyline
           fill="none"
@@ -81,7 +81,7 @@ const MarketTable = ({ onTrade }) => {
           <div className="title-with-icon">
             <h2>Live Market Dashboard</h2>
           </div>
-          <p>Real-time quotes and activity metrics from NSE/BSE equities</p>
+          <p>Real-time activity metrics from NSE/BSE equities</p>
         </div>
 
         <div className="market-table-header-search">
@@ -97,7 +97,7 @@ const MarketTable = ({ onTrade }) => {
               <th>Company</th>
               <th className="num-align">Price</th>
               <th className="num-align">Change</th>
-              <th style={{ textAlign: "center", width: "120px" }}>Trend</th>
+              <th style={{ textAlign: "center", width: "150px" }}>Trend</th>
               <th className="actions-align">Actions</th>
             </tr>
           </thead>
@@ -136,7 +136,7 @@ const MarketTable = ({ onTrade }) => {
                     <td className={`stock-change-cell num-align ${isPositive ? "positive" : "negative"}`}>
                       {isPositive ? "+" : ""}{change.toFixed(2)}%
                     </td>
-                    <td className="stock-chart-cell" style={{ verticalAlign: "middle", textAlign: "center" }}>
+                    <td className="stock-chart-cell" style={{ verticalAlign: "middle", textAlign: "center", width: "150px" }}>
                       <Sparkline data={stock.history} />
                     </td>
                     <td className="stock-actions-cell actions-align">

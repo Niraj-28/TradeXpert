@@ -2,36 +2,40 @@
 @import "./App.css";
 
 @theme {
-  --color-brand-dark: #091413;
-  --color-brand-primary: #285A48;
-  --color-brand-accent: #408A71;
-  --color-brand-mint: #B0E4CC;
+  --color-brand-dark: #051F20;
+  --color-brand-primary: #0B2B26;
+  --color-brand-accent: #235347;
+  --color-brand-mint: #8EB69B;
 
   /* Overwrite default emerald palette to map directly to our new colors */
-  --color-emerald-50: #f0fbf7;
-  --color-emerald-100: #e1f7ed;
-  --color-emerald-200: #c2eedc;
-  --color-emerald-300: #B0E4CC;
-  --color-emerald-400: #66b59c;
-  --color-emerald-500: #408A71;
-  --color-emerald-600: #285A48;
-  --color-emerald-700: #1b4234;
-  --color-emerald-800: #0f271f;
-  --color-emerald-900: #091413;
+  --color-emerald-50: #f4faf6;
+  --color-emerald-100: #DAF1DE;
+  --color-emerald-200: #c5e6ce;
+  --color-emerald-300: #a9d6b5;
+  --color-emerald-400: #8EB69B;
+  --color-emerald-500: #427f71;
+  --color-emerald-600: #235347;
+  --color-emerald-700: #163832;
+  --color-emerald-800: #0B2B26;
+  --color-emerald-900: #051F20;
 }
 
 :root {
-  --brand-dark: #091413;
-  --brand-primary: #285A48;
-  --brand-accent: #408A71;
-  --brand-mint: #B0E4CC;
+  --brand-dark: #051F20;
+  --brand-primary: #0B2B26;
+  --brand-accent: #235347;
+  --brand-mint: #8EB69B;
+  --brand-light: #DAF1DE;
 }
-
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+html {
+  font-size: 17.5px; /* Increase base text size globally */
 }
 
 html,
@@ -45,6 +49,10 @@ body,
   background: #ffffff;
 
   overflow-x: hidden;
+}
+
+body {
+  zoom: 1.05; /* Scale up layout elements uniformly by 5% */
 }
 
 a {

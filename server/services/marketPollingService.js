@@ -7,6 +7,8 @@ const Holding = require("../models/holdingModel.cjs");
 const Watchlist = require("../models/watchlistModel.cjs");
 
 let ioInstance = null;
+let lastSquareOffDate = "";
+let lastCancelPendingDate = "";
 
 export const initializeMarketPolling = (io) => {
   ioInstance = io;
@@ -144,6 +146,16 @@ const calculateSectorPerformance = (stockData) => {
 };
 
 function emitMarketData(formattedData) {
+  // Update in-memory price cache for order execution
+  try {
+    const priceCache = require("./priceCache.cjs");
+    formattedData.forEach((item) => {
+      priceCache.setPrice(item.symbol, item.price);
+    });
+  } catch (err) {
+    console.error("Failed to update price cache in marketPollingService:", err.message);
+  }
+
   const indexSymbols = new Set([
     "NIFTY 50",
     "BANK NIFTY",
@@ -468,5 +480,35 @@ function startPolling() {
   fetchMarketData();
   setInterval(() => {
     fetchMarketData();
+
+    // Check for 3:20 PM IST daily square-off
+    try {
+      const now = new Date();
+      const istTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+      const hours = istTime.getHours();
+      const minutes = istTime.getMinutes();
+      const dateStr = istTime.toDateString();
+
+      if (hours === 15 && minutes === 20 && lastSquareOffDate !== dateStr) {
+        lastSquareOffDate = dateStr;
+        const { autoSquareOffIntraday } = require("./orderExecutionService.cjs");
+        console.log(`🤖 [AUTO SQUARE-OFF] Triggering daily 3:20 PM IST square-off...`);
+        autoSquareOffIntraday(ioInstance).catch(err => {
+          console.error("Auto square-off failed:", err.message);
+        });
+      }
+
+      // Check for 3:30 PM IST daily cancel pending orders
+      if (hours === 15 && minutes === 30 && lastCancelPendingDate !== dateStr) {
+        lastCancelPendingDate = dateStr;
+        const { cancelAllPendingOrders } = require("./orderExecutionService.cjs");
+        console.log(`🧹 [DAILY CANCEL] Triggering daily 3:30 PM IST pending orders cancellation...`);
+        cancelAllPendingOrders(ioInstance).catch(err => {
+          console.error("Daily cancel pending orders failed:", err.message);
+        });
+      }
+    } catch (err) {
+      console.error("Error in daily square-off check:", err.message);
+    }
   }, 3000);
 }

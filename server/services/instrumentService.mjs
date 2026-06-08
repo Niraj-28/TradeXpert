@@ -75,7 +75,26 @@ const isRealStock = (item) => {
   const name = (item.name || item.company_name || "").toUpperCase();
   const symbol = (item.trading_symbol || item.tradingSymbol || "").toUpperCase();
 
-  // Exclude mutual funds, ETFs, index funds, and gilt funds
+  // 1. Exclude Sovereign Gold Bonds (SGB)
+  if (symbol.startsWith("SGB")) return false;
+
+  // 2. Exclude Gold/Silver commodity tracking symbols
+  if (symbol.startsWith("GOLD") || symbol.startsWith("SILVER")) return false;
+
+  // 3. Exclude REITs, InvITs, and RR (Rights) symbols
+  if (
+    symbol.endsWith("-RR") ||
+    symbol.endsWith("_RR") ||
+    symbol.includes("-REIT") ||
+    name.includes("REIT") ||
+    name.includes("INVIT") ||
+    name.includes("INVESTMENT TRUST") ||
+    name.includes("REAL ESTATE TRUST")
+  ) {
+    return false;
+  }
+
+  // 4. Exclude Mutual Funds, ETFs, Index Funds, Gilt Funds, and other Schemes/Funds
   if (
     name.includes("MUTUAL FUND") ||
     name.includes(" ETF") ||
@@ -83,7 +102,23 @@ const isRealStock = (item) => {
     name.includes("GILT") ||
     name.includes("GROWTH") ||
     name.includes("INDEX FUND") ||
-    symbol.endsWith("BEES")
+    name.includes("EXCHANGE TRADED") ||
+    name.includes("EXCHANGE-TRADED") ||
+    name.includes("FUND") ||
+    name.includes("SCHEME") ||
+    symbol.endsWith("BEES") ||
+    symbol.includes("ETF")
+  ) {
+    return false;
+  }
+
+  // 5. Exclude Debt, Bonds, NCDs (Non-Convertible Debentures)
+  if (
+    name.includes("BOND") ||
+    name.includes("NCD") ||
+    name.includes("DEBENTURE") ||
+    name.includes("SECURED") ||
+    name.includes("UNSECURED")
   ) {
     return false;
   }

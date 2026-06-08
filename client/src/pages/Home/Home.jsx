@@ -4,6 +4,7 @@ import TransparentLogo from "../../components/ui/TransparentLogo";
 import { useMarket } from "../../context/MarketContext";
 import { useAuth } from "../../context/AuthContext";
 import Navbar from "../../components/layout/Navbar";
+import LiveTicker from "../../components/market/LiveTicker";
 import {
   LineChart, Line, ResponsiveContainer
 } from "recharts";
@@ -161,26 +162,7 @@ const Home = () => {
       <Navbar />
 
       {/* INFINITE RUNNING TICKER RIBBON */}
-      <div className="landing-ticker-ribbon">
-        <div className="landing-ticker-track">
-          {[1, 2, 3].map((copyIndex) => (
-            <div key={`copy-${copyIndex}`} className="landing-ticker-set">
-              {tickerStocks.map((stock, sIdx) => {
-                const isPos = stock.change >= 0;
-                return (
-                  <div key={`${stock.symbol}-${copyIndex}-${sIdx}`} className="landing-ticker-item" onClick={() => navigate(`/stocks/${stock.symbol}`)}>
-                    <span className="ticker-name">{stock.symbol}</span>
-                    <span className="ticker-price">₹{Number(stock.price).toFixed(2)}</span>
-                    <span className={`ticker-change ${isPos ? "up" : "down"}`}>
-                      {isPos ? "+" : ""}{Number(stock.change).toFixed(2)}%
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      </div>
+      <LiveTicker />
 
       {/* HERO SECTION */}
       <header className="landing-hero-section">
@@ -232,9 +214,6 @@ const Home = () => {
             <div className="hero-indices-panel">
               <div className="panel-header">
                 <h3>Live Market Indices</h3>
-                <span className="live-pill">
-                  <span className="pulse-dot"></span> Live
-                </span>
               </div>
 
               <div className="indices-list">
@@ -421,7 +400,7 @@ const Home = () => {
       <footer className="landing-footer-section">
         <div className="landing-footer-content">
           <div className="landing-footer-left">
-            <TransparentLogo className="landing-logo" alt="TradeXpert" style={{ height: "34px" }} />
+            <TransparentLogo className="landing-logo" alt="TradeXpert" style={{ height: "38px", width: "130px" }} />
             <p className="description">
               TradeXpert is a virtual paper trading system created for simulation, education, and strategy testing. We do not place real-exchange trades or handle security assets.
             </p>

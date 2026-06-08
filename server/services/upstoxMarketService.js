@@ -189,6 +189,16 @@ const startUpstoxMarketFeed = async (io) => {
         // Emit processed events
         io.emit("marketData", marketData);
 
+        // Update in-memory price cache for order execution
+        try {
+          const priceCache = require("../services/priceCache.cjs");
+          marketData.forEach((item) => {
+            priceCache.setPrice(item.symbol, item.price);
+          });
+        } catch (err) {
+          console.error("Failed to update price cache in upstoxMarketService:", err.message);
+        }
+
         const indexSymbols = new Set([
           "NIFTY 50",
           "BANK NIFTY",

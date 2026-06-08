@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import axios from "axios";
 
 const getMarketTimeLabels = (pointsCount, now) => {
   const marketStart = new Date(now);
@@ -134,9 +135,42 @@ const generateStaticChartData = (symbol, timeframe, currentPrice, openPrice, hig
 };
  
 const TradingChart = ({ symbol = "RELIANCE", timeframe = "1D", currentPrice = 1300, openPrice = null, highPrice = null, lowPrice = null }) => {
-  // Memoize data calculation
-  const chartData = useMemo(() => {
-    return generateStaticChartData(symbol, timeframe, currentPrice, openPrice, highPrice, lowPrice);
+  const [chartData, setChartData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const fetchHistory = async () => {
+      try {
+        setLoading(true);
+        const res = await axios.get(`http://localhost:5000/api/market/history`, {
+          params: { symbol, timeframe }
+        });
+        if (active) {
+          if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+            setChartData(res.data);
+          } else {
+            const fallback = generateStaticChartData(symbol, timeframe, currentPrice, openPrice, highPrice, lowPrice);
+            setChartData(fallback);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching yahoo history, using fallback:", err.message);
+        if (active) {
+          const fallback = generateStaticChartData(symbol, timeframe, currentPrice, openPrice, highPrice, lowPrice);
+          setChartData(fallback);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchHistory();
+    return () => {
+      active = false;
+    };
   }, [symbol, timeframe, currentPrice, openPrice, highPrice, lowPrice]);
 
   // Determine trend direction (green/red)
@@ -148,7 +182,7 @@ const TradingChart = ({ symbol = "RELIANCE", timeframe = "1D", currentPrice = 13
   }, [chartData]);
 
   const strokeColor = isPositive ? "#10b981" : "#ef4444";
-  const gradientId = `chartGradient-${symbol}-${timeframe}`;
+  const gradientId = `chartGradient-${symbol.replace(/[^a-zA-Z0-9]/g, "")}-${timeframe}`;
 
   return (
     <div className="trading-chart-responsive-box">

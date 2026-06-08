@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import axios from "axios";
 import { useMarket } from "../../context/MarketContext";
 import { socket } from "../../services/socket";
 import { getHoldings } from "../../services/holdingService";
@@ -19,7 +20,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import StockLogo from "../../components/ui/StockLogo";
-import { getLiveNews } from "../../services/marketApi";
+import { getLiveNews, getStockNews, getStockEvents } from "../../services/marketApi";
 
 // Format currency
 const formatINR = (value) => {
@@ -379,37 +380,45 @@ const StockDetails = () => {
   const [timeframe, setTimeframe] = useState("1D");
   const [activeTab, setActiveTab] = useState("Overview"); // Overview, Technicals, News, Events
   const [newsList, setNewsList] = useState([]);
+  const [eventsList, setEventsList] = useState([]);
+  const [newsLoading, setNewsLoading] = useState(true);
+  const [eventsLoading, setEventsLoading] = useState(true);
 
   useEffect(() => {
-    // Initial load from mock fallback
+    if (!symbol) return;
+
+    // Initial load from mock fallback as skeleton/placeholder
     const seedStats = getInitialStockStats(symbol);
-    const mockNews = getStockTabDetails(symbol, seedStats.price).news;
-    setNewsList(mockNews);
+    const fallbackDetails = getStockTabDetails(symbol, seedStats.price);
+    setNewsList(fallbackDetails.news);
+    setEventsList(fallbackDetails.events);
+    setNewsLoading(true);
+    setEventsLoading(true);
     
-    const fetchLiveStockNews = async () => {
+    const fetchNewsAndEvents = async () => {
       try {
-        const allNews = await getLiveNews();
-        const symUpper = symbol.toUpperCase();
-        const filtered = allNews.filter(article => {
-          const titleUpper = (article.title || "").toUpperCase();
-          const summaryUpper = (article.summary || "").toUpperCase();
-          const artSymbolUpper = (article.symbol || "").toUpperCase();
-          
-          return artSymbolUpper === symUpper || 
-                 titleUpper.includes(symUpper) || 
-                 summaryUpper.includes(symUpper);
-        });
-        
-        if (filtered.length > 0) {
-          setNewsList(filtered);
-        } else if (allNews && allNews.length > 0) {
-          setNewsList(allNews.slice(0, 4));
+        const news = await getStockNews(symbol);
+        if (news && news.length > 0) {
+          setNewsList(news);
         }
       } catch (err) {
         console.error("Failed to fetch live stock news:", err);
+      } finally {
+        setNewsLoading(false);
+      }
+
+      try {
+        const events = await getStockEvents(symbol);
+        if (events && events.length > 0) {
+          setEventsList(events);
+        }
+      } catch (err) {
+        console.error("Failed to fetch stock events:", err);
+      } finally {
+        setEventsLoading(false);
       }
     };
-    fetchLiveStockNews();
+    fetchNewsAndEvents();
   }, [symbol]);
 
   // Order Ticket states
@@ -585,17 +594,70 @@ const StockDetails = () => {
   }, [symbol, liveStock]);
 
   // Dynamic Chart Points compiler
-  const chartData = useMemo(() => {
-    const isCandle = chartType === "candle";
-    return generateStaticChartData(
-      symbol,
-      timeframe,
-      stockDetails.price,
-      isCandle,
-      stockDetails.open,
-      stockDetails.high,
-      stockDetails.low
-    );
+  const [chartData, setChartData] = useState([]);
+  const [chartLoading, setChartLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const fetchHistoryData = async () => {
+      try {
+        setChartLoading(true);
+        const res = await axios.get("http://localhost:5000/api/market/history", {
+          params: { symbol, timeframe }
+        });
+        if (active) {
+          if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+            const mapped = res.data.map(d => {
+              const cOpen = d.open ?? d.price;
+              const cClose = d.close ?? d.price;
+              return {
+                ...d,
+                open: cOpen,
+                close: cClose,
+                high: d.high ?? Math.max(cOpen, cClose),
+                low: d.low ?? Math.min(cOpen, cClose),
+                range: [Math.min(cOpen, cClose), Math.max(cOpen, cClose)]
+              };
+            });
+            setChartData(mapped);
+          } else {
+            const fallback = generateStaticChartData(
+              symbol,
+              timeframe,
+              stockDetails.price,
+              chartType === "candle",
+              stockDetails.open,
+              stockDetails.high,
+              stockDetails.low
+            );
+            setChartData(fallback);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch historical quotes, falling back:", err);
+        if (active) {
+          const fallback = generateStaticChartData(
+            symbol,
+            timeframe,
+            stockDetails.price,
+            chartType === "candle",
+            stockDetails.open,
+            stockDetails.high,
+            stockDetails.low
+          );
+          setChartData(fallback);
+        }
+      } finally {
+        if (active) {
+          setChartLoading(false);
+        }
+      }
+    };
+
+    fetchHistoryData();
+    return () => {
+      active = false;
+    };
   }, [symbol, timeframe, chartType, stockDetails.price, stockDetails.open, stockDetails.high, stockDetails.low]);
 
   const yDomain = useMemo(() => {
@@ -620,10 +682,11 @@ const StockDetails = () => {
     return [Math.floor(minVal - padding), Math.ceil(maxVal + padding)];
   }, [chartData, chartType]);
 
-  // Check if user holds active stock
+  // Check if user holds active stock for currently selected product type
   const userPosition = useMemo(() => {
-    return holdings.find(h => h.symbol.toUpperCase() === symbol.toUpperCase());
-  }, [holdings, symbol]);
+    const targetProductType = productType.toUpperCase(); // "DELIVERY" or "INTRADAY"
+    return holdings.find(h => h.symbol.toUpperCase() === symbol.toUpperCase() && h.productType === targetProductType);
+  }, [holdings, symbol, productType]);
 
   // Calculate dynamic bid-ask lists for depth (fluctuates around LTP)
   const marketDepthData = useMemo(() => {
@@ -673,15 +736,35 @@ const StockDetails = () => {
 
     const execPrice = priceMode === "Market" ? stockDetails.price : limitPrice;
     const cost = tradeQty * execPrice;
+    const isIntraday = productType === "Intraday";
+    const requiredMargin = isIntraday ? cost / 5 : cost;
 
-    if (tradeType === "BUY" && cost > cashBalance) {
-      toast.error("Insufficient virtual cash balance available!");
-      return;
+    if (tradeType === "BUY") {
+      if (requiredMargin > cashBalance) {
+        toast.error(`Insufficient virtual cash balance! Required margin: ₹${requiredMargin.toFixed(2)}, Available: ₹${cashBalance.toFixed(2)}`);
+        return;
+      }
     }
 
-    if (tradeType === "SELL" && (!userPosition || userPosition.quantity < tradeQty)) {
-      toast.error(`Insufficient position holdings! You only own ${userPosition?.quantity || 0} shares.`);
-      return;
+    if (tradeType === "SELL") {
+      if (isIntraday) {
+        let sqQty = 0;
+        if (userPosition && userPosition.quantity > 0) {
+          sqQty = Math.min(Number(tradeQty), userPosition.quantity);
+        }
+        const excessQty = Math.max(0, Number(tradeQty) - sqQty);
+        const requiredMarginForShort = (excessQty * Number(execPrice)) / 5;
+
+        if (requiredMarginForShort > cashBalance) {
+          toast.error(`Insufficient virtual cash balance for short position! Required margin: ₹${requiredMarginForShort.toFixed(2)}, Available: ₹${cashBalance.toFixed(2)}`);
+          return;
+        }
+      } else {
+        if (!userPosition || userPosition.quantity < tradeQty) {
+          toast.error(`Insufficient holdings! You only own ${userPosition?.quantity || 0} shares of ${symbol} (Delivery).`);
+          return;
+        }
+      }
     }
 
     try {
@@ -692,13 +775,14 @@ const StockDetails = () => {
         quantity: Number(tradeQty),
         price: Number(execPrice),
         exchange: exchange,
-        priceMode: priceMode.toUpperCase()
+        priceMode: priceMode.toUpperCase(),
+        productType: productType.toUpperCase()
       });
 
       if (priceMode === "Limit") {
         toast.success(`Limit order placed at ₹${Number(execPrice).toFixed(2)} on ${exchange}`);
       } else {
-        toast.success(`Market order submitted: ${tradeType} ${tradeQty} shares on ${exchange}`);
+        toast.success(`Market order submitted: ${tradeType} ${tradeQty} shares on ${exchange} [${productType}]`);
       }
 
       fetchUserData();
@@ -740,9 +824,9 @@ const StockDetails = () => {
               
               <div className="price-quote-block">
                 <span className="price-val">{formatINR(stockDetails.price)}</span>
-                <span className={`change-badge ${isPositive ? "up" : "down"}`}>
-                  {isPositive ? "+" : ""}
-                  {stockDetails.changeAmt.toFixed(2)} ({isPositive ? "+" : ""}
+                <span className={`change-badge ${stockDetails.change >= 0 ? "up" : "down"}`}>
+                  {stockDetails.change >= 0 ? "+" : ""}
+                  {stockDetails.changeAmt.toFixed(2)} ({stockDetails.change >= 0 ? "+" : ""}
                   {stockDetails.change.toFixed(2)}%)
                 </span>
                 <span className="timeframe-indicator">1D</span>
@@ -816,8 +900,22 @@ const StockDetails = () => {
             </div>
 
             {/* Recharts Wrapper */}
-            <div className="recharts-wrapper-box">
-              <ResponsiveContainer width="100%" height={300}>
+            <div className="recharts-wrapper-box" style={{ position: "relative" }}>
+              {chartLoading && chartData.length === 0 ? (
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "300px",
+                  fontSize: "13px",
+                  color: "#64748b",
+                  fontFamily: "Poppins, sans-serif",
+                }}>
+                  <RefreshCw className="animate-spin text-emerald-500 mr-2" size={16} />
+                  <span>Loading live chart data from Yahoo Finance...</span>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
                 {chartType === "line" ? (
                   <AreaChart data={chartData} margin={{ top: 10, right: 5, left: 5, bottom: 5 }}>
                     <defs>
@@ -892,6 +990,7 @@ const StockDetails = () => {
                   </BarChart>
                 )}
               </ResponsiveContainer>
+              )}
             </div>
 
             {/* Timeframes Bar */}
@@ -1179,7 +1278,7 @@ const StockDetails = () => {
               {activeTab === "Events" && (
                 <div className="premium-events-timeline">
                   <div className="timeline-spine" />
-                  {tabDetails.events.map((e, idx) => {
+                  {eventsList.map((e, idx) => {
                     let icon = <FileText size={14} />;
                     let typeClass = "meeting";
                     if (e.type.includes("Dividend")) {
@@ -1335,7 +1434,11 @@ const StockDetails = () => {
                 {/* User Holding Info (Optional display if owns stock) */}
                 {userPosition ? (
                   <div className="ticket-position-info">
-                    <span>Currently holding {userPosition.quantity} shares (Avg. ₹{userPosition.avgPrice.toFixed(2)})</span>
+                    {userPosition.quantity < 0 ? (
+                      <span>Short position of {Math.abs(userPosition.quantity)} shares (Avg. ₹{userPosition.avgPrice.toFixed(2)})</span>
+                    ) : (
+                      <span>Currently holding {userPosition.quantity} shares (Avg. ₹{userPosition.avgPrice.toFixed(2)})</span>
+                    )}
                   </div>
                 ) : null}
 
@@ -1347,8 +1450,17 @@ const StockDetails = () => {
                   </div>
                   
                   <div className="info-row border-t pt-2 mt-2">
-                    <span className="label font-semibold">Approx. Required</span>
-                    <span className="val font-bold text-[#0f172a]">{formatINR(totalCost)}</span>
+                    {productType === "Intraday" ? (
+                      <>
+                        <span className="label font-semibold">Margin Required (5x)</span>
+                        <span className="val font-bold text-[#00b074]">{formatINR(totalCost / 5)}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="label font-semibold">Approx. Required</span>
+                        <span className="val font-bold text-[#0f172a]">{formatINR(totalCost)}</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
