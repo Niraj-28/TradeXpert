@@ -5,7 +5,7 @@ const COLORS = [
   "#408A71", // Brand Accent (Emerald Green)
   "#091413", // Brand Dark (Navy)
   "#285A48", // Brand Primary (Forest Green)
-  "#B0E4CC", // Brand Mint
+  "#107b49ff", // Brand Mint
   "#4f46e5", // Indigo
   "#0ea5e9", // Sky Blue
   "#f59e0b", // Amber/Gold
@@ -14,10 +14,12 @@ const COLORS = [
 
 const PortfolioAnalytics = ({ holdings = [], cash = 0 }) => {
   // Construct dynamic data slices
-  const chartData = holdings.map((h) => ({
-    name: h.symbol,
-    value: parseFloat(h.currentVal.toFixed(2)),
-  }));
+  const chartData = holdings
+    .filter((h) => h.currentVal > 0)
+    .map((h) => ({
+      name: h.symbol,
+      value: parseFloat(h.currentVal.toFixed(2)),
+    }));
 
   // Append cash as a slice if available
   if (cash > 0) {
@@ -32,8 +34,8 @@ const PortfolioAnalytics = ({ holdings = [], cash = 0 }) => {
   const dataToRender = hasData
     ? chartData
     : [
-        { name: "Available Capital", value: 1000000 },
-      ];
+      { name: "Available Capital", value: 1000000 },
+    ];
 
   const totalValue = dataToRender.reduce((sum, item) => sum + item.value, 0);
 

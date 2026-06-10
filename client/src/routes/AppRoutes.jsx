@@ -20,6 +20,10 @@ import Profile from "../pages/Profile/Profile";
 import StockDetails from "../pages/StockDetails/StockDetails";
 import ProtectedRoute from "./ProtectedRoute";
 import Home from "../pages/Home/Home";
+import TradingRules from "../pages/Resources/TradingRules";
+import TechnicalGuides from "../pages/Resources/TechnicalGuides";
+import PrivacyPolicy from "../pages/Resources/PrivacyPolicy";
+import TermsOfUse from "../pages/Resources/TermsOfUse";
 
 const AppRoutes = () => {
   return (
@@ -47,7 +51,45 @@ const AppRoutes = () => {
         element={<ResetPassword />}
       />
 
-      {/* MAIN APP */}
+      {/* PUBLIC APP PAGES */}
+      <Route element={<MainLayout />}>
+        <Route
+          path="/markets"
+          element={<MarketsPage />}
+        />
+
+        <Route
+          path="/stocks/:symbol"
+          element={<StockDetails />}
+        />
+
+        <Route
+          path="/news"
+          element={<News />}
+        />
+
+        <Route
+          path="/resources/trading-rules"
+          element={<TradingRules />}
+        />
+
+        <Route
+          path="/resources/technical-guides"
+          element={<TechnicalGuides />}
+        />
+
+        <Route
+          path="/resources/privacy"
+          element={<PrivacyPolicy />}
+        />
+
+        <Route
+          path="/resources/terms"
+          element={<TermsOfUse />}
+        />
+      </Route>
+
+      {/* PROTECTED APP PAGES */}
       <Route 
         element={
           <ProtectedRoute>
@@ -55,11 +97,6 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       >
-
-        <Route
-          path="/markets"
-          element={<MarketsPage />}
-        />
 
         <Route
           path="/portfolio"
@@ -77,18 +114,8 @@ const AppRoutes = () => {
         />
 
         <Route
-          path="/stocks/:symbol"
-          element={<StockDetails />}
-        />
-
-        <Route
           path="/orders"
           element={<Orders />}
-        />
-
-        <Route
-          path="/news"
-          element={<News />}
         />
 
         <Route

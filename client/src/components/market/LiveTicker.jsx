@@ -18,6 +18,8 @@ const LiveTicker = () => {
         {tickerItems.map((stock, index) => {
           const change = stock.change ?? 0;
           const isPositive = change >= 0;
+          const hasPrice = stock.price !== "--" && stock.price !== undefined && !isNaN(Number(stock.price));
+          const displayPrice = hasPrice ? Number(stock.price).toFixed(2) : "—";
 
           return (
             <div
@@ -26,7 +28,7 @@ const LiveTicker = () => {
             >
               <span className="ticker-symbol">{stock.symbol}</span>
               <strong className="ticker-price">
-                {stock.price === "--" || stock.price === undefined ? "—" : `₹${stock.price}`}
+                {displayPrice === "—" ? "—" : `₹${displayPrice}`}
               </strong>
               <span className={`ticker-change-pct ${isPositive ? "positive" : "negative"}`}>
                 {isPositive ? (

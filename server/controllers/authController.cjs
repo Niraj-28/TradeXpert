@@ -97,19 +97,14 @@ const registerUser = async (
     // RESPONSE
 
     res.status(201).json({
-
       _id: user._id,
-
       name: user.name,
-
       email: user.email,
-
       phone: user.phone,
-
+      username: user.username || "",
+      bio: user.bio || "",
       balance: user.balance !== undefined ? user.balance : 1000000,
-
       token: generateToken(user._id),
-
     });
 
   } catch (error) {
@@ -167,19 +162,14 @@ const loginUser = async (
     ) {
 
       res.status(200).json({
-
         _id: user._id,
-
         name: user.name,
-
         email: user.email,
-
         phone: user.phone,
-
+        username: user.username || "",
+        bio: user.bio || "",
         balance: user.balance !== undefined ? user.balance : 1000000,
-
         token: generateToken(user._id),
-
       });
 
     } else {

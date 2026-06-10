@@ -1,24 +1,82 @@
 import { useNavigate } from "react-router-dom";
 import { useMarket } from "../../context/MarketContext";
-import { ArrowUpRight, ArrowDownRight, Activity } from "lucide-react";
+import { Activity } from "lucide-react";
+import StockLogo from "../ui/StockLogo";
+
+const companyNameMap = {
+  RELIANCE: "Reliance Industries",
+  TCS: "Tata Consultancy Services",
+  INFY: "Infosys Limited",
+  HDFCBANK: "HDFC Bank",
+  ICICIBANK: "ICICI Bank",
+  SBIN: "State Bank of India",
+  BHARTIARTL: "Bharti Airtel",
+  ITC: "ITC Limited",
+  LT: "Larsen & Toubro",
+  TATASTEEL: "Tata Steel",
+  TATAMOTORS: "Tata Motors",
+  WIPRO: "Wipro Limited",
+  AXISBANK: "Axis Bank",
+  KOTAKBANK: "Kotak Mahindra Bank",
+  HINDUNILVR: "Hindustan Unilever",
+  ADANIENT: "Adani Enterprises",
+  BAJFINANCE: "Bajaj Finance",
+  MARUTI: "Maruti Suzuki",
+  SUNPHARMA: "Sun Pharmaceutical",
+  "M&M": "Mahindra & Mahindra",
+  ONGC: "Oil & Natural Gas Corp",
+  POWERGRID: "Power Grid Corp",
+  NTPC: "NTPC Limited",
+  COALINDIA: "Coal India",
+  ADANIPORTS: "Adani Ports & SEZ",
+  ULTRACEMCO: "UltraTech Cement",
+  GRASIM: "Grasim Industries",
+  JSWSTEEL: "JSW Steel",
+  LTIM: "LTIMindtree",
+  HINDALCO: "Hindalco Industries",
+  DMART: "Avenue Supermarts",
+  SIEMENS: "Siemens Limited",
+  APOLLOHOSP: "Apollo Hospitals",
+  MAXHEALTH: "Max Healthcare",
+  ABB: "ABB India",
+  JIOFIN: "Jio Financial Services",
+  LICI: "LIC of India"
+};
+
+import { useState, useEffect } from "react";
 
 const TrendingStocks = () => {
   const { trendingStocks } = useMarket();
   const navigate = useNavigate();
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 900);
+  
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 900);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const limit = isMobile ? 4 : 6;
+
   const stocks = trendingStocks?.length
-    ? trendingStocks
-    : Array.from({ length: 6 }, (_, index) => ({
-        symbol: `STK${index + 1}`,
-        price: "—",
-        change: 0,
-      }));
+    ? trendingStocks.slice(0, limit)
+    : Array.from({ length: limit }, (_, index) => {
+      const fallbackSymbols = ["DMART", "SIEMENS", "APOLLOHOSP", "MAXHEALTH", "ABB", "TMCV"];
+      const fallbackPrices = [4182.80, 3728.90, 8267.00, 960.20, 7218.50, 365.30];
+      const fallbackChanges = [3.10, 2.91, 2.19, 1.21, 1.01, -1.42];
+      return {
+        symbol: fallbackSymbols[index],
+        price: fallbackPrices[index],
+        change: fallbackChanges[index],
+        company: companyNameMap[fallbackSymbols[index]]
+      };
+    });
 
   return (
     <div className="trending-section-wrapper">
       <div className="market-section-header">
         <div className="title-with-icon">
-          <Activity className="section-title-icon text-[#37c98b]" size={22} />
           <h2 className="market-section-title">Trending Stocks</h2>
         </div>
         <p className="market-section-subtitle">Most active equities by volume and trade count today</p>
@@ -26,34 +84,47 @@ const TrendingStocks = () => {
 
       <div className="trending-cards-grid">
         {stocks.map((stock, index) => {
-          const change = Number(stock.change ?? 0);
-          const isPositive = change >= 0;
-          const displayPrice = stock.price === "—" || stock.price === undefined
-            ? "—" 
-            : `₹${Number(stock.price).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+          const changePercent = Number(stock.change ?? 0);
+          const price = parseFloat(stock.price) || 0;
+          const isPositive = changePercent >= 0;
+
+          // Calculate absolute change in rupees
+          const prevPrice = price / (1 + changePercent / 100);
+          const absChange = price - prevPrice;
+
+          const displayPrice = price === 0 || isNaN(price)
+            ? "—"
+            : `₹${price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+          const absVal = Math.abs(absChange).toFixed(2);
+          const pctVal = Math.abs(changePercent).toFixed(2);
+          const displayChange = price === 0 || isNaN(price)
+            ? "—"
+            : `${isPositive ? "" : "-"}${absVal} (${isPositive ? "" : "-"}${pctVal}%)`;
+
+          const companyName = stock.company || companyNameMap[stock.symbol.toUpperCase()] || stock.symbol;
 
           return (
-            <div 
-              key={`${stock.symbol}-${index}`} 
+            <div
+              key={`${stock.symbol}-${index}`}
               className="trending-stock-card clickable-card"
               onClick={() => navigate(`/stocks/${stock.symbol.toUpperCase()}`)}
             >
-              <div className="trend-card-left">
-                <span className="trend-symbol">{stock.symbol}</span>
-                <span className="trend-exchange-pill">NSE</span>
+              <div className="trend-card-logo-wrap">
+                <StockLogo symbol={stock.symbol} size={48} />
               </div>
-              
-              <div className="trend-card-right">
-                <span className="trend-price">{displayPrice}</span>
-                <span className={`trend-change-badge ${isPositive ? "positive" : "negative"}`}>
-                  {isPositive ? (
-                    <ArrowUpRight size={12} className="inline mr-0.5" />
-                  ) : (
-                    <ArrowDownRight size={12} className="inline mr-0.5" />
-                  )}
-                  {Math.abs(change).toFixed(2)}%
-                </span>
-              </div>
+
+              <span className="trend-company-name" title={companyName}>
+                {companyName}
+              </span>
+
+              <span className="trend-card-price">
+                {displayPrice}
+              </span>
+
+              <span className={`trend-card-change ${isPositive ? "positive" : "negative"}`}>
+                {displayChange}
+              </span>
             </div>
           );
         })}

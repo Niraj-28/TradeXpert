@@ -119,7 +119,7 @@ const startUpstoxMarketFeed = async (io) => {
           guid: "tradexpert",
           method: "sub",
           data: {
-            mode: "ltpc",
+            mode: "full",
             instrumentKeys: keysToSubscribe,
           },
         })
@@ -143,9 +143,27 @@ const startUpstoxMarketFeed = async (io) => {
         };
 
         const marketData = Object.entries(feeds).map(([key, value]) => {
-          const ltp = value.ltpc?.ltp ?? 0;
-          const close = value.ltpc?.cp ?? 0;
-          const change = close ? (((ltp - close) / close) * 100) : 0;
+          const isFull = !!value.ff;
+          let ltp = 0;
+          let close = 0;
+          let volume = 0;
+
+          if (isFull) {
+            if (value.ff.marketFF) {
+              ltp = value.ff.marketFF.ltpc?.ltp ?? 0;
+              close = value.ff.marketFF.ltpc?.cp ?? 0;
+              volume = value.ff.marketFF.eFeedDetails?.vtt ?? 0;
+            } else if (value.ff.indexFF) {
+              ltp = value.ff.indexFF.ltpc?.ltp ?? 0;
+              close = value.ff.indexFF.ltpc?.cp ?? 0;
+            }
+          } else {
+            ltp = value.ltpc?.ltp ?? 0;
+            close = value.ltpc?.cp ?? 0;
+          }
+
+          const changeAmt = ltp - close;
+          const changePercent = close ? (((ltp - close) / close) * 100) : 0;
 
           const symbol =
             allStocksMap[key] ||
@@ -156,7 +174,9 @@ const startUpstoxMarketFeed = async (io) => {
             symbol,
             instrumentKey: key,
             price: Number(ltp),
-            change: Number(change),
+            change: Number(changeAmt),
+            percent: Number(changePercent),
+            volume: Number(volume),
             ohlc: {
               open: Number(close),
               high: Number(ltp) + 10,
@@ -168,6 +188,16 @@ const startUpstoxMarketFeed = async (io) => {
 
         // Emit processed events
         io.emit("marketData", marketData);
+
+        // Update in-memory price cache for order execution
+        try {
+          const priceCache = require("../services/priceCache.cjs");
+          marketData.forEach((item) => {
+            priceCache.setPrice(item.symbol, item.price);
+          });
+        } catch (err) {
+          console.error("Failed to update price cache in upstoxMarketService:", err.message);
+        }
 
         const indexSymbols = new Set([
           "NIFTY 50",
@@ -183,33 +213,84 @@ const startUpstoxMarketFeed = async (io) => {
           .map((item) => ({
             name: item.symbol,
             value: Number(item.price),
-            change: Number(item.change),
+            change: Number(item.percent),
           }));
 
         const stockData = marketData.filter((item) => !indexSymbols.has(item.symbol));
 
-        const trendingData = stockData.slice(0, 6).map((item) => ({
-          symbol: item.symbol,
-          price: item.price,
-          change: Number(item.change),
-        }));
+        const formatVolumeValue = (val) => {
+          const num = Number(val);
+          if (isNaN(num) || num <= 0) return "—";
+          if (num >= 1000000) {
+            return (num / 1000000).toFixed(1) + "M";
+          }
+          if (num >= 1000) {
+            return (num / 1000).toFixed(1) + "K";
+          }
+          return num.toString();
+        };
+
+        const trendingData = [...stockData]
+          .sort((a, b) => {
+            const priceA = Number(a.price) || 0;
+            const priceB = Number(b.price) || 0;
+            const volA = Number(a.volume) || 0;
+            const volB = Number(b.volume) || 0;
+            
+            const percentA = Number(a.percent) || 0;
+            const percentB = Number(b.percent) || 0;
+
+            const valueA = volA * priceA;
+            const valueB = volB * priceB;
+
+            // Positive change stocks (buying pressure) first
+            const isPosA = percentA > 0 ? 1 : 0;
+            const isPosB = percentB > 0 ? 1 : 0;
+
+            if (isPosA !== isPosB) {
+              return isPosB - isPosA;
+            }
+
+            // If both are positive, sort by traded value/turnover descending
+            if (isPosA === 1) {
+              return valueB - valueA;
+            }
+
+            // If both are non-positive, sort by percentage change descending (closer to positive first)
+            if (percentA !== percentB) {
+              return percentB - percentA;
+            }
+
+            // Fallback to traded value descending
+            return valueB - valueA;
+          })
+          .slice(0, 6)
+          .map((item) => {
+            const details = getInstrumentDetails(item.symbol);
+            return {
+              symbol: item.symbol,
+              company: details?.name || item.symbol,
+              price: item.price,
+              change: Number(item.percent),
+            };
+          });
 
         const gainersData = [...stockData]
-          .sort((a, b) => parseFloat(b.change) - parseFloat(a.change))
-          .slice(0, 3)
+          .sort((a, b) => parseFloat(b.percent) - parseFloat(a.percent))
+          .slice(0, 5)
           .map((item) => ({
             symbol: item.symbol,
             price: item.price,
-            change: Number(item.change),
+            change: Number(item.percent),
           }));
 
         const losersData = [...stockData]
-          .sort((a, b) => parseFloat(a.change) - parseFloat(b.change))
-          .slice(0, 3)
+          .sort((a, b) => parseFloat(a.percent) - parseFloat(b.percent))
+          .slice(0, 5)
           .map((item) => ({
             symbol: item.symbol,
             price: item.price,
-            change: Number(item.change),
+            change: Number(item.percent),
           }));
 
         const marketTableData = stockData.map((item) => {
@@ -218,8 +299,8 @@ const startUpstoxMarketFeed = async (io) => {
             symbol: item.symbol,
             company: details?.name || item.symbol,
             price: item.price,
-            change: Number(item.change),
-            volume: "—",
+            change: Number(item.percent),
+            volume: formatVolumeValue(item.volume),
           };
         });
 

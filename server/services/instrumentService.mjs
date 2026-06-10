@@ -62,19 +62,84 @@ const SEEDED_STOCKS = [
 
 let cachedInstruments = null;
 
+const isRealStock = (item) => {
+  if (!item) return false;
+  const type = (item.instrument_type || item.instrumentType || "").toUpperCase();
+  const isEquityType = type === "EQ" || type === "EQUITY" || type === "BE" || type === "SM" || type === "ST";
+  if (!isEquityType) return false;
+
+  const isin = (item.isin || "").toUpperCase();
+  // Standard Indian equities (stocks) always have ISIN starting with "INE"
+  if (!isin.startsWith("INE")) return false;
+
+  const name = (item.name || item.company_name || "").toUpperCase();
+  const symbol = (item.trading_symbol || item.tradingSymbol || "").toUpperCase();
+
+  // 1. Exclude Sovereign Gold Bonds (SGB)
+  if (symbol.startsWith("SGB")) return false;
+
+  // 2. Exclude Gold/Silver commodity tracking symbols
+  if (symbol.startsWith("GOLD") || symbol.startsWith("SILVER")) return false;
+
+  // 3. Exclude REITs, InvITs, and RR (Rights) symbols
+  if (
+    symbol.endsWith("-RR") ||
+    symbol.endsWith("_RR") ||
+    symbol.includes("-REIT") ||
+    name.includes("REIT") ||
+    name.includes("INVIT") ||
+    name.includes("INVESTMENT TRUST") ||
+    name.includes("REAL ESTATE TRUST")
+  ) {
+    return false;
+  }
+
+  // 4. Exclude Mutual Funds, ETFs, Index Funds, Gilt Funds, and other Schemes/Funds
+  if (
+    name.includes("MUTUAL FUND") ||
+    name.includes(" ETF") ||
+    name.endsWith(" ETF") ||
+    name.includes("GILT") ||
+    name.includes("GROWTH") ||
+    name.includes("INDEX FUND") ||
+    name.includes("EXCHANGE TRADED") ||
+    name.includes("EXCHANGE-TRADED") ||
+    name.includes("FUND") ||
+    name.includes("SCHEME") ||
+    symbol.endsWith("BEES") ||
+    symbol.includes("ETF")
+  ) {
+    return false;
+  }
+
+  // 5. Exclude Debt, Bonds, NCDs (Non-Convertible Debentures)
+  if (
+    name.includes("BOND") ||
+    name.includes("NCD") ||
+    name.includes("DEBENTURE") ||
+    name.includes("SECURED") ||
+    name.includes("UNSECURED")
+  ) {
+    return false;
+  }
+
+  return true;
+};
+
 const loadInstrumentsIntoMemory = () => {
   if (cachedInstruments) return cachedInstruments;
   try {
     if (fs.existsSync(CACHE_FILE)) {
       const cacheData = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
-      cachedInstruments = cacheData.instruments || [];
-      console.log(`⚡ [INSTRUMENTS] Loaded ${cachedInstruments.length} instruments into memory cache.`);
+      const rawList = cacheData.instruments || [];
+      cachedInstruments = rawList.filter(isRealStock);
+      console.log(`⚡ [INSTRUMENTS] Loaded ${cachedInstruments.length} equity instruments into memory cache.`);
     }
   } catch (err) {
     console.error("❌ [INSTRUMENTS] Error loading instruments cache from disk:", err.message);
   }
   if (!cachedInstruments || !cachedInstruments.length) {
-    cachedInstruments = SEEDED_STOCKS;
+    cachedInstruments = SEEDED_STOCKS.filter(isRealStock);
   }
   return cachedInstruments;
 };
@@ -88,7 +153,7 @@ export const fetchAllInstruments = async (accessToken) => {
       const cacheAge = Date.now() - cacheData.timestamp;
       if (cacheAge < CACHE_DURATION) {
         console.log("✅ Using cached instruments");
-        cachedInstruments = cacheData.instruments;
+        cachedInstruments = cacheData.instruments.filter(isRealStock);
         return cachedInstruments;
       }
     }
@@ -107,11 +172,7 @@ export const fetchAllInstruments = async (accessToken) => {
 
     const filterEquity = (list) => {
       if (!Array.isArray(list)) return [];
-      return list.filter((item) => {
-        const type = (item.instrument_type || item.instrumentType || "").toUpperCase();
-        const segment = (item.segment || "").toUpperCase();
-        return type === "EQ" || type === "EQUITY" || segment === "NSE_EQ" || segment === "BSE_EQ";
-      });
+      return list.filter(isRealStock);
     };
 
     const nseStocks = filterEquity(nseData);
@@ -147,18 +208,55 @@ export const fetchAllInstruments = async (accessToken) => {
 export const searchInstruments = (query) => {
   try {
     const q = String(query || "").trim().toLowerCase();
+    if (!q) return [];
+
     const items = loadInstrumentsIntoMemory();
 
-    const results = items.filter((it) => {
+    const matched = [];
+    for (const it of items) {
       const trading = (it.trading_symbol || it.tradingSymbol || "").toLowerCase();
       const name = (it.name || it.company_name || "").toLowerCase();
       const isin = (it.isin || "").toLowerCase();
       const key = (it.instrument_key || "").toLowerCase();
 
-      return trading.includes(q) || name.includes(q) || isin.includes(q) || key.includes(q);
+      if (trading.includes(q) || name.includes(q) || isin.includes(q) || key.includes(q)) {
+        matched.push(it);
+      }
+    }
+
+    // Sort to prioritize exact, prefix, and equity/high-quality matches
+    matched.sort((a, b) => {
+      const symbolA = (a.trading_symbol || a.tradingSymbol || "").toLowerCase();
+      const symbolB = (b.trading_symbol || b.tradingSymbol || "").toLowerCase();
+      
+      const nameA = (a.name || a.company_name || "").toLowerCase();
+      const nameB = (b.name || b.company_name || "").toLowerCase();
+
+      // 1. Exact matches on symbol
+      const exactA = symbolA === q ? 1 : 0;
+      const exactB = symbolB === q ? 1 : 0;
+      if (exactA !== exactB) return exactB - exactA;
+
+      // 2. Starts with match on symbol
+      const startsA = symbolA.startsWith(q) ? 1 : 0;
+      const startsB = symbolB.startsWith(q) ? 1 : 0;
+      if (startsA !== startsB) return startsB - startsA;
+
+      // 3. Name starts with query
+      const nameStartsA = nameA.startsWith(q) ? 1 : 0;
+      const nameStartsB = nameB.startsWith(q) ? 1 : 0;
+      if (nameStartsA !== nameStartsB) return nameStartsB - nameStartsA;
+
+      // 4. Symbol contains query
+      const containsSymA = symbolA.includes(q) ? 1 : 0;
+      const containsSymB = symbolB.includes(q) ? 1 : 0;
+      if (containsSymA !== containsSymB) return containsSymB - containsSymA;
+
+      // Fallback: alphabetical symbol
+      return symbolA.localeCompare(symbolB);
     });
 
-    return results.slice(0, 100);
+    return matched.slice(0, 100);
   } catch (e) {
     console.error("Search instruments error:", e.message);
     return [];

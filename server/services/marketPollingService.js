@@ -7,6 +7,8 @@ const Holding = require("../models/holdingModel.cjs");
 const Watchlist = require("../models/watchlistModel.cjs");
 
 let ioInstance = null;
+let lastSquareOffDate = "";
+let lastCancelPendingDate = "";
 
 export const initializeMarketPolling = (io) => {
   ioInstance = io;
@@ -75,11 +77,13 @@ const getOrInitializeSimulatedPrice = (symbol, instrumentKey) => {
   let changePercent = 0.0;
   let open = 0.0;
 
+  let hash = 0;
+  for (let i = 0; i < sym.length; i++) {
+    hash = sym.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const baseVolume = Math.abs(hash % 5000000) + 100000;
+
   if (basePrice === undefined) {
-    let hash = 0;
-    for (let i = 0; i < sym.length; i++) {
-      hash = sym.charCodeAt(i) + ((hash << 5) - hash);
-    }
     basePrice = Math.abs(hash % 2900) + 100; // Rs 100 - 3000
     changePercent = ((hash % 100) / 25) - 2; // -2% to +2%
     open = basePrice * (1 - changePercent / 100);
@@ -99,12 +103,12 @@ const getOrInitializeSimulatedPrice = (symbol, instrumentKey) => {
     prevClose: Number(open.toFixed(2)),
     high: Number((basePrice * 1.012).toFixed(2)),
     low: Number((basePrice * 0.988).toFixed(2)),
-    volume: "1.2M",
+    volume: baseVolume,
   };
 
   simulatedPricesStore[sym] = data;
   return data;
-};
+}
 
 const stockSectors = {
   TCS: "IT", INFY: "IT", WIPRO: "IT", LTIM: "IT",
@@ -142,6 +146,16 @@ const calculateSectorPerformance = (stockData) => {
 };
 
 function emitMarketData(formattedData) {
+  // Update in-memory price cache for order execution
+  try {
+    const priceCache = require("./priceCache.cjs");
+    formattedData.forEach((item) => {
+      priceCache.setPrice(item.symbol, item.price);
+    });
+  } catch (err) {
+    console.error("Failed to update price cache in marketPollingService:", err.message);
+  }
+
   const indexSymbols = new Set([
     "NIFTY 50",
     "BANK NIFTY",
@@ -161,11 +175,62 @@ function emitMarketData(formattedData) {
     (item) => !indexSymbols.has(item.symbol)
   );
 
-  const trendingData = stockData.slice(0, 6).map((item) => ({
-    symbol: item.symbol,
-    price: item.price,
-    change: item.percent,
-  }));
+  const formatVolumeValue = (val) => {
+    const num = Number(val);
+    if (isNaN(num) || num <= 0) return "—";
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1) + "M";
+    }
+    if (num >= 1000) {
+      return (num / 1000).toFixed(1) + "K";
+    }
+    return num.toString();
+  };
+
+  const trendingData = [...stockData]
+    .sort((a, b) => {
+      const priceA = Number(a.price) || 0;
+      const priceB = Number(b.price) || 0;
+      const volA = Number(a.volume) || 0;
+      const volB = Number(b.volume) || 0;
+      
+      const percentA = Number(a.percent) || 0;
+      const percentB = Number(b.percent) || 0;
+
+      const valueA = volA * priceA;
+      const valueB = volB * priceB;
+
+      // Positive change stocks (buying pressure) first
+      const isPosA = percentA > 0 ? 1 : 0;
+      const isPosB = percentB > 0 ? 1 : 0;
+
+      if (isPosA !== isPosB) {
+        return isPosB - isPosA;
+      }
+
+      // If both are positive, sort by traded value/turnover descending
+      if (isPosA === 1) {
+        return valueB - valueA;
+      }
+
+      // If both are non-positive, sort by percentage change descending (closer to positive first)
+      if (percentA !== percentB) {
+        return percentB - percentA;
+      }
+
+      // Fallback to traded value descending
+      return valueB - valueA;
+    })
+    .slice(0, 6)
+    .map((item) => {
+      const details = getInstrumentDetails(item.symbol);
+      return {
+        symbol: item.symbol,
+        company: details?.name || item.symbol,
+        price: item.price,
+        change: item.percent,
+      };
+    });
 
   const marketTableData = stockData.map((item) => {
     const details = getInstrumentDetails(item.symbol);
@@ -174,13 +239,13 @@ function emitMarketData(formattedData) {
       company: details?.name || item.symbol,
       price: item.price,
       change: item.percent,
-      volume: item.volume || "—",
+      volume: formatVolumeValue(item.volume),
     };
   });
 
   const gainersData = [...stockData]
     .sort((a, b) => parseFloat(b.percent) - parseFloat(a.percent))
-    .slice(0, 3)
+    .slice(0, 5)
     .map((item) => ({
       symbol: item.symbol,
       price: item.price,
@@ -189,7 +254,7 @@ function emitMarketData(formattedData) {
 
   const losersData = [...stockData]
     .sort((a, b) => parseFloat(a.percent) - parseFloat(b.percent))
-    .slice(0, 3)
+    .slice(0, 5)
     .map((item) => ({
       symbol: item.symbol,
       price: item.price,
@@ -253,6 +318,10 @@ function simulateAndEmitPrices(activeSymbolsMap) {
     data.high = Number(Math.max(data.high, newPrice).toFixed(2));
     data.low = Number(Math.min(data.low, newPrice).toFixed(2));
 
+    // Simulate volume increment (always positive during a session)
+    const volIncrement = Math.floor(Math.random() * 15000) + 1000;
+    data.volume = (Number(data.volume) || 100000) + volIncrement;
+
     return {
       symbol: data.symbol,
       instrument: data.instrument,
@@ -263,6 +332,7 @@ function simulateAndEmitPrices(activeSymbolsMap) {
       low: data.low,
       open: data.open,
       close: data.close,
+      volume: data.volume,
     };
   });
 
@@ -392,6 +462,7 @@ async function fetchMarketData() {
         low: item.ohlc?.low || priceValue * 0.99,
         open: item.ohlc?.open || priceValue,
         close: item.ohlc?.close || priceValue,
+        volume: Number(item.volume) || 0,
       };
     });
 
@@ -409,5 +480,35 @@ function startPolling() {
   fetchMarketData();
   setInterval(() => {
     fetchMarketData();
+
+    // Check for 3:20 PM IST daily square-off
+    try {
+      const now = new Date();
+      const istTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+      const hours = istTime.getHours();
+      const minutes = istTime.getMinutes();
+      const dateStr = istTime.toDateString();
+
+      if (hours === 15 && minutes === 20 && lastSquareOffDate !== dateStr) {
+        lastSquareOffDate = dateStr;
+        const { autoSquareOffIntraday } = require("./orderExecutionService.cjs");
+        console.log(`🤖 [AUTO SQUARE-OFF] Triggering daily 3:20 PM IST square-off...`);
+        autoSquareOffIntraday(ioInstance).catch(err => {
+          console.error("Auto square-off failed:", err.message);
+        });
+      }
+
+      // Check for 3:30 PM IST daily cancel pending orders
+      if (hours === 15 && minutes === 30 && lastCancelPendingDate !== dateStr) {
+        lastCancelPendingDate = dateStr;
+        const { cancelAllPendingOrders } = require("./orderExecutionService.cjs");
+        console.log(`🧹 [DAILY CANCEL] Triggering daily 3:30 PM IST pending orders cancellation...`);
+        cancelAllPendingOrders(ioInstance).catch(err => {
+          console.error("Daily cancel pending orders failed:", err.message);
+        });
+      }
+    } catch (err) {
+      console.error("Error in daily square-off check:", err.message);
+    }
   }, 3000);
 }

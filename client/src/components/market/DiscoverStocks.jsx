@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { searchStocks } from "../../services/marketApi";
 import { addToWatchlist } from "../../services/watchlistService";
+import { useAuth } from "../../context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { Search, Plus, Check, RefreshCw, X, TrendingUp } from "lucide-react";
+import StockLogo from "../ui/StockLogo";
 
 const DiscoverStocks = ({ onTrade }) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [addedSymbols, setAddedSymbols] = useState(new Set());
+  const { user } = useAuth();
 
   const handleSearch = async (val) => {
     setQuery(val);
@@ -31,6 +34,10 @@ const DiscoverStocks = ({ onTrade }) => {
   };
 
   const handleAddWatchlist = async (symbol) => {
+    if (!user) {
+      toast.error("Please sign in to add stocks to your watchlist");
+      return;
+    }
     try {
       await addToWatchlist(symbol.toUpperCase());
       toast.success(`${symbol} added to watchlist`);
@@ -89,18 +96,25 @@ const DiscoverStocks = ({ onTrade }) => {
 
                 return (
                   <div key={stock.instrument_key} className="discover-result-item">
-                    <div 
+                     <div 
                       className="discover-result-left"
                       onClick={() => onTrade({
                         symbol: stock.trading_symbol,
                         name: stock.name || stock.trading_symbol,
                         price: estimatedPrice,
                       })}
-                      style={{ cursor: "pointer" }}
+                      style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}
                     >
-                      <span className="discover-result-symbol">{stock.trading_symbol}</span>
-                      <span className="discover-result-name">{stock.name || "Equity Stock"}</span>
-                      <span className="discover-result-exchange">{stock.exchange}</span>
+                      <StockLogo symbol={stock.trading_symbol} size={28} />
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span className="discover-result-symbol">{stock.trading_symbol}</span>
+                          <span className="discover-result-exchange" style={{ fontSize: "10px", padding: "1px 4px", background: "#f1f5f9", borderRadius: "4px", color: "#64748b", fontWeight: "600" }}>{stock.exchange}</span>
+                        </div>
+                        <span className="discover-result-name" style={{ fontSize: "11px", color: "#64748b", marginTop: "1px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "180px" }}>
+                          {stock.name || "Equity Stock"}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="discover-result-actions">

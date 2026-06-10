@@ -42,6 +42,22 @@ const holdingSchema =
 
       },
 
+      productType: {
+
+        type: String,
+
+        enum: [
+
+          "DELIVERY",
+
+          "INTRADAY",
+
+        ],
+
+        default: "DELIVERY",
+
+      },
+
     },
 
     {

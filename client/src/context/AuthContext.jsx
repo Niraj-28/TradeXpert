@@ -27,27 +27,16 @@ export const AuthProvider = ({
     );
 
   const login = (data) => {
-
-    setUser(data);
-
+    const token = data.token || localStorage.getItem("token");
+    const updatedUser = { ...data, token };
+    setUser(updatedUser);
     localStorage.setItem(
-
       "user",
-
-      JSON.stringify(data)
-
+      JSON.stringify(updatedUser)
     );
-
-    // IMPORTANT
-
-    localStorage.setItem(
-
-      "token",
-
-      data.token
-
-    );
-
+    if (token) {
+      localStorage.setItem("token", token);
+    }
   };
 
   const logout = () => {

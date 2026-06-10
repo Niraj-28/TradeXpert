@@ -1,29 +1,38 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import axios from "axios";
 import { useMarket } from "../../context/MarketContext";
 import { socket } from "../../services/socket";
 import { getHoldings } from "../../services/holdingService";
 import { placeOrder } from "../../services/orderService";
 import { getUserProfile } from "../../services/authService";
+import { getWatchlist, addToWatchlist, removeFromWatchlist } from "../../services/watchlistService";
+import { useAuth } from "../../context/AuthContext";
 import { 
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, 
   CartesianGrid, BarChart, Bar 
 } from "recharts";
 import { 
   ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, 
-  Check, Plus, RefreshCw, AlertCircle, Settings, ChevronDown, Bell, Star,
-  TrendingUp as BuyIcon, ShieldAlert, Award, Globe, Calendar, FileText
+  Check, Plus, RefreshCw, AlertCircle, Settings, ChevronDown, Bell, Star, Bookmark,
+  TrendingUp as BuyIcon, ShieldAlert, Award, Globe, Calendar, FileText,
+  Clock, ChevronRight, Activity, ArrowLeft
 } from "lucide-react";
 import toast from "react-hot-toast";
+import StockLogo from "../../components/ui/StockLogo";
+import { getLiveNews, getStockNews, getStockEvents } from "../../services/marketApi";
 
 // Format currency
 const formatINR = (value) => {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
 };
+
+
 
 // Deterministic mock data seed for custom stocks
 const getInitialStockStats = (symbol) => {
@@ -31,12 +40,12 @@ const getInitialStockStats = (symbol) => {
   for (let i = 0; i < symbol.length; i++) {
     hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const basePrice = Math.abs(hash % 2900) + 100;
+  const open = Math.abs(hash % 2900) + 100;
   const changePercent = ((hash % 100) / 25) - 2; // -2% to +2%
-  const changeVal = basePrice * (changePercent / 100);
-  const open = basePrice - changeVal;
-  const high = Math.max(basePrice, open) * (1 + 0.012);
-  const low = Math.min(basePrice, open) * (1 - 0.012);
+  const changeVal = open * (changePercent / 100);
+  const price = open + changeVal;
+  const high = Math.max(price, open) * (1 + 0.012);
+  const low = Math.min(price, open) * (1 - 0.012);
   
   const yLow = low * 0.92;
   const yHigh = high * 1.15;
@@ -44,7 +53,7 @@ const getInitialStockStats = (symbol) => {
   return {
     symbol: symbol.toUpperCase(),
     companyName: symbol.toUpperCase() + " Technologies India",
-    price: parseFloat(basePrice.toFixed(2)),
+    price: parseFloat(price.toFixed(2)),
     change: parseFloat(changePercent.toFixed(2)),
     changeAmt: parseFloat(changeVal.toFixed(2)),
     open: parseFloat(open.toFixed(2)),
@@ -64,6 +73,12 @@ const getStockTabDetails = (symbol, price) => {
   for (let i = 0; i < symbol.length; i++) {
     hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
   }
+
+  const getRelativeDateString = (offsetDays) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  };
 
   // Sentiment (e.g. Bullish, Bearish, Neutral)
   const sentimentIndex = Math.abs(hash % 3); // 0 = Bearish, 1 = Neutral, 2 = Bullish
@@ -109,10 +124,10 @@ const getStockTabDetails = (symbol, price) => {
 
   // Events
   const events = [
-    { type: "Board Meeting", date: "June 12, 2026", purpose: "Audited Financial Results & dividend consideration" },
-    { type: "Dividend Paid", date: "May 20, 2026", purpose: "Final Dividend of ₹" + ((Math.abs(hash) % 15) + 5) + ".50 per equity share" },
-    { type: "Corporate Action", date: "April 08, 2026", purpose: "1:1 Bonus Shares Issue Approval" },
-    { type: "AGM Scheduled", date: "August 24, 2026", purpose: "Annual General Meeting to approve auditor appointments" }
+    { type: "Board Meeting", date: getRelativeDateString(10), purpose: "Audited Financial Results & dividend consideration" },
+    { type: "Dividend Paid", date: getRelativeDateString(-15), purpose: "Final Dividend of ₹" + ((Math.abs(hash) % 15) + 5) + ".50 per equity share" },
+    { type: "Corporate Action", date: getRelativeDateString(-45), purpose: "1:1 Bonus Shares Issue Approval" },
+    { type: "AGM Scheduled", date: getRelativeDateString(30), purpose: "Annual General Meeting to approve auditor appointments" }
   ];
 
   return {
@@ -176,77 +191,177 @@ const CandleShape = (props) => {
   );
 };
 
-// Seed deterministic historical data (Line and Candle options)
-const generateHistoricalPoints = (symbol, timeframe, isCandle) => {
+const getMarketTimeLabels = (pointsCount, now) => {
+  const marketStart = new Date(now);
+  marketStart.setHours(9, 15, 0, 0);
+  
+  const marketEnd = new Date(now);
+  marketEnd.setHours(15, 30, 0, 0);
+  
+  let chartEnd = marketEnd;
+  const currentHour = now.getHours();
+  const currentMin = now.getMinutes();
+  const isTodayMarketTime = (currentHour > 9 || (currentHour === 9 && currentMin >= 15)) && (currentHour < 15 || (currentHour === 15 && currentMin <= 30));
+  
+  if (isTodayMarketTime) {
+    chartEnd = now;
+  }
+  
+  const startMs = marketStart.getTime();
+  const endMs = chartEnd.getTime();
+  const diffMs = Math.max(1000, endMs - startMs);
+  const stepMs = diffMs / (pointsCount - 1);
+  
+  const labels = [];
+  for (let i = 0; i < pointsCount; i++) {
+    const time = new Date(startMs + i * stepMs);
+    const label = time.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+    labels.push(label);
+  }
+  return labels;
+};
+
+// Seed deterministic historical data (Line and Candle options) scaled to currentPrice
+const generateStaticChartData = (symbol, timeframe, currentPrice, isCandle, openPrice, highPrice, lowPrice) => {
   let hash = 0;
   for (let i = 0; i < symbol.length; i++) {
     hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const basePrice = Math.abs(hash % 2900) + 100;
   
-  let pointsCount = 30;
+  let pointsCount = 60;
   let intervalDays = 1;
-
-  if (timeframe === "1W") {
-    pointsCount = 7;
+  
+  if (timeframe === "1D") {
+    pointsCount = 75;
+  } else if (timeframe === "1W") {
+    pointsCount = 50;
+    intervalDays = 0.2; // multiple points per day
   } else if (timeframe === "1M") {
-    pointsCount = 30;
+    pointsCount = 60;
+    intervalDays = 0.5;
   } else if (timeframe === "3M") {
-    pointsCount = 45;
-    intervalDays = 2;
+    pointsCount = 90;
+    intervalDays = 1;
   } else if (timeframe === "1Y") {
-    pointsCount = 12;
-    intervalDays = 30;
+    pointsCount = 120;
+    intervalDays = 3;
   } else if (timeframe === "ALL") {
-    pointsCount = 20;
-    intervalDays = 60;
+    pointsCount = 180;
+    intervalDays = 10;
   }
-
-  const data = [];
-  let currentClose = basePrice * 0.92;
+  
   const now = new Date();
-
-  for (let i = pointsCount - 1; i >= 0; i--) {
-    const date = new Date(now.getTime() - i * intervalDays * 24 * 60 * 60 * 1000);
+  const data = [];
+  
+  if (timeframe === "1D") {
+    // 1D timeframe: generate intermediate points between openPrice and currentPrice,
+    // bounded by lowPrice and highPrice.
+    const open = openPrice || currentPrice * 0.99;
+    const close = currentPrice;
+    const high = highPrice || Math.max(open, close) * 1.01;
+    const low = lowPrice || Math.min(open, close) * 0.99;
+    const range = high - low || 1.0;
     
-    // Deterministic random walk
-    const seed = Math.sin(hash + i) * 1.8;
-    const trend = (i / pointsCount) * (hash % 12 - 6);
-    const pct = (seed + trend) / 100;
+    const labels = getMarketTimeLabels(pointsCount, now);
     
-    const open = currentClose;
-    currentClose = currentClose * (1 + pct);
-    const close = currentClose;
-    
-    const high = Math.max(open, close) * (1 + Math.abs(Math.cos(hash * i) * 0.015));
-    const low = Math.min(open, close) * (1 - Math.abs(Math.sin(hash * i) * 0.015));
-
-    let label = "";
-    if (timeframe === "1W") {
-      label = date.toLocaleDateString("en-IN", { weekday: "short" });
-    } else if (timeframe === "1M" || timeframe === "3M") {
-      label = date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-    } else {
-      label = date.toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
+    for (let i = 0; i < pointsCount; i++) {
+      const t = i / (pointsCount - 1);
+      // Base linear interpolation
+      let price = open + (close - open) * t;
+      
+      // Add deterministic wave perturbation (0 at endpoints i=0 and i=pointsCount-1)
+      if (i > 0 && i < pointsCount - 1) {
+        const wave = Math.sin(Math.PI * t) * (
+          Math.sin(hash + i * 0.8) * 0.45 +
+          Math.cos(hash * 2 - i * 1.4) * 0.25 +
+          Math.sin(hash * 0.5 + i * 2.2) * 0.15
+        );
+        // Volatility scale
+        const vol = range * 0.3; // perturbation can go up to 30% of day's range
+        price += wave * vol;
+      }
+      
+      // Clamp to [low, high]
+      price = Math.max(low + range * 0.02, Math.min(high - range * 0.02, price));
+      
+      // At endpoints, be exact
+      if (i === 0) price = open;
+      if (i === pointsCount - 1) price = close;
+      
+      const label = labels[i];
+      
+      if (isCandle) {
+        const cClose = price;
+        const cOpen = (i === 0) ? (open - (close - open) * 0.05) : (data[i - 1] ? data[i - 1].close : open);
+        const diff = Math.abs(cClose - cOpen) || (range * 0.05);
+        const cHigh = Math.max(cOpen, cClose) + (range * 0.05 * Math.abs(Math.sin(hash + i)));
+        const cLow = Math.min(cOpen, cClose) - (range * 0.05 * Math.abs(Math.cos(hash + i)));
+        data.push({
+          time: label,
+          open: parseFloat(cOpen.toFixed(2)),
+          close: parseFloat(cClose.toFixed(2)),
+          high: parseFloat(Math.min(high, cHigh).toFixed(2)),
+          low: parseFloat(Math.max(low, cLow).toFixed(2)),
+          range: [parseFloat(Math.min(cOpen, cClose).toFixed(2)), parseFloat(Math.max(cOpen, cClose).toFixed(2))]
+        });
+      } else {
+        data.push({
+          time: label,
+          price: parseFloat(price.toFixed(2)),
+        });
+      }
     }
-
-    if (isCandle) {
-      data.push({
-        time: label,
-        open: parseFloat(open.toFixed(2)),
-        close: parseFloat(close.toFixed(2)),
-        high: parseFloat(high.toFixed(2)),
-        low: parseFloat(low.toFixed(2)),
-        range: [parseFloat(Math.min(open, close).toFixed(2)), parseFloat(Math.max(open, close).toFixed(2))]
-      });
-    } else {
-      data.push({
-        time: label,
-        price: parseFloat(close.toFixed(2)),
-      });
+  } else {
+    // Longer timeframe: generate points backward from currentPrice
+    const factors = [1.0];
+    let currentFactor = 1.0;
+    
+    for (let i = 1; i < pointsCount; i++) {
+      // Deterministic return
+      const seed = Math.sin(hash - i) * 1.5;
+      const trend = (hash % 8 - 4) / 4.0; // -1 to +1
+      const r = (seed + trend * 0.5) / 100; // -2% to +2% per interval
+      currentFactor = currentFactor / (1 + r);
+      factors.unshift(currentFactor);
+    }
+    
+    // Calculate prices based on factors, scaled so the last one is exactly currentPrice
+    for (let i = 0; i < pointsCount; i++) {
+      const date = new Date(now.getTime() - (pointsCount - 1 - i) * intervalDays * 24 * 60 * 60 * 1000);
+      const pointPrice = currentPrice * factors[i];
+      
+      let label = "";
+      if (timeframe === "1W") {
+        label = date.toLocaleDateString("en-IN", { weekday: "short" });
+      } else if (timeframe === "1M" || timeframe === "3M") {
+        label = date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+      } else {
+        label = date.toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
+      }
+      
+      if (isCandle) {
+        const cClose = pointPrice;
+        const cOpen = (i === 0) ? (pointPrice / (1 + (Math.sin(hash) * 0.8) / 100)) : (data[i - 1] ? data[i - 1].close : pointPrice);
+        const diff = Math.abs(cClose - cOpen) || 1;
+        const cHigh = Math.max(cOpen, cClose) + diff * 0.3 * Math.abs(Math.sin(hash + i));
+        const cLow = Math.min(cOpen, cClose) - diff * 0.3 * Math.abs(Math.cos(hash + i));
+        data.push({
+          time: label,
+          open: parseFloat(cOpen.toFixed(2)),
+          close: parseFloat(cClose.toFixed(2)),
+          high: parseFloat(cHigh.toFixed(2)),
+          low: parseFloat(cLow.toFixed(2)),
+          range: [parseFloat(Math.min(cOpen, cClose).toFixed(2)), parseFloat(Math.max(cOpen, cClose).toFixed(2))]
+        });
+      } else {
+        data.push({
+          time: label,
+          price: parseFloat(pointPrice.toFixed(2)),
+        });
+      }
     }
   }
-
+  
   return data;
 };
 
@@ -255,6 +370,7 @@ const StockDetails = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { marketStocks } = useMarket();
+  const { user } = useAuth();
 
   // Navigation query parameter (Buy vs Sell)
   const initialType = searchParams.get("type") === "SELL" ? "SELL" : "BUY";
@@ -263,6 +379,47 @@ const StockDetails = () => {
   const [chartType, setChartType] = useState("line"); // "line" | "candle"
   const [timeframe, setTimeframe] = useState("1D");
   const [activeTab, setActiveTab] = useState("Overview"); // Overview, Technicals, News, Events
+  const [newsList, setNewsList] = useState([]);
+  const [eventsList, setEventsList] = useState([]);
+  const [newsLoading, setNewsLoading] = useState(true);
+  const [eventsLoading, setEventsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!symbol) return;
+
+    // Initial load from mock fallback as skeleton/placeholder
+    const seedStats = getInitialStockStats(symbol);
+    const fallbackDetails = getStockTabDetails(symbol, seedStats.price);
+    setNewsList(fallbackDetails.news);
+    setEventsList(fallbackDetails.events);
+    setNewsLoading(true);
+    setEventsLoading(true);
+    
+    const fetchNewsAndEvents = async () => {
+      try {
+        const news = await getStockNews(symbol);
+        if (news && news.length > 0) {
+          setNewsList(news);
+        }
+      } catch (err) {
+        console.error("Failed to fetch live stock news:", err);
+      } finally {
+        setNewsLoading(false);
+      }
+
+      try {
+        const events = await getStockEvents(symbol);
+        if (events && events.length > 0) {
+          setEventsList(events);
+        }
+      } catch (err) {
+        console.error("Failed to fetch stock events:", err);
+      } finally {
+        setEventsLoading(false);
+      }
+    };
+    fetchNewsAndEvents();
+  }, [symbol]);
 
   // Order Ticket states
   const [tradeType, setTradeType] = useState(initialType);
@@ -273,14 +430,78 @@ const StockDetails = () => {
   const [exchange, setExchange] = useState("NSE"); // NSE | BSE
   const [placingOrder, setPlacingOrder] = useState(false);
 
+  // Mobile Order states
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 900);
+  const [mobileOrderOpen, setMobileOrderOpen] = useState(false);
+  const [focusedInput, setFocusedInput] = useState("qty"); // "qty" | "price"
+  const [qtyInput, setQtyInput] = useState("1");
+  const [priceInput, setPriceInput] = useState("");
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 900);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const openMobileOrder = (type) => {
+    setTradeType(type);
+    setQtyInput(tradeQty.toString() || "1");
+    setPriceInput(limitPrice > 0 ? limitPrice.toString() : stockDetails.price.toString());
+    setMobileOrderOpen(true);
+  };
+
+  const closeMobileOrder = () => {
+    setMobileOrderOpen(false);
+  };
+
+  const handleKeyPress = (key) => {
+    const targetState = focusedInput === "qty" ? qtyInput : priceInput;
+    const setTargetState = focusedInput === "qty" ? setQtyInput : setPriceInput;
+
+    if (key === "BACKSPACE") {
+      const newVal = targetState.slice(0, -1);
+      setTargetState(newVal);
+    } else if (key === ".") {
+      if (focusedInput === "qty") return;
+      if (!targetState.includes(".")) {
+        setTargetState(targetState + ".");
+      }
+    } else {
+      if (targetState === "0" && key === "0") return;
+      if (targetState === "" && key === "0") {
+        setTargetState("0");
+        return;
+      }
+      setTargetState(targetState + key);
+    }
+  };
+
+  useEffect(() => {
+    const q = parseInt(qtyInput) || 0;
+    setTradeQty(q);
+  }, [qtyInput]);
+
+  useEffect(() => {
+    const p = parseFloat(priceInput) || 0;
+    setLimitPrice(p);
+  }, [priceInput]);
+
+  useEffect(() => {
+    if (priceMode === "Market") {
+      setFocusedInput("qty");
+    }
+  }, [priceMode]);
+
   // Simulated cash and holdings
   const [holdings, setHoldings] = useState([]);
   const [cashBalance, setCashBalance] = useState(1000000);
   const [liveTicks, setLiveTicks] = useState([]);
   const [simulatedPrice, setSimulatedPrice] = useState(null);
+  const [watchlist, setWatchlist] = useState([]);
 
   // Fetch initial cash and user position state
   const fetchUserData = async () => {
+    if (!user) return;
     try {
       const data = await getHoldings();
       const currentHoldings = data.holdings || [];
@@ -288,14 +509,47 @@ const StockDetails = () => {
       
       const profile = await getUserProfile();
       setCashBalance(profile.balance !== undefined ? profile.balance : 1000000);
+
+      const wlData = await getWatchlist();
+      setWatchlist(wlData.watchlist || []);
     } catch (error) {
       console.error("Failed to load user portfolio data:", error);
     }
   };
 
+  const isInWatchlist = useMemo(() => {
+    return watchlist.some((item) => item.symbol?.toUpperCase() === symbol?.toUpperCase());
+  }, [watchlist, symbol]);
+
+  const toggleWatchlist = async () => {
+    if (!user) {
+      toast.error("Please sign in to add stocks to your watchlist");
+      return;
+    }
+    try {
+      if (isInWatchlist) {
+        const item = watchlist.find((w) => w.symbol.toUpperCase() === symbol.toUpperCase());
+        if (item) {
+          await removeFromWatchlist(item._id);
+          toast.success(`${symbol.toUpperCase()} removed from watchlist`);
+          setWatchlist((prev) => prev.filter((w) => w._id !== item._id));
+        }
+      } else {
+        await addToWatchlist(symbol.toUpperCase());
+        toast.success(`${symbol.toUpperCase()} added to watchlist`);
+        const wlData = await getWatchlist();
+        setWatchlist(wlData.watchlist || []);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update watchlist");
+    }
+  };
+
   useEffect(() => {
-    fetchUserData();
-  }, []);
+    if (user) {
+      fetchUserData();
+    }
+  }, [user]);
 
   // Find stock in live feed
   const liveStock = useMemo(() => {
@@ -309,10 +563,11 @@ const StockDetails = () => {
     if (liveStock) {
       const price = parseFloat(liveStock.price) || 0;
       const change = parseFloat(liveStock.change) || 0;
-      const changeAmt = price * (change / 100);
-      const open = parseFloat(liveStock.open) || price - changeAmt;
-      const high = parseFloat(liveStock.high) || Math.max(price, open) * 1.01;
-      const low = parseFloat(liveStock.low) || Math.min(price, open) * 0.99;
+      const prevClose = price / (1 + change / 100);
+      const changeAmt = price - prevClose;
+      const open = parseFloat(liveStock.open) || prevClose;
+      const high = parseFloat(liveStock.high) || Math.max(price, open) * 1.015;
+      const low = parseFloat(liveStock.low) || Math.min(price, open) * 0.985;
       
       const seedStats = getInitialStockStats(symbol);
 
@@ -325,7 +580,7 @@ const StockDetails = () => {
         open,
         high,
         low,
-        prevClose: parseFloat(liveStock.close) || open,
+        prevClose,
         volume: liveStock.volume || "1.5M",
         w52Low: seedStats.w52Low,
         w52High: seedStats.w52High,
@@ -362,8 +617,9 @@ const StockDetails = () => {
     }
   }, [stockDetails.price, priceMode]);
 
-  // Register dynamic view-stock in backend dynamically
+  // Register dynamic view-stock in backend dynamically and scroll page to top
   useEffect(() => {
+    window.scrollTo(0, 0);
     if (symbol) {
       socket.emit("view-stock", symbol);
     }
@@ -399,63 +655,100 @@ const StockDetails = () => {
     }
   }, [symbol, liveStock]);
 
-  // Generate live ticks for 1D chart view
-  useEffect(() => {
-    const timeLabel = new Date().toLocaleTimeString("en-IN", { hour12: false }).slice(-8);
-    setLiveTicks((prev) => {
-      const ticks = [...prev, { time: timeLabel, price: stockDetails.price }];
-      return ticks.slice(-20);
-    });
-  }, [stockDetails.price]);
-
-  // Clear ticks on symbol switch
-  useEffect(() => {
-    setLiveTicks([]);
-  }, [symbol]);
-
   // Dynamic Chart Points compiler
-  const chartData = useMemo(() => {
-    const isCandle = chartType === "candle";
-    if (timeframe === "1D") {
-      if (isCandle) {
-        // Compile mock candles for 1D view
-        const base = stockDetails.price;
-        return Array.from({ length: 15 }, (_, i) => {
-          const factor = Math.sin(i * 0.6) * 12;
-          const open = base + factor;
-          const close = base + factor + (Math.cos(i) * 8);
-          const high = Math.max(open, close) + 5;
-          const low = Math.min(open, close) - 4;
-          return {
-            time: `${10 + Math.floor(i/2)}:${(i%2) * 30 || "00"}`,
-            open,
-            close,
-            high,
-            low,
-            range: [Math.min(open, close), Math.max(open, close)],
-          };
+  const [chartData, setChartData] = useState([]);
+  const [chartLoading, setChartLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const fetchHistoryData = async () => {
+      try {
+        setChartLoading(true);
+        const res = await axios.get("http://localhost:5000/api/market/history", {
+          params: { symbol, timeframe }
         });
+        if (active) {
+          if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+            const mapped = res.data.map(d => {
+              const cOpen = d.open ?? d.price;
+              const cClose = d.close ?? d.price;
+              return {
+                ...d,
+                open: cOpen,
+                close: cClose,
+                high: d.high ?? Math.max(cOpen, cClose),
+                low: d.low ?? Math.min(cOpen, cClose),
+                range: [Math.min(cOpen, cClose), Math.max(cOpen, cClose)]
+              };
+            });
+            setChartData(mapped);
+          } else {
+            const fallback = generateStaticChartData(
+              symbol,
+              timeframe,
+              stockDetails.price,
+              chartType === "candle",
+              stockDetails.open,
+              stockDetails.high,
+              stockDetails.low
+            );
+            setChartData(fallback);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch historical quotes, falling back:", err);
+        if (active) {
+          const fallback = generateStaticChartData(
+            symbol,
+            timeframe,
+            stockDetails.price,
+            chartType === "candle",
+            stockDetails.open,
+            stockDetails.high,
+            stockDetails.low
+          );
+          setChartData(fallback);
+        }
+      } finally {
+        if (active) {
+          setChartLoading(false);
+        }
       }
-      // Line chart 1D returns live ticks or seeded path
-      if (liveTicks.length > 1) {
-        return liveTicks;
+    };
+
+    fetchHistoryData();
+    return () => {
+      active = false;
+    };
+  }, [symbol, timeframe, chartType, stockDetails.price, stockDetails.open, stockDetails.high, stockDetails.low]);
+
+  const yDomain = useMemo(() => {
+    if (!chartData || chartData.length === 0) return ["auto", "auto"];
+    
+    let minVal = Infinity;
+    let maxVal = -Infinity;
+    
+    chartData.forEach(d => {
+      if (chartType === "candle") {
+        if (d.low < minVal) minVal = d.low;
+        if (d.high > maxVal) maxVal = d.high;
+      } else {
+        if (d.price < minVal) minVal = d.price;
+        if (d.price > maxVal) maxVal = d.price;
       }
-      return Array.from({ length: 12 }, (_, i) => {
-        const factor = Math.sin(i * 0.5) * 0.008;
-        return {
-          time: `${9 + Math.floor(i/2)}:${(i%2)*30 || "00"}`,
-          price: parseFloat((stockDetails.open * (1 + factor)).toFixed(2)),
-        };
-      });
-    }
+    });
+    
+    if (minVal === Infinity || maxVal === -Infinity) return ["auto", "auto"];
+    
+    const padding = (maxVal - minVal) * 0.05 || 10;
+    return [Math.floor(minVal - padding), Math.ceil(maxVal + padding)];
+  }, [chartData, chartType]);
 
-    return generateHistoricalPoints(symbol, timeframe, isCandle);
-  }, [symbol, timeframe, chartType, stockDetails, liveTicks]);
-
-  // Check if user holds active stock
+  // Check if user holds active stock for currently selected product type
   const userPosition = useMemo(() => {
-    return holdings.find(h => h.symbol.toUpperCase() === symbol.toUpperCase());
-  }, [holdings, symbol]);
+    const targetProductType = productType.toUpperCase(); // "DELIVERY" or "INTRADAY"
+    return holdings.find(h => h.symbol.toUpperCase() === symbol.toUpperCase() && (h.productType || "DELIVERY").toUpperCase() === targetProductType);
+  }, [holdings, symbol, productType]);
 
   // Calculate dynamic bid-ask lists for depth (fluctuates around LTP)
   const marketDepthData = useMemo(() => {
@@ -505,15 +798,35 @@ const StockDetails = () => {
 
     const execPrice = priceMode === "Market" ? stockDetails.price : limitPrice;
     const cost = tradeQty * execPrice;
+    const isIntraday = productType === "Intraday";
+    const requiredMargin = isIntraday ? cost / 5 : cost;
 
-    if (tradeType === "BUY" && cost > cashBalance) {
-      toast.error("Insufficient virtual cash balance available!");
-      return;
+    if (tradeType === "BUY") {
+      if (requiredMargin > cashBalance) {
+        toast.error(`Insufficient virtual cash balance! Required margin: ₹${requiredMargin.toFixed(2)}, Available: ₹${cashBalance.toFixed(2)}`);
+        return;
+      }
     }
 
-    if (tradeType === "SELL" && (!userPosition || userPosition.quantity < tradeQty)) {
-      toast.error(`Insufficient position holdings! You only own ${userPosition?.quantity || 0} shares.`);
-      return;
+    if (tradeType === "SELL") {
+      if (isIntraday) {
+        let sqQty = 0;
+        if (userPosition && userPosition.quantity > 0) {
+          sqQty = Math.min(Number(tradeQty), userPosition.quantity);
+        }
+        const excessQty = Math.max(0, Number(tradeQty) - sqQty);
+        const requiredMarginForShort = (excessQty * Number(execPrice)) / 5;
+
+        if (requiredMarginForShort > cashBalance) {
+          toast.error(`Insufficient virtual cash balance for short position! Required margin: ₹${requiredMarginForShort.toFixed(2)}, Available: ₹${cashBalance.toFixed(2)}`);
+          return;
+        }
+      } else {
+        if (!userPosition || userPosition.quantity < tradeQty) {
+          toast.error(`Insufficient holdings! You only own ${userPosition?.quantity || 0} shares of ${symbol} (Delivery).`);
+          return;
+        }
+      }
     }
 
     try {
@@ -524,16 +837,18 @@ const StockDetails = () => {
         quantity: Number(tradeQty),
         price: Number(execPrice),
         exchange: exchange,
-        priceMode: priceMode.toUpperCase()
+        priceMode: priceMode.toUpperCase(),
+        productType: productType.toUpperCase()
       });
 
       if (priceMode === "Limit") {
         toast.success(`Limit order placed at ₹${Number(execPrice).toFixed(2)} on ${exchange}`);
       } else {
-        toast.success(`Market order submitted: ${tradeType} ${tradeQty} shares on ${exchange}`);
+        toast.success(`Market order submitted: ${tradeType} ${tradeQty} shares on ${exchange} [${productType}]`);
       }
 
       fetchUserData();
+      setMobileOrderOpen(false);
 
     } catch (err) {
       toast.error(err.response?.data?.message || "Virtual execution failed");
@@ -542,7 +857,12 @@ const StockDetails = () => {
     }
   };
 
-  const isPositive = stockDetails.change >= 0;
+  const isPositive = useMemo(() => {
+    if (!chartData || chartData.length < 2) return stockDetails.change >= 0;
+    const start = chartType === "candle" ? chartData[0].open : chartData[0].price;
+    const end = chartType === "candle" ? chartData[chartData.length - 1].close : chartData[chartData.length - 1].price;
+    return end >= start;
+  }, [chartData, chartType, stockDetails.change]);
   const totalCost = tradeQty * (priceMode === "Market" ? stockDetails.price : limitPrice);
 
   return (
@@ -555,9 +875,7 @@ const StockDetails = () => {
           
           {/* Header block */}
           <div className="stock-profile-header-card">
-            <div className="profile-logo-avatar">
-              {symbol.slice(0, 2).toUpperCase()}
-            </div>
+            <StockLogo symbol={symbol} size={64} />
             
             <div className="profile-text-block">
               <div className="profile-exchange-row">
@@ -569,14 +887,54 @@ const StockDetails = () => {
               
               <div className="price-quote-block">
                 <span className="price-val">{formatINR(stockDetails.price)}</span>
-                <span className={`change-badge ${isPositive ? "up" : "down"}`}>
-                  {isPositive ? "+" : ""}
-                  {stockDetails.changeAmt.toFixed(2)} ({isPositive ? "+" : ""}
+                <span className={`change-badge ${stockDetails.change >= 0 ? "up" : "down"}`}>
+                  {stockDetails.change >= 0 ? "+" : ""}
+                  {stockDetails.changeAmt.toFixed(2)} ({stockDetails.change >= 0 ? "+" : ""}
                   {stockDetails.change.toFixed(2)}%)
                 </span>
                 <span className="timeframe-indicator">1D</span>
               </div>
             </div>
+
+            {user && (
+              <button
+                type="button"
+                onClick={toggleWatchlist}
+                className={`stock-watchlist-toggle-btn ${isInWatchlist ? "active" : ""}`}
+                title={isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+                style={{
+                  background: "transparent",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "50%",
+                  width: "40px",
+                  height: "40px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: isInWatchlist ? "#00b074" : "#64748b",
+                  borderColor: isInWatchlist ? "#00b074" : "#cbd5e1",
+                  transition: "all 0.2s ease",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(0, 176, 116, 0.05)";
+                  if (!isInWatchlist) {
+                    e.currentTarget.style.color = "#00b074";
+                    e.currentTarget.style.borderColor = "#00b074";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  if (!isInWatchlist) {
+                    e.currentTarget.style.color = "#64748b";
+                    e.currentTarget.style.borderColor = "#cbd5e1";
+                  }
+                }}
+              >
+                <Bookmark size={20} fill={isInWatchlist ? "#00b074" : "none"} />
+              </button>
+            )}
           </div>
 
           {/* Interactive Chart Visualizer */}
@@ -605,8 +963,22 @@ const StockDetails = () => {
             </div>
 
             {/* Recharts Wrapper */}
-            <div className="recharts-wrapper-box">
-              <ResponsiveContainer width="100%" height={300}>
+            <div className="recharts-wrapper-box" style={{ position: "relative" }}>
+              {chartLoading && chartData.length === 0 ? (
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "300px",
+                  fontSize: "13px",
+                  color: "#64748b",
+                  fontFamily: "Poppins, sans-serif",
+                }}>
+                  <RefreshCw className="animate-spin text-emerald-500 mr-2" size={16} />
+                  <span>Loading live chart data from Yahoo Finance...</span>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
                 {chartType === "line" ? (
                   <AreaChart data={chartData} margin={{ top: 10, right: 5, left: 5, bottom: 5 }}>
                     <defs>
@@ -618,16 +990,16 @@ const StockDetails = () => {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis dataKey="time" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
                     <YAxis 
-                      domain={["auto", "auto"]} 
+                      domain={yDomain} 
                       stroke="#94a3b8" 
                       fontSize={10} 
                       tickLine={false} 
                       axisLine={false} 
                       orientation="right" 
-                      formatter={(v) => `₹${v.toLocaleString("en-IN")}`}
+                      formatter={(v) => "₹" + Number(v).toFixed(2)}
                     />
                     <Tooltip 
-                      formatter={(v) => [`₹${v.toLocaleString("en-IN")}`, "LTP"]}
+                      formatter={(v) => ["₹" + Number(v).toFixed(2), "LTP"]}
                       contentStyle={{
                         borderRadius: "8px",
                         border: "1px solid #e8edf5",
@@ -650,19 +1022,19 @@ const StockDetails = () => {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis dataKey="time" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
                     <YAxis 
-                      domain={["auto", "auto"]} 
+                      domain={yDomain} 
                       stroke="#94a3b8" 
                       fontSize={10} 
                       tickLine={false} 
                       axisLine={false} 
                       orientation="right"
-                      formatter={(v) => `₹${v.toLocaleString("en-IN")}`}
+                      formatter={(v) => "₹" + Number(v).toFixed(2)}
                     />
                     <Tooltip 
                       formatter={(v, name, props) => {
                         const { open, close, high, low } = props.payload;
                         return [
-                          `Open: ₹${open} | Close: ₹${close} | High: ₹${high} | Low: ₹${low}`,
+                          `Open: ₹${Number(open).toFixed(2)} | Close: ₹${Number(close).toFixed(2)} | High: ₹${Number(high).toFixed(2)} | Low: ₹${Number(low).toFixed(2)}`,
                           "Candle"
                         ];
                       }}
@@ -681,6 +1053,7 @@ const StockDetails = () => {
                   </BarChart>
                 )}
               </ResponsiveContainer>
+              )}
             </div>
 
             {/* Timeframes Bar */}
@@ -834,62 +1207,94 @@ const StockDetails = () => {
 
               {/* TECHNICALS TAB */}
               {activeTab === "Technicals" && (
-                <div className="technicals-tab-viewport">
-                  <div className="tech-summary-header mb-6">
-                    <span className="summary-label text-slate-400 text-xs font-semibold block mb-1">MARKET SENTIMENT</span>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-xl font-bold ${
-                        tabDetails.sentiment === "Bullish" ? "text-[#00b074]" : 
-                        tabDetails.sentiment === "Bearish" ? "text-[#ff4d4d]" : "text-amber-500"
-                      }`}>
+                <div className="premium-technicals-layout">
+                  <div className="sentiment-gauge-card">
+                    <span className="section-subtitle">MARKET SENTIMENT</span>
+                    <div className="sentiment-main-row">
+                      <span className={`sentiment-text-badge ${tabDetails.sentiment.toLowerCase()}`}>
                         {tabDetails.sentiment}
                       </span>
-                      <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-md font-semibold">EMA / SMA Sync</span>
+                      <span className="sync-badge">EMA / SMA Sync</span>
+                    </div>
+                    
+                    <div className="gauge-track-container">
+                      <div className="gauge-track">
+                        <div className="gauge-segment bearish" />
+                        <div className="gauge-segment neutral" />
+                        <div className="gauge-segment bullish" />
+                        <div 
+                          className="gauge-pointer" 
+                          style={{ 
+                            left: tabDetails.sentiment === "Bullish" ? "85%" : 
+                                  tabDetails.sentiment === "Bearish" ? "15%" : "50%" 
+                          }}
+                        />
+                      </div>
+                      <div className="gauge-labels-row">
+                        <span className="label-text text-bearish">Bearish</span>
+                        <span className="label-text text-neutral">Neutral</span>
+                        <span className="label-text text-bullish">Bullish</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* Moving Averages */}
-                    <div className="tech-section-block">
-                      <h4 className="text-sm font-bold text-slate-700 mb-3 border-b pb-2">Moving Averages</h4>
-                      <div className="space-y-3">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-500 font-medium">EMA (20)</span>
-                          <span className="font-bold text-[#0f172a]">{formatINR(tabDetails.ema20)}</span>
+                  <div className="technical-indicators-grid">
+                    {/* Moving Averages Card */}
+                    <div className="indicator-group-card">
+                      <div className="card-header">
+                        <TrendingUp size={16} className="header-icon text-[#00b074]" />
+                        <h4>Moving Averages</h4>
+                      </div>
+                      <div className="indicators-list">
+                        <div className="indicator-row">
+                          <span className="ind-name">EMA (20)</span>
+                          <span className="ind-val">{formatINR(tabDetails.ema20)}</span>
+                          <span className="ind-status buy">Bullish</span>
                         </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-500 font-medium">SMA (50)</span>
-                          <span className="font-bold text-[#0f172a]">{formatINR(tabDetails.sma50)}</span>
+                        <div className="indicator-row">
+                          <span className="ind-name">SMA (50)</span>
+                          <span className="ind-val">{formatINR(tabDetails.sma50)}</span>
+                          <span className="ind-status buy">Bullish</span>
                         </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-500 font-medium">SMA (100)</span>
-                          <span className="font-bold text-[#0f172a]">{formatINR(tabDetails.sma100)}</span>
+                        <div className="indicator-row">
+                          <span className="ind-name">SMA (100)</span>
+                          <span className="ind-val">{formatINR(tabDetails.sma100)}</span>
+                          <span className="ind-status buy">Bullish</span>
                         </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-500 font-medium">SMA (200)</span>
-                          <span className="font-bold text-[#0f172a]">{formatINR(tabDetails.sma200)}</span>
+                        <div className="indicator-row">
+                          <span className="ind-name">SMA (200)</span>
+                          <span className="ind-val">{formatINR(tabDetails.sma200)}</span>
+                          <span className="ind-status buy">Bullish</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Oscillators */}
-                    <div className="tech-section-block">
-                      <h4 className="text-sm font-bold text-slate-700 mb-3 border-b pb-2">Oscillators</h4>
-                      <div className="space-y-3">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-500 font-medium">RSI (14)</span>
-                          <div className="text-right">
-                            <span className="font-bold text-[#0f172a] block">{tabDetails.rsi}</span>
-                            <span className="text-[10px] text-slate-400 font-semibold">{tabDetails.rsiStatus}</span>
+                    {/* Oscillators Card */}
+                    <div className="indicator-group-card">
+                      <div className="card-header">
+                        <Activity size={16} className="header-icon text-indigo-500" />
+                        <h4>Oscillators</h4>
+                      </div>
+                      <div className="indicators-list">
+                        <div className="indicator-row">
+                          <span className="ind-name">RSI (14)</span>
+                          <div className="ind-val-wrapper">
+                            <span className="ind-val font-bold">{tabDetails.rsi}</span>
+                            <span className="ind-status-sub">{tabDetails.rsiStatus}</span>
                           </div>
+                          <span className={`ind-status ${tabDetails.rsi > 70 ? "sell" : tabDetails.rsi < 30 ? "buy" : "neutral"}`}>
+                            {tabDetails.rsi > 70 ? "Overbought" : tabDetails.rsi < 30 ? "Oversold" : "Neutral"}
+                          </span>
                         </div>
-                        <div className="flex justify-between text-xs border-t pt-2">
-                          <span className="text-slate-500 font-medium">MACD (12, 26)</span>
-                          <span className="font-bold text-[#00b074]">Buy Signal</span>
+                        <div className="indicator-row">
+                          <span className="ind-name">MACD (12, 26)</span>
+                          <span className="ind-val">—</span>
+                          <span className="ind-status buy">Buy Signal</span>
                         </div>
-                        <div className="flex justify-between text-xs border-t pt-2">
-                          <span className="text-slate-500 font-medium">Stochastic %K</span>
-                          <span className="font-bold text-slate-700">Neutral</span>
+                        <div className="indicator-row">
+                          <span className="ind-name">Stochastic %K</span>
+                          <span className="ind-val">—</span>
+                          <span className="ind-status neutral">Neutral</span>
                         </div>
                       </div>
                     </div>
@@ -899,19 +1304,34 @@ const StockDetails = () => {
 
               {/* NEWS TAB */}
               {activeTab === "News" && (
-                <div className="news-tab-viewport space-y-6">
-                  {tabDetails.news.map((item, idx) => (
-                    <div key={`news-${idx}`} className="news-article-card border-b last:border-0 pb-4 last:pb-0">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded font-bold uppercase">{item.source}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">{item.time}</span>
+                <div className="premium-news-layout">
+                  {newsList.map((item, idx) => (
+                    <div key={`news-${idx}`} className="news-feed-card">
+                      <div className="news-card-meta">
+                        <span className={`news-source-tag ${(item.source || "").toLowerCase().replace(/\s+/g, '-')}`}>
+                          {item.source}
+                        </span>
+                        <span className="news-time-dot">•</span>
+                        <span className="news-time-label">
+                          <Clock size={11} className="inline mr-1 align-middle" />
+                          {item.time}
+                        </span>
                       </div>
-                      <h4 className="text-sm font-bold text-slate-800 hover:text-[#00b074] cursor-pointer transition-colors mb-1">
-                        {item.title}
-                      </h4>
-                      <p className="text-xs text-[#64748b] leading-relaxed">
-                        {item.summary}
-                      </p>
+                      <h3 className="news-card-title">{item.title}</h3>
+                      <p className="news-card-summary">{item.summary}</p>
+                      <div className="news-card-footer">
+                        {item.link ? (
+                          <a href={item.link} target="_blank" rel="noopener noreferrer" className="read-more-link">
+                            Read full coverage
+                            <ChevronRight size={14} className="arrow-icon ml-1 inline" />
+                          </a>
+                        ) : (
+                          <a href="#news-link" className="read-more-link" onClick={(e) => e.preventDefault()}>
+                            Read full analysis
+                            <ChevronRight size={14} className="arrow-icon ml-1 inline" />
+                          </a>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -919,27 +1339,49 @@ const StockDetails = () => {
 
               {/* EVENTS TAB */}
               {activeTab === "Events" && (
-                <div className="events-tab-viewport">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-xs font-bold text-slate-400 uppercase pb-2">Event Type</th>
-                          <th className="text-xs font-bold text-slate-400 uppercase pb-2">Date</th>
-                          <th className="text-xs font-bold text-slate-400 uppercase pb-2">Details / Purpose</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tabDetails.events.map((e, idx) => (
-                          <tr key={`evt-${idx}`} className="border-b last:border-0">
-                            <td className="text-xs font-bold text-slate-700 py-3">{e.type}</td>
-                            <td className="text-xs font-medium text-[#00b074] py-3">{e.date}</td>
-                            <td className="text-xs text-slate-500 py-3">{e.purpose}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                <div className="premium-events-timeline">
+                  <div className="timeline-spine" />
+                  {eventsList.map((e, idx) => {
+                    let icon = <FileText size={14} />;
+                    let typeClass = "meeting";
+                    if (e.type.includes("Dividend")) {
+                      icon = <Award size={14} />;
+                      typeClass = "dividend";
+                    } else if (e.type.includes("Action") || e.type.includes("Bonus")) {
+                      icon = <Settings size={14} />;
+                      typeClass = "action";
+                    } else if (e.type.includes("AGM")) {
+                      icon = <Globe size={14} />;
+                      typeClass = "agm";
+                    }
+                    
+                    const parts = e.date.split(" ");
+                    const month = parts[0] ? parts[0].slice(0, 3).toUpperCase() : "EVT";
+                    const day = parts[1] ? parts[1].replace(",", "") : "—";
+                    const year = parts[2] || "";
+
+                    return (
+                      <div key={`evt-${idx}`} className="timeline-node">
+                        <div className="event-date-badge">
+                          <span className="badge-month">{month}</span>
+                          <span className="badge-day">{day}</span>
+                          <span className="badge-year">{year}</span>
+                        </div>
+
+                        <div className={`timeline-bullet-icon ${typeClass}`}>
+                          {icon}
+                        </div>
+
+                        <div className="event-details-card">
+                          <div className="event-header-row">
+                            <span className={`event-type-tag ${typeClass}`}>{e.type}</span>
+                            <span className="event-date-string">{e.date}</span>
+                          </div>
+                          <p className="event-purpose-text">{e.purpose}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -949,147 +1391,361 @@ const StockDetails = () => {
 
         {/* RIGHT ORDER TICKET COLUMN */}
         <aside className="stock-trade-sidebar-column">
-          <div className="groww-order-ticket-container">
-            {/* Action tabs BUY/SELL */}
-            <div className="ticket-action-tab-header">
-              <button
-                type="button"
-                onClick={() => setTradeType("BUY")}
-                className={`tab-btn buy ${tradeType === "BUY" ? "active" : ""}`}
-              >
-                BUY
-              </button>
-              <button
-                type="button"
-                onClick={() => setTradeType("SELL")}
-                className={`tab-btn sell ${tradeType === "SELL" ? "active" : ""}`}
-              >
-                SELL
-              </button>
-            </div>
-
-            {/* Form inputs */}
-            <form onSubmit={handleExecuteTrade} className="groww-ticket-form">
-              
-              {/* Product Pills */}
-              <div className="ticket-form-section">
-                <div className="product-selector-pills">
-                  {["Delivery", "Intraday"].map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => setProductType(p)}
-                      className={`pill-btn ${productType === p ? "active" : ""}`}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
+          {user ? (
+            <div className="groww-order-ticket-container">
+              {/* Action tabs BUY/SELL */}
+              <div className="ticket-action-tab-header">
+                <button
+                  type="button"
+                  onClick={() => setTradeType("BUY")}
+                  className={`tab-btn buy ${tradeType === "BUY" ? "active" : ""}`}
+                >
+                  BUY
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTradeType("SELL")}
+                  className={`tab-btn sell ${tradeType === "SELL" ? "active" : ""}`}
+                >
+                  SELL
+                </button>
               </div>
 
-              {/* Exchange Selector */}
-              <div className="ticket-form-section">
-                <div className="exchange-selector-pills">
-                  {["NSE", "BSE"].map((ex) => (
-                    <button
-                      key={ex}
-                      type="button"
-                      onClick={() => setExchange(ex)}
-                      className={`exchange-pill-btn ${exchange === ex ? "active" : ""}`}
-                    >
-                      {ex}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Quantity */}
-              <div className="ticket-form-section">
-                <div className="field-input-wrapper">
-                  <label className="field-label">Qty {exchange}</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={tradeQty}
-                    onChange={(e) => setTradeQty(Math.max(1, parseInt(e.target.value) || 0))}
-                    className="field-input text-right"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Price Type and Input */}
-              <div className="ticket-form-section">
-                <div className="field-input-wrapper">
-                  <div className="field-label-dropdown-block">
-                    <label className="field-label">Price</label>
-                    <select 
-                      value={priceMode} 
-                      onChange={(e) => setPriceMode(e.target.value)}
-                      className="price-type-select"
-                    >
-                      <option value="Market">Market</option>
-                      <option value="Limit">Limit</option>
-                    </select>
+              {/* Form inputs */}
+              <form onSubmit={handleExecuteTrade} className="groww-ticket-form">
+                
+                {/* Product Pills */}
+                <div className="ticket-form-section">
+                  <div className="product-selector-pills">
+                    {["Delivery", "Intraday"].map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setProductType(p)}
+                        className={`pill-btn ${productType === p ? "active" : ""}`}
+                      >
+                        {p}
+                      </button>
+                    ))}
                   </div>
+                </div>
 
-                  {priceMode === "Market" ? (
-                    <div className="field-text-placeholder text-right">
-                      At Market (₹{stockDetails.price.toFixed(2)})
-                    </div>
-                  ) : (
+                {/* Exchange Selector */}
+                <div className="ticket-form-section">
+                  <div className="exchange-selector-pills">
+                    {["NSE", "BSE"].map((ex) => (
+                      <button
+                        key={ex}
+                        type="button"
+                        onClick={() => setExchange(ex)}
+                        className={`exchange-pill-btn ${exchange === ex ? "active" : ""}`}
+                      >
+                        {ex}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quantity */}
+                <div className="ticket-form-section">
+                  <div className="field-input-wrapper">
+                    <label className="field-label">Qty {exchange}</label>
                     <input
                       type="number"
-                      step="0.05"
-                      min="0.05"
-                      value={limitPrice}
-                      onChange={(e) => setLimitPrice(parseFloat(e.target.value) || 0)}
+                      min="1"
+                      value={tradeQty}
+                      onChange={(e) => setTradeQty(Math.max(1, parseInt(e.target.value) || 0))}
                       className="field-input text-right"
                       required
                     />
+                  </div>
+                </div>
+
+                {/* Price Type and Input */}
+                <div className="ticket-form-section">
+                  <div className="field-input-wrapper">
+                    <div className="field-label-dropdown-block">
+                      <label className="field-label">Price</label>
+                      <select 
+                        value={priceMode} 
+                        onChange={(e) => setPriceMode(e.target.value)}
+                        className="price-type-select"
+                      >
+                        <option value="Market">Market</option>
+                        <option value="Limit">Limit</option>
+                      </select>
+                    </div>
+
+                    {priceMode === "Market" ? (
+                      <div className="field-text-placeholder text-right">
+                        At Market (₹{stockDetails.price.toFixed(2)})
+                      </div>
+                    ) : (
+                      <input
+                        type="number"
+                        step="0.05"
+                        min="0.05"
+                        value={limitPrice}
+                        onChange={(e) => setLimitPrice(parseFloat(e.target.value) || 0)}
+                        className="field-input text-right"
+                        required
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* User Holding Info (Optional display if owns stock) */}
+                {userPosition ? (
+                  <div className="ticket-position-info">
+                    {userPosition.quantity < 0 ? (
+                      <span>Short position of {Math.abs(userPosition.quantity)} shares (Avg. ₹{userPosition.avgPrice.toFixed(2)})</span>
+                    ) : (
+                      <span>Currently holding {userPosition.quantity} shares (Avg. ₹{userPosition.avgPrice.toFixed(2)})</span>
+                    )}
+                  </div>
+                ) : null}
+
+                {/* Balance & Approx Capital req */}
+                <div className="ticket-capital-info-block">
+                  <div className="info-row">
+                    <span className="label">Virtual Balance</span>
+                    <span className="val">{formatINR(cashBalance)}</span>
+                  </div>
+                  
+                  <div className="info-row border-t pt-2 mt-2">
+                    {productType === "Intraday" ? (
+                      <>
+                        <span className="label font-semibold">Margin Required (5x)</span>
+                        <span className="val font-bold text-[#00b074]">{formatINR(totalCost / 5)}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="label font-semibold">Approx. Required</span>
+                        <span className="val font-bold text-[#0f172a]">{formatINR(totalCost)}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Buy/Sell Button */}
+                <button
+                  type="submit"
+                  disabled={placingOrder}
+                  className={`ticket-submit-btn ${tradeType === "BUY" ? "btn-buy" : "btn-sell"}`}
+                >
+                  {placingOrder ? (
+                    <RefreshCw className="animate-spin inline" size={18} />
+                  ) : tradeType === "BUY" ? (
+                    "Buy"
+                  ) : (
+                    "Sell"
                   )}
-                </div>
+                </button>
+              </form>
+            </div>
+          ) : (
+            <div className="groww-order-ticket-container lock-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 24px', height: '100%', minHeight: '380px', background: '#ffffff', borderRadius: '12px', border: '1px solid rgba(40, 90, 72, 0.1)', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)' }}>
+              <div className="lock-icon-wrapper" style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(64, 138, 113, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px', color: 'var(--brand-accent)' }}>
+                <ShieldAlert size={28} />
               </div>
-
-              {/* User Holding Info (Optional display if owns stock) */}
-              {userPosition ? (
-                <div className="ticket-position-info">
-                  <span>Currently holding {userPosition.quantity} shares (Avg. ₹{userPosition.avgPrice.toFixed(2)})</span>
-                </div>
-              ) : null}
-
-              {/* Balance & Approx Capital req */}
-              <div className="ticket-capital-info-block">
-                <div className="info-row">
-                  <span className="label">Virtual Balance</span>
-                  <span className="val">{formatINR(cashBalance)}</span>
-                </div>
-                
-                <div className="info-row border-t pt-2 mt-2">
-                  <span className="label font-semibold">Approx. Required</span>
-                  <span className="val font-bold text-[#0f172a]">{formatINR(totalCost)}</span>
-                </div>
-              </div>
-
-              {/* Buy/Sell Button */}
-              <button
-                type="submit"
-                disabled={placingOrder}
-                className={`ticket-submit-btn ${tradeType === "BUY" ? "btn-buy" : "btn-sell"}`}
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--brand-dark)', marginBottom: '10px' }}>Sign In to Trade</h3>
+              <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '24px', lineHeight: '1.5' }}>
+                Create an account or sign in to start virtual trading with ₹10 Lakhs of simulated capital.
+              </p>
+              <button 
+                onClick={() => navigate("/login")} 
+                className="ticket-submit-btn btn-buy"
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
               >
-                {placingOrder ? (
-                  <RefreshCw className="animate-spin inline" size={18} />
-                ) : tradeType === "BUY" ? (
-                  "Buy"
-                ) : (
-                  "Sell"
-                )}
+                Sign In Now <ArrowUpRight size={16} />
               </button>
-            </form>
-          </div>
+              <button 
+                onClick={() => navigate("/register")} 
+                style={{ width: '100%', height: '40px', border: '1px solid rgba(40, 90, 72, 0.3)', background: 'transparent', color: 'var(--brand-primary)', fontSize: '13px', fontWeight: '600', borderRadius: '8px', cursor: 'pointer', marginTop: '12px', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(64, 138, 113, 0.05)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                Get Started Free
+              </button>
+            </div>
+          )}
         </aside>
 
       </div>
+
+      {/* Mobile Bottom Sticky Bar */}
+      {isMobile && (
+        <div className="mobile-bottom-trade-bar">
+          {user ? (
+            <>
+              <button 
+                type="button"
+                className="mobile-trade-btn btn-sell" 
+                onClick={() => openMobileOrder("SELL")}
+              >
+                Sell
+              </button>
+              <button 
+                type="button"
+                className="mobile-trade-btn btn-buy" 
+                onClick={() => openMobileOrder("BUY")}
+              >
+                Buy
+              </button>
+            </>
+          ) : (
+            <button 
+              type="button"
+              className="mobile-trade-btn btn-buy" 
+              onClick={() => navigate("/login")}
+              style={{ width: "100%" }}
+            >
+              Sign In to Trade
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Mobile Full-Screen Buy/Sell Overlay */}
+      {isMobile && mobileOrderOpen && (
+        <>
+          <div className="mobile-order-overlay-backdrop" onClick={closeMobileOrder} />
+          <div className="mobile-order-overlay-wrapper">
+          <div className="mobile-order-overlay-header">
+            <button type="button" className="overlay-back-btn" onClick={closeMobileOrder}>
+              <ArrowLeft size={24} />
+            </button>
+            <div className="overlay-header-details">
+              <span className="overlay-company-name">{stockDetails.companyName}</span>
+              <div className="overlay-price-row">
+                <span className="overlay-price-val">₹{stockDetails.price.toFixed(2)}</span>
+                <span className={`overlay-change-badge ${stockDetails.change >= 0 ? "up" : "down"}`}>
+                  {stockDetails.change >= 0 ? "+" : ""}
+                  {stockDetails.changeAmt.toFixed(2)} ({stockDetails.change >= 0 ? "+" : ""}
+                  {stockDetails.change.toFixed(2)}%)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mobile-order-overlay-body">
+            {/* Product Tabs: Delivery / Intraday */}
+            <div className="product-selector-row">
+              {["Delivery", "Intraday"].map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setProductType(p)}
+                  className={`product-pill ${productType === p ? "active" : ""}`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            {/* Input fields */}
+            <div className="overlay-form-fields">
+              {/* Qty field */}
+              <div 
+                className={`overlay-field-group ${focusedInput === "qty" ? "focused" : ""}`}
+                onClick={() => setFocusedInput("qty")}
+              >
+                <span className="field-label">Qty {exchange}</span>
+                <div className="field-input-box">
+                  <span className="input-placeholder-value">{qtyInput || "0"}</span>
+                </div>
+              </div>
+
+              {/* Price field */}
+              <div 
+                className={`overlay-field-group ${focusedInput === "price" ? "focused" : ""}`}
+                onClick={() => {
+                  if (priceMode !== "Market") {
+                    setFocusedInput("price");
+                  }
+                }}
+              >
+                <div className="field-label-dropdown">
+                  <span className="field-label">Price</span>
+                  <button 
+                    type="button"
+                    className="price-mode-toggle-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const nextMode = priceMode === "Market" ? "Limit" : "Market";
+                      setPriceMode(nextMode);
+                      if (nextMode === "Limit" && priceInput === "") {
+                        setPriceInput(stockDetails.price.toString());
+                      }
+                    }}
+                  >
+                    {priceMode} ▾
+                  </button>
+                </div>
+                <div className="field-input-box">
+                  {priceMode === "Market" ? (
+                    <span className="input-placeholder-value text-disabled">
+                      At Market (₹{stockDetails.price.toFixed(2)})
+                    </span>
+                  ) : (
+                    <span className="input-placeholder-value">{priceInput || "0"}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Capital details */}
+            <div className="overlay-capital-details">
+              <div className="detail-row">
+                <span className="lbl">Virtual Balance</span>
+                <span className="val">{formatINR(cashBalance)}</span>
+              </div>
+              <div className="detail-row">
+                {productType === "Intraday" ? (
+                  <>
+                    <span className="lbl font-semibold">Margin Required (5x)</span>
+                    <span className="val font-bold text-[#00b074]">{formatINR(totalCost / 5)}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="lbl font-semibold">Approx. Required</span>
+                    <span className="val font-bold text-[#ffffff]">{formatINR(totalCost)}</span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Execute button */}
+            <button
+              type="button"
+              className={`overlay-execute-btn ${tradeType === "BUY" ? "btn-buy" : "btn-sell"}`}
+              onClick={handleExecuteTrade}
+              disabled={placingOrder}
+            >
+              {placingOrder ? (
+                <RefreshCw className="animate-spin inline" size={18} />
+              ) : (
+                `${tradeType === "BUY" ? "BUY" : "SELL"} ${symbol}`
+              )}
+            </button>
+          </div>
+
+          {/* Numeric keypad grid */}
+          <div className="mobile-numeric-keypad">
+            {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "BACKSPACE"].map((key) => (
+              <button
+                key={key}
+                type="button"
+                className="keypad-btn"
+                onClick={() => handleKeyPress(key)}
+              >
+                {key === "BACKSPACE" ? "⌫" : key}
+              </button>
+            ))}
+          </div>
+        </div>
+        </>
+      )}
     </div>
   );
 };

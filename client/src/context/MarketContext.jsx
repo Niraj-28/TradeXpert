@@ -220,7 +220,7 @@ export const MarketProvider = ({ children }) => {
           item.symbol || item.instrument || item.company
         ),
         price: item.price,
-        change: item.change,
+        change: item.percent !== undefined ? item.percent : item.change,
       }));
 
       const marketTableData = stockData.map((item) => ({
@@ -229,26 +229,26 @@ export const MarketProvider = ({ children }) => {
           companyMap[item.symbol] || item.company || item.symbol || item.instrument
         ),
         price: item.price,
-        change: item.change,
+        change: item.percent !== undefined ? item.percent : item.change,
         volume: normalizeString(item.volume),
       }));
 
       const gainersData = [...stockData]
-        .sort((a, b) => parseFloat(b.change) - parseFloat(a.change))
-        .slice(0, 3)
+        .sort((a, b) => parseFloat(b.percent !== undefined ? b.percent : b.change) - parseFloat(a.percent !== undefined ? a.percent : a.change))
+        .slice(0, 5)
         .map((item) => ({
           symbol: normalizeString(item.symbol),
           price: item.price,
-          change: item.change,
+          change: item.percent !== undefined ? item.percent : item.change,
         }));
 
       const losersData = [...stockData]
-        .sort((a, b) => parseFloat(a.change) - parseFloat(b.change))
-        .slice(0, 3)
+        .sort((a, b) => parseFloat(a.percent !== undefined ? a.percent : a.change) - parseFloat(b.percent !== undefined ? b.percent : b.change))
+        .slice(0, 5)
         .map((item) => ({
           symbol: normalizeString(item.symbol),
           price: item.price,
-          change: item.change,
+          change: item.percent !== undefined ? item.percent : item.change,
         }));
 
       setIndices(indicesData);
@@ -258,16 +258,16 @@ export const MarketProvider = ({ children }) => {
       setTopLosers(losersData);
     };
 
-    socket.on("marketData", (data) => {
-      console.log("MARKET DATA:", data);
-      processMarketData(data);
-    });
-
-    // Some backends emit only "market-data".
-    socket.on("market-data", (data) => {
-      console.log("MARKET DATA:", data);
-      processMarketData(data);
-    });
+    // socket.on("marketData", (data) => {
+    //   console.log("MARKET DATA:", data);
+    //   processMarketData(data);
+    // });
+    // 
+    // // Some backends emit only "market-data".
+    // socket.on("market-data", (data) => {
+    //   console.log("MARKET DATA:", data);
+    //   processMarketData(data);
+    // });
 
     // Ensure that if the websocket feed already emits fully prepared card payloads,
     // we don't accidentally overwrite them with mismatched shape.

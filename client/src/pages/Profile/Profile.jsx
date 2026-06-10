@@ -109,7 +109,7 @@ const Profile = () => {
         bio: editedFields.bio,
       };
       const updated = await updateUserProfile(payload);
-      
+
       // Update session context
       login(updated);
       setIsEditing(false);
@@ -134,7 +134,7 @@ const Profile = () => {
       toast.error("New password must be at least 6 characters long");
       return;
     }
-    
+
     try {
       const payload = {
         currentPassword: passwordFields.currentPassword,
@@ -152,7 +152,7 @@ const Profile = () => {
   return (
     <div className="profile-page">
       <div className="profile-card">
-        
+
         {/* HEADER */}
         <div className="profile-header">
           <div className="profile-avatar-large">
@@ -165,9 +165,9 @@ const Profile = () => {
                 <h1>{profileData.fullName}</h1>
                 <p className="profile-title">{profileData.bio}</p>
               </div>
-              
+
               {!isEditing ? (
-                <button 
+                <button
                   onClick={() => { setIsEditing(true); setEditedFields({ ...profileData }); }}
                   className="profile-edit-toggle-btn"
                 >
@@ -175,13 +175,13 @@ const Profile = () => {
                 </button>
               ) : (
                 <div className="profile-action-btn-group">
-                  <button 
+                  <button
                     onClick={handleSaveProfile}
                     className="profile-save-btn"
                   >
                     <Check size={12} /> Save
                   </button>
-                  <button 
+                  <button
                     onClick={() => setIsEditing(false)}
                     className="profile-cancel-btn"
                   >
@@ -200,7 +200,7 @@ const Profile = () => {
               <User size={18} />
               <div>
                 <span>Username</span>
-                <h3>{profileData.username}</h3>
+                <h3>{profileData.username || "Not set"}</h3>
               </div>
             </div>
 
@@ -234,7 +234,7 @@ const Profile = () => {
             <div className="profile-form-grid">
               <div className="form-field-group">
                 <label className="field-label-small">Full Name</label>
-                <input 
+                <input
                   type="text"
                   value={editedFields.fullName}
                   onChange={(e) => setEditedFields({ ...editedFields, fullName: e.target.value })}
@@ -243,7 +243,7 @@ const Profile = () => {
               </div>
               <div className="form-field-group">
                 <label className="field-label-small">Username</label>
-                <input 
+                <input
                   type="text"
                   value={editedFields.username}
                   onChange={(e) => setEditedFields({ ...editedFields, username: e.target.value })}
@@ -252,7 +252,7 @@ const Profile = () => {
               </div>
               <div className="form-field-group">
                 <label className="field-label-small">Email Address</label>
-                <input 
+                <input
                   type="email"
                   value={editedFields.email}
                   onChange={(e) => setEditedFields({ ...editedFields, email: e.target.value })}
@@ -261,7 +261,7 @@ const Profile = () => {
               </div>
               <div className="form-field-group">
                 <label className="field-label-small">Phone Number</label>
-                <input 
+                <input
                   type="text"
                   value={editedFields.phone}
                   onChange={(e) => setEditedFields({ ...editedFields, phone: e.target.value })}
@@ -284,7 +284,7 @@ const Profile = () => {
         <div className="profile-metrics-panel">
           <h2 className="profile-section-subtitle border-bottom">Virtual Simulator Portfolio Summary</h2>
           <div className="profile-metrics-grid">
-            
+
             <div className="profile-metric-card">
               <div className="profile-metric-icon emerald">
                 <Wallet size={20} />
@@ -330,7 +330,7 @@ const Profile = () => {
 
         {/* CHANGE PASSWORD COLLAPSE BOX */}
         <div className="change-password-accordion">
-          <div 
+          <div
             onClick={() => setShowPasswordBox(!showPasswordBox)}
             className="change-password-header-row"
           >
@@ -351,7 +351,7 @@ const Profile = () => {
               <div className="profile-form-grid">
                 <div className="form-field-group relative-position">
                   <label className="field-label-small">Current Password</label>
-                  <input 
+                  <input
                     type={showPass ? "text" : "password"}
                     value={passwordFields.currentPassword}
                     onChange={(e) => setPasswordFields({ ...passwordFields, currentPassword: e.target.value })}
@@ -369,7 +369,7 @@ const Profile = () => {
 
                 <div className="form-field-group">
                   <label className="field-label-small">New Password</label>
-                  <input 
+                  <input
                     type="password"
                     value={passwordFields.newPassword}
                     onChange={(e) => setPasswordFields({ ...passwordFields, newPassword: e.target.value })}
@@ -380,7 +380,7 @@ const Profile = () => {
 
                 <div className="form-field-group">
                   <label className="field-label-small">Confirm New Password</label>
-                  <input 
+                  <input
                     type="password"
                     value={passwordFields.confirmPassword}
                     onChange={(e) => setPasswordFields({ ...passwordFields, confirmPassword: e.target.value })}

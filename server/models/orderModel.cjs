@@ -85,6 +85,15 @@ const orderSchema =
         default: "MARKET",
       },
 
+      productType: {
+        type: String,
+        enum: [
+          "DELIVERY",
+          "INTRADAY",
+        ],
+        default: "DELIVERY",
+      },
+
       executedAt: Date,
 
     },

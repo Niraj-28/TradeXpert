@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import logo from "../../assets/Logo.png";
+import TransparentLogo from "../../components/ui/TransparentLogo";
 import { sendOtp, verifyOtp, resetForgottenPassword } from "../../services/authService";
 import { useMarket } from "../../context/MarketContext";
-import { 
+import {
   FaCheckCircle,
   FaRegCircle,
   FaEye,
@@ -42,9 +42,13 @@ const ResetPassword = () => {
   };
 
   const niftyData = indices.find((ind) => ind.name === "NIFTY 50");
-  const niftyValue = niftyData ? niftyData.value : 22450.00;
-  const niftyChange = niftyData ? niftyData.change : 0.45;
-  const isPositive = niftyChange >= 0;
+  const niftyChange = niftyData ? parseFloat(niftyData.change) : 1.24;
+
+  const sensexData = indices.find((ind) => ind.name === "SENSEX");
+  const sensexChange = sensexData ? parseFloat(sensexData.change) : 1.08;
+
+  const bankNiftyData = indices.find((ind) => ind.name === "BANK NIFTY");
+  const bankNiftyChange = bankNiftyData ? parseFloat(bankNiftyData.change) : -0.15;
 
   // Auto focus first OTP input when step changes to 2
   useEffect(() => {
@@ -196,43 +200,45 @@ const ResetPassword = () => {
       <div className="auth-hero-panel">
         <div className="auth-hero-glow"></div>
         <div className="auth-hero-grid-overlay"></div>
-        
+
         <div className="auth-hero-content-wrap">
-          <div className="auth-hero-logo" onClick={() => navigate("/")}>
-            <img src={logo} alt="TradeXpert" />
-          </div>
-
-          <div className="auth-hero-main">
-            <h1 className="auth-hero-tagline">
-              Trade Smart.<br />
-              <span>Master the Market.</span>
-            </h1>
-            <p className="auth-hero-desc">
-              Practice stock trading using our high-performance virtual simulator powered by real-time Indian market feeds.
-            </p>
-          </div>
-
-          {/* MINIMAL LIVE ACCENT CARD */}
-          <div className="auth-hero-widget">
-            <div className="widget-header">
-              <span className="widget-title">Market Index Live Feed</span>
-              <span className={`widget-status-dot ${connected ? "connected" : "simulated"}`}></span>
+          {/* Centered minimalist column */}
+          <div className="auth-hero-center-block">
+            <div className="auth-hero-logo-center" onClick={() => navigate("/")}>
+              <TransparentLogo style={{ height: "72px", cursor: "pointer" }} />
             </div>
-            <div className="widget-body">
-              <div className="widget-metric">
-                <span className="metric-label">NIFTY 50</span>
-                <div className="metric-row">
-                  <span className="metric-value">{formatValue(niftyValue)}</span>
-                  <span className={`metric-change ${isPositive ? "positive" : "negative"}`}>
-                    {isPositive ? "▲" : "▼"} {Math.abs(niftyChange).toFixed(2)}%
+
+            <h1 className="auth-hero-headline">
+              Practice trading.<br />
+              <span>Master the market.</span>
+            </h1>
+
+            <p className="auth-hero-subtext">
+              High-fidelity virtual trading simulator synced with real-time Indian stock market feeds. Master your investment strategies without risking capital.
+            </p>
+
+            <div className="auth-hero-indices-card">
+              <div className="auth-hero-indices-row">
+                <div className="index-item">
+                  <span className="index-name">NIFTY 50</span>
+                  <span className={`index-change ${niftyChange >= 0 ? "positive" : "negative"}`}>
+                    {niftyChange >= 0 ? "+" : ""}{niftyChange.toFixed(2)}%
+                  </span>
+                </div>
+                <div className="index-item">
+                  <span className="index-name">SENSEX</span>
+                  <span className={`index-change ${sensexChange >= 0 ? "positive" : "negative"}`}>
+                    {sensexChange >= 0 ? "+" : ""}{sensexChange.toFixed(2)}%
+                  </span>
+                </div>
+                <div className="index-item">
+                  <span className="index-name">BANK NIFTY</span>
+                  <span className={`index-change ${bankNiftyChange >= 0 ? "positive" : "negative"}`}>
+                    {bankNiftyChange >= 0 ? "+" : ""}{bankNiftyChange.toFixed(2)}%
                   </span>
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="auth-hero-footer">
-            <span>© 2026 TradeXpert. Practise virtual stock trading with zero financial risk.</span>
           </div>
         </div>
       </div>
@@ -288,7 +294,7 @@ const ResetPassword = () => {
                 <label className="auth-input-label" style={{ textAlign: "center", width: "100%" }}>
                   6-Digit Verification Code (OTP)
                 </label>
-                
+
                 {/* 6 SPLIT INPUTS */}
                 <div className="otp-input-container">
                   {otpValues.map((value, idx) => (
@@ -308,7 +314,7 @@ const ResetPassword = () => {
                     />
                   ))}
                 </div>
-                
+
                 <p className="auth-input-hint" style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', textAlign: 'center' }}>
                   Check your server console/terminal logs to find the verification code.
                 </p>
