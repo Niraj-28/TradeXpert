@@ -109,7 +109,15 @@ exports.placeOrder =
         }
 
         if (type === "SELL") {
-          const holding = await Holding.findOne({ user: req.user.id, symbol: symbol.toUpperCase(), productType: "DELIVERY" });
+          const holding = await Holding.findOne({
+            user: req.user.id,
+            symbol: symbol.toUpperCase(),
+            $or: [
+              { productType: "DELIVERY" },
+              { productType: { $exists: false } },
+              { productType: null }
+            ]
+          });
           if (!holding || holding.quantity < Number(quantity)) {
             return res.status(400).json({
               success: false,

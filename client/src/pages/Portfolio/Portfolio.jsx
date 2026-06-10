@@ -39,6 +39,52 @@ const getInitialPrice = (symbol) => {
   };
 };
 
+const Sparkline = ({ data = [], width = 75, height = 24 }) => {
+  if (!Array.isArray(data) || data.length < 2) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "0 auto", width, height }}>
+        <svg width={width} height={height}>
+          <line x1="0" y1={height / 2} x2={width} y2={height / 2} stroke="rgba(0, 0, 0, 0.1)" strokeWidth="1.5" strokeDasharray="3,3" />
+        </svg>
+      </div>
+    );
+  }
+
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min === 0 ? 1 : max - min;
+  const padding = range * 0.15;
+  const adjMin = min - padding;
+  const adjMax = max + padding;
+  const adjRange = adjMax - adjMin;
+
+  const points = data
+    .map((val, index) => {
+      const x = (index / (data.length - 1)) * width;
+      const y = height - ((val - adjMin) / adjRange) * height;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+
+  const isPositive = data[data.length - 1] >= data[0];
+  const strokeColor = isPositive ? "#00b074" : "#ff3b30";
+
+  return (
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "0 auto", width, height }}>
+      <svg width={width} height={height} style={{ overflow: "visible" }}>
+        <polyline
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          points={points}
+        />
+      </svg>
+    </div>
+  );
+};
+
 const Portfolio = () => {
   const { marketStocks } = useMarket();
   const navigate = useNavigate();
@@ -47,6 +93,14 @@ const Portfolio = () => {
   const [cashBalance, setCashBalance] = useState(1000000);
   const [activePortfolioTab, setActivePortfolioTab] = useState("holdings"); // "holdings" | "positions"
   const [squaringOff, setSquaringOff] = useState(false);
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 900);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 900);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Client-side simulated prices for custom holdings
   const [simulatedPrices, setSimulatedPrices] = useState({});
@@ -158,6 +212,7 @@ const Portfolio = () => {
         ...holding,
         ltp,
         change,
+        history: liveStock ? liveStock.history : [],
         investedVal,
         currentVal,
         totalPnL,
@@ -232,6 +287,76 @@ const Portfolio = () => {
 
   const isPos = summary.totalPnL >= 0;
   const isDayPos = summary.dayPnL >= 0;
+
+  const renderMobileHoldingsList = () => {
+    return (
+      <div className="portfolio-list-mobile">
+        <AnimatePresence mode="wait">
+          {activeList.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 20px", color: "#64748b" }} key="empty-mobile">
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                <Briefcase size={28} style={{ color: "#cbd5e1" }} />
+                <span style={{ fontSize: "14px", fontWeight: "500" }}>
+                  No active {activePortfolioTab === "holdings" ? "holdings (Delivery)" : "positions (Intraday)"}
+                </span>
+                <span style={{ fontSize: "12px", color: "#94a3b8" }}>
+                  Go to Markets to place an order.
+                </span>
+              </div>
+            </div>
+          ) : (
+            activeList.map((r) => {
+              const isCardPos = r.totalPnL >= 0;
+              return (
+                <motion.div
+                  key={`${r.symbol}-${r.productType}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="portfolio-list-row-mobile clickable-row"
+                  onClick={() => navigate(`/stocks/${r.symbol.toUpperCase()}`)}
+                >
+                  <div className="left-block">
+                    <StockLogo symbol={r.symbol} size={36} />
+                    <div className="symbol-info">
+                      <span className="sym-text">{r.symbol}</span>
+                      <span className="company-text">
+                        {r.quantity < 0 ? (
+                          <span style={{
+                            color: "#ef4444",
+                            background: "rgba(239, 68, 68, 0.1)",
+                            padding: "1px 4px",
+                            borderRadius: "3px",
+                            fontSize: "10px",
+                            fontWeight: "600",
+                            marginRight: "4px"
+                          }}>
+                            SHORT
+                          </span>
+                        ) : null}
+                        {Math.abs(r.quantity)} qty • Avg ₹{r.avgPrice.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="center-block">
+                    <Sparkline data={r.history} width={75} height={24} />
+                  </div>
+
+                  <div className="right-block">
+                    <span className="price-text">{formatINR(r.currentVal)}</span>
+                    <span className={`change-text ${isCardPos ? "positive" : "negative"}`}>
+                      {isCardPos ? "+" : ""}{r.totalPnL.toFixed(2)} ({r.totalPnLPct.toFixed(2)}%)
+                    </span>
+                  </div>
+                </motion.div>
+              );
+            })
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
 
   return (
     <div className="portfolio-page">
@@ -391,87 +516,91 @@ const Portfolio = () => {
                 </div>
               </div>
 
-              <div className="portfolio-holdings-table-wrap">
-                <table className="portfolio-holdings-table">
-                  <thead>
-                    <tr>
-                      <th>Stock</th>
-                      <th className="num">Qty</th>
-                      <th className="num">Avg. Price</th>
-                      <th className="num">Current Price</th>
-                      <th className="num">Current Value</th>
-                      <th className="num">Total P/L</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <AnimatePresence mode="wait">
-                      {activeList.length === 0 ? (
-                        <tr key="empty-row">
-                          <td colSpan="6" style={{ textAlign: "center", padding: "40px 20px", color: "#64748b" }}>
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                              <Briefcase size={28} style={{ color: "#cbd5e1" }} />
-                              <span style={{ fontSize: "14px", fontWeight: "500" }}>
-                                No active {activePortfolioTab === "holdings" ? "holdings (Delivery)" : "positions (Intraday)"}
-                              </span>
-                              <span style={{ fontSize: "12px", color: "#94a3b8" }}>
-                                Go to Markets to place an order.
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      ) : (
-                        activeList.map((r) => {
-                          const isCardPos = r.totalPnL >= 0;
-                          return (
-                            <motion.tr
-                              layout
-                              key={`${r.symbol}-${r.productType}`}
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0 }}
-                              onClick={() => navigate(`/stocks/${r.symbol.toUpperCase()}`)}
-                              className="clickable-row"
-                            >
-                              <td>
-                                <div className="holdings-stock" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                  <StockLogo symbol={r.symbol} size={32} />
-                                  <div style={{ display: "flex", flexDirection: "column" }}>
-                                    <span className="holdings-symbol">{r.symbol}</span>
-                                    <span className="holdings-name">{r.productType === "INTRADAY" ? "Intraday (MIS)" : "Delivery (CNC)"}</span>
+              {isMobile ? (
+                renderMobileHoldingsList()
+              ) : (
+                <div className="portfolio-holdings-table-wrap">
+                  <table className="portfolio-holdings-table">
+                    <thead>
+                      <tr>
+                        <th>Stock</th>
+                        <th className="num">Qty</th>
+                        <th className="num">Avg. Price</th>
+                        <th className="num">Current Price</th>
+                        <th className="num">Current Value</th>
+                        <th className="num">Total P/L</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <AnimatePresence mode="wait">
+                        {activeList.length === 0 ? (
+                          <tr key="empty-row">
+                            <td colSpan="6" style={{ textAlign: "center", padding: "40px 20px", color: "#64748b" }}>
+                              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                                <Briefcase size={28} style={{ color: "#cbd5e1" }} />
+                                <span style={{ fontSize: "14px", fontWeight: "500" }}>
+                                  No active {activePortfolioTab === "holdings" ? "holdings (Delivery)" : "positions (Intraday)"}
+                                </span>
+                                <span style={{ fontSize: "12px", color: "#94a3b8" }}>
+                                  Go to Markets to place an order.
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          activeList.map((r) => {
+                            const isCardPos = r.totalPnL >= 0;
+                            return (
+                              <motion.tr
+                                layout
+                                key={`${r.symbol}-${r.productType}`}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => navigate(`/stocks/${r.symbol.toUpperCase()}`)}
+                                className="clickable-row"
+                              >
+                                <td>
+                                  <div className="holdings-stock" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <StockLogo symbol={r.symbol} size={32} />
+                                    <div style={{ display: "flex", flexDirection: "column" }}>
+                                      <span className="holdings-symbol">{r.symbol}</span>
+                                      <span className="holdings-name">{r.productType === "INTRADAY" ? "Intraday (MIS)" : "Delivery (CNC)"}</span>
+                                    </div>
                                   </div>
-                                </div>
-                              </td>
-                              <td className="num">
-                                {r.quantity < 0 ? (
-                                  <span style={{
-                                    color: "#ef4444",
-                                    background: "rgba(239, 68, 68, 0.1)",
-                                    padding: "2px 6px",
-                                    borderRadius: "4px",
-                                    fontSize: "11px",
-                                    fontWeight: "600",
-                                    marginRight: "6px",
-                                    display: "inline-block"
-                                  }}>
-                                    SHORT
-                                  </span>
-                                ) : null}
-                                {Math.abs(r.quantity)}
-                              </td>
-                              <td className="num">{formatINR(r.avgPrice)}</td>
-                              <td className="num">{formatINR(r.ltp)}</td>
-                              <td className="num">{formatINR(r.currentVal)}</td>
-                              <td className={`num ${isCardPos ? "positive" : "negative"}`}>
-                                {isCardPos ? "+" : ""}{formatINR(r.totalPnL)} ({r.totalPnLPct.toFixed(2)}%)
-                              </td>
-                            </motion.tr>
-                          );
-                        })
-                      )}
-                    </AnimatePresence>
-                  </tbody>
-                </table>
-              </div>
+                                </td>
+                                <td className="num">
+                                  {r.quantity < 0 ? (
+                                    <span style={{
+                                      color: "#ef4444",
+                                      background: "rgba(239, 68, 68, 0.1)",
+                                      padding: "2px 6px",
+                                      borderRadius: "4px",
+                                      fontSize: "11px",
+                                      fontWeight: "600",
+                                      marginRight: "6px",
+                                      display: "inline-block"
+                                    }}>
+                                      SHORT
+                                    </span>
+                                  ) : null}
+                                  {Math.abs(r.quantity)}
+                                </td>
+                                <td className="num">{formatINR(r.avgPrice)}</td>
+                                <td className="num">{formatINR(r.ltp)}</td>
+                                <td className="num">{formatINR(r.currentVal)}</td>
+                                <td className={`num ${isCardPos ? "positive" : "negative"}`}>
+                                  {isCardPos ? "+" : ""}{formatINR(r.totalPnL)} ({r.totalPnLPct.toFixed(2)}%)
+                                </td>
+                              </motion.tr>
+                            );
+                          })
+                        )}
+                      </AnimatePresence>
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </section>
           </div>
         </section>

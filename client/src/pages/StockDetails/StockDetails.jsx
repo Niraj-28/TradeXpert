@@ -16,7 +16,7 @@ import {
   ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, 
   Check, Plus, RefreshCw, AlertCircle, Settings, ChevronDown, Bell, Star, Bookmark,
   TrendingUp as BuyIcon, ShieldAlert, Award, Globe, Calendar, FileText,
-  Clock, ChevronRight, Activity
+  Clock, ChevronRight, Activity, ArrowLeft
 } from "lucide-react";
 import toast from "react-hot-toast";
 import StockLogo from "../../components/ui/StockLogo";
@@ -430,6 +430,68 @@ const StockDetails = () => {
   const [exchange, setExchange] = useState("NSE"); // NSE | BSE
   const [placingOrder, setPlacingOrder] = useState(false);
 
+  // Mobile Order states
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 900);
+  const [mobileOrderOpen, setMobileOrderOpen] = useState(false);
+  const [focusedInput, setFocusedInput] = useState("qty"); // "qty" | "price"
+  const [qtyInput, setQtyInput] = useState("1");
+  const [priceInput, setPriceInput] = useState("");
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 900);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const openMobileOrder = (type) => {
+    setTradeType(type);
+    setQtyInput(tradeQty.toString() || "1");
+    setPriceInput(limitPrice > 0 ? limitPrice.toString() : stockDetails.price.toString());
+    setMobileOrderOpen(true);
+  };
+
+  const closeMobileOrder = () => {
+    setMobileOrderOpen(false);
+  };
+
+  const handleKeyPress = (key) => {
+    const targetState = focusedInput === "qty" ? qtyInput : priceInput;
+    const setTargetState = focusedInput === "qty" ? setQtyInput : setPriceInput;
+
+    if (key === "BACKSPACE") {
+      const newVal = targetState.slice(0, -1);
+      setTargetState(newVal);
+    } else if (key === ".") {
+      if (focusedInput === "qty") return;
+      if (!targetState.includes(".")) {
+        setTargetState(targetState + ".");
+      }
+    } else {
+      if (targetState === "0" && key === "0") return;
+      if (targetState === "" && key === "0") {
+        setTargetState("0");
+        return;
+      }
+      setTargetState(targetState + key);
+    }
+  };
+
+  useEffect(() => {
+    const q = parseInt(qtyInput) || 0;
+    setTradeQty(q);
+  }, [qtyInput]);
+
+  useEffect(() => {
+    const p = parseFloat(priceInput) || 0;
+    setLimitPrice(p);
+  }, [priceInput]);
+
+  useEffect(() => {
+    if (priceMode === "Market") {
+      setFocusedInput("qty");
+    }
+  }, [priceMode]);
+
   // Simulated cash and holdings
   const [holdings, setHoldings] = useState([]);
   const [cashBalance, setCashBalance] = useState(1000000);
@@ -685,7 +747,7 @@ const StockDetails = () => {
   // Check if user holds active stock for currently selected product type
   const userPosition = useMemo(() => {
     const targetProductType = productType.toUpperCase(); // "DELIVERY" or "INTRADAY"
-    return holdings.find(h => h.symbol.toUpperCase() === symbol.toUpperCase() && h.productType === targetProductType);
+    return holdings.find(h => h.symbol.toUpperCase() === symbol.toUpperCase() && (h.productType || "DELIVERY").toUpperCase() === targetProductType);
   }, [holdings, symbol, productType]);
 
   // Calculate dynamic bid-ask lists for depth (fluctuates around LTP)
@@ -786,6 +848,7 @@ const StockDetails = () => {
       }
 
       fetchUserData();
+      setMobileOrderOpen(false);
 
     } catch (err) {
       toast.error(err.response?.data?.message || "Virtual execution failed");
@@ -1509,6 +1572,180 @@ const StockDetails = () => {
         </aside>
 
       </div>
+
+      {/* Mobile Bottom Sticky Bar */}
+      {isMobile && (
+        <div className="mobile-bottom-trade-bar">
+          {user ? (
+            <>
+              <button 
+                type="button"
+                className="mobile-trade-btn btn-sell" 
+                onClick={() => openMobileOrder("SELL")}
+              >
+                Sell
+              </button>
+              <button 
+                type="button"
+                className="mobile-trade-btn btn-buy" 
+                onClick={() => openMobileOrder("BUY")}
+              >
+                Buy
+              </button>
+            </>
+          ) : (
+            <button 
+              type="button"
+              className="mobile-trade-btn btn-buy" 
+              onClick={() => navigate("/login")}
+              style={{ width: "100%" }}
+            >
+              Sign In to Trade
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Mobile Full-Screen Buy/Sell Overlay */}
+      {isMobile && mobileOrderOpen && (
+        <>
+          <div className="mobile-order-overlay-backdrop" onClick={closeMobileOrder} />
+          <div className="mobile-order-overlay-wrapper">
+          <div className="mobile-order-overlay-header">
+            <button type="button" className="overlay-back-btn" onClick={closeMobileOrder}>
+              <ArrowLeft size={24} />
+            </button>
+            <div className="overlay-header-details">
+              <span className="overlay-company-name">{stockDetails.companyName}</span>
+              <div className="overlay-price-row">
+                <span className="overlay-price-val">₹{stockDetails.price.toFixed(2)}</span>
+                <span className={`overlay-change-badge ${stockDetails.change >= 0 ? "up" : "down"}`}>
+                  {stockDetails.change >= 0 ? "+" : ""}
+                  {stockDetails.changeAmt.toFixed(2)} ({stockDetails.change >= 0 ? "+" : ""}
+                  {stockDetails.change.toFixed(2)}%)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mobile-order-overlay-body">
+            {/* Product Tabs: Delivery / Intraday */}
+            <div className="product-selector-row">
+              {["Delivery", "Intraday"].map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setProductType(p)}
+                  className={`product-pill ${productType === p ? "active" : ""}`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            {/* Input fields */}
+            <div className="overlay-form-fields">
+              {/* Qty field */}
+              <div 
+                className={`overlay-field-group ${focusedInput === "qty" ? "focused" : ""}`}
+                onClick={() => setFocusedInput("qty")}
+              >
+                <span className="field-label">Qty {exchange}</span>
+                <div className="field-input-box">
+                  <span className="input-placeholder-value">{qtyInput || "0"}</span>
+                </div>
+              </div>
+
+              {/* Price field */}
+              <div 
+                className={`overlay-field-group ${focusedInput === "price" ? "focused" : ""}`}
+                onClick={() => {
+                  if (priceMode !== "Market") {
+                    setFocusedInput("price");
+                  }
+                }}
+              >
+                <div className="field-label-dropdown">
+                  <span className="field-label">Price</span>
+                  <button 
+                    type="button"
+                    className="price-mode-toggle-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const nextMode = priceMode === "Market" ? "Limit" : "Market";
+                      setPriceMode(nextMode);
+                      if (nextMode === "Limit" && priceInput === "") {
+                        setPriceInput(stockDetails.price.toString());
+                      }
+                    }}
+                  >
+                    {priceMode} ▾
+                  </button>
+                </div>
+                <div className="field-input-box">
+                  {priceMode === "Market" ? (
+                    <span className="input-placeholder-value text-disabled">
+                      At Market (₹{stockDetails.price.toFixed(2)})
+                    </span>
+                  ) : (
+                    <span className="input-placeholder-value">{priceInput || "0"}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Capital details */}
+            <div className="overlay-capital-details">
+              <div className="detail-row">
+                <span className="lbl">Virtual Balance</span>
+                <span className="val">{formatINR(cashBalance)}</span>
+              </div>
+              <div className="detail-row">
+                {productType === "Intraday" ? (
+                  <>
+                    <span className="lbl font-semibold">Margin Required (5x)</span>
+                    <span className="val font-bold text-[#00b074]">{formatINR(totalCost / 5)}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="lbl font-semibold">Approx. Required</span>
+                    <span className="val font-bold text-[#ffffff]">{formatINR(totalCost)}</span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Execute button */}
+            <button
+              type="button"
+              className={`overlay-execute-btn ${tradeType === "BUY" ? "btn-buy" : "btn-sell"}`}
+              onClick={handleExecuteTrade}
+              disabled={placingOrder}
+            >
+              {placingOrder ? (
+                <RefreshCw className="animate-spin inline" size={18} />
+              ) : (
+                `${tradeType === "BUY" ? "BUY" : "SELL"} ${symbol}`
+              )}
+            </button>
+          </div>
+
+          {/* Numeric keypad grid */}
+          <div className="mobile-numeric-keypad">
+            {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "BACKSPACE"].map((key) => (
+              <button
+                key={key}
+                type="button"
+                className="keypad-btn"
+                onClick={() => handleKeyPress(key)}
+              >
+                {key === "BACKSPACE" ? "⌫" : key}
+              </button>
+            ))}
+          </div>
+        </div>
+        </>
+      )}
     </div>
   );
 };

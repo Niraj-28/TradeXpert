@@ -47,6 +47,14 @@ const Watchlist = () => {
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 900);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 900);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   // Client-side simulated prices for custom stocks
   const [simulatedPrices, setSimulatedPrices] = useState({});
 
@@ -183,8 +191,8 @@ const Watchlist = () => {
   const generateSparklinePoints = (change) => {
     const steps = 6;
     const points = [];
-    const height = 30;
-    const width = 100;
+    const height = 24;
+    const width = 75;
 
     let currentVal = height / 2;
     points.push(`0,${currentVal}`);
@@ -193,8 +201,8 @@ const Watchlist = () => {
 
     for (let i = 1; i <= steps; i++) {
       const x = (width / steps) * i;
-      const noise = (Math.random() * 8 - 4);
-      const trend = direction * (Math.abs(change) * 2) * (i / steps);
+      const noise = (Math.random() * 6 - 3);
+      const trend = direction * (Math.abs(change) * 1.5) * (i / steps);
       const y = Math.min(Math.max(height / 2 + trend + noise, 3), height - 3);
       points.push(`${x},${y}`);
     }
@@ -324,6 +332,58 @@ const Watchlist = () => {
               Use the search bar above to discover stock instruments and add them to your watchlist.
             </p>
           </motion.div>
+        ) : isMobile ? (
+          <div className="watchlist-list-mobile">
+            {enrichedWatchlist.map((stock) => {
+              const isPositive = stock.change >= 0;
+
+              return (
+                <div
+                  key={stock._id}
+                  className="watchlist-list-row-mobile clickable-row"
+                  onClick={() => navigate(`/stocks/${stock.symbol.toUpperCase()}`)}
+                >
+                  <div className="left-block">
+                    <StockLogo symbol={stock.symbol} size={36} />
+                    <div className="symbol-info">
+                      <span className="sym-text">{stock.symbol}</span>
+                      <span className="company-text">NSE</span>
+                    </div>
+                  </div>
+
+                  <div className="center-block">
+                    <svg className="sparkline-svg" width="75" height="24">
+                      <polyline
+                        fill="none"
+                        stroke={isPositive ? "#00b074" : "#ff3b30"}
+                        strokeWidth="1.8"
+                        points={generateSparklinePoints(stock.change)}
+                      />
+                    </svg>
+                  </div>
+
+                  <div className="right-block">
+                    <div className="price-change-wrap">
+                      <span className="price-text">{formatINR(stock.price)}</span>
+                      <span className={`change-text ${isPositive ? "positive" : "negative"}`}>
+                        {isPositive ? "+" : ""}{stock.change.toFixed(2)}%
+                      </span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveStock(stock._id, stock.symbol);
+                      }}
+                      className="watchlist-row-remove-btn"
+                      title="Remove from watchlist"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <motion.div
             layout

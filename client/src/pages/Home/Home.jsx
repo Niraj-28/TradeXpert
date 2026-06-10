@@ -295,21 +295,6 @@ const Home = () => {
                     <span className="price-label">Last Traded Price</span>
                     <span className="price-value">₹{stock.price.toFixed(2)}</span>
                   </div>
-                  <div className="sparkline-wrapper">
-                    <div style={{ width: "100px", height: "35px" }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={stock.sparkData}>
-                          <Line
-                            type="monotone"
-                            dataKey="price"
-                            stroke={isPos ? "#00b074" : "#ff4d4d"}
-                            strokeWidth={1.5}
-                            dot={false}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
                 </div>
 
                 <div className="card-footer">

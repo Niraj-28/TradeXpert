@@ -20,7 +20,20 @@ async function executeOrder(order, currentPrice, io) {
     const productType = order.productType ? order.productType.toUpperCase() : "DELIVERY";
     const execCost = Number(execPrice) * Number(quantity);
 
-    let holding = await Holding.findOne({ user: userId, symbol, productType });
+    let holding;
+    if (productType === "DELIVERY") {
+      holding = await Holding.findOne({
+        user: userId,
+        symbol,
+        $or: [
+          { productType: "DELIVERY" },
+          { productType: { $exists: false } },
+          { productType: null }
+        ]
+      });
+    } else {
+      holding = await Holding.findOne({ user: userId, symbol, productType });
+    }
     const user = await User.findById(userId);
 
     if (productType === "DELIVERY") {

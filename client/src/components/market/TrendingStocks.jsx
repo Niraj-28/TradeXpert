@@ -43,13 +43,25 @@ const companyNameMap = {
   LICI: "LIC of India"
 };
 
+import { useState, useEffect } from "react";
+
 const TrendingStocks = () => {
   const { trendingStocks } = useMarket();
   const navigate = useNavigate();
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 900);
+  
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 900);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const limit = isMobile ? 4 : 6;
+
   const stocks = trendingStocks?.length
-    ? trendingStocks.slice(0, 6) // Show exactly 6 cards to align cleanly in one row
-    : Array.from({ length: 6 }, (_, index) => {
+    ? trendingStocks.slice(0, limit)
+    : Array.from({ length: limit }, (_, index) => {
       const fallbackSymbols = ["DMART", "SIEMENS", "APOLLOHOSP", "MAXHEALTH", "ABB", "TMCV"];
       const fallbackPrices = [4182.80, 3728.90, 8267.00, 960.20, 7218.50, 365.30];
       const fallbackChanges = [3.10, 2.91, 2.19, 1.21, 1.01, -1.42];

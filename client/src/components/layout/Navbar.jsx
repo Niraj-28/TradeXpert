@@ -5,7 +5,8 @@ import {
   Bell,
   LogOut,
   X,
-  RefreshCw
+  RefreshCw,
+  Menu
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { searchStocks } from "../../services/marketApi";
@@ -16,9 +17,18 @@ import TransparentLogo from "../../components/ui/TransparentLogo";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const searchRef = useRef(null);
   const { user, logout } = useAuth();
+  
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 900);
+  
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 900);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -208,206 +218,315 @@ const Navbar = () => {
 
       {/* RIGHT */}
       <div className="navbar-right">
+        {isMobile ? (
+          <>
 
-        {/* SEARCH */}
-        <div className="search-box" style={{ position: "relative" }} ref={searchRef}>
-          <Search size={18} />
-          <input
-            type="text"
-            placeholder="Search stocks (e.g. RELIANCE, TATASTEEL)..."
-            value={searchQuery}
-            onChange={handleSearchChange}
-            onFocus={() => setDropdownOpen(true)}
-          />
-          {searchQuery && (
-            <button 
-              onClick={() => { setSearchQuery(""); setSearchResults([]); }}
-              style={{ border: "none", background: "transparent", cursor: "pointer", paddingRight: "8px", display: "flex", alignItems: "center" }}
+            {/* AVATAR TOGGLE TRIGGERS MOBILE DRAWER */}
+            <div
+              className="profile-box mobile-trigger"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              style={{ position: "relative", cursor: "pointer" }}
             >
-              <X size={15} className="text-slate-400" />
-            </button>
-          )}
+              {user ? userInitial : <User size={18} />}
+              {user && unreadCount > 0 && <span className="profile-notification-badge-dot" />}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* SEARCH */}
+            <div className="search-box" style={{ position: "relative" }} ref={searchRef}>
+              <Search size={18} />
+              <input
+                type="text"
+                placeholder="Search stocks (e.g. RELIANCE, TATASTEEL)..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                onFocus={() => setDropdownOpen(true)}
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => { setSearchQuery(""); setSearchResults([]); }}
+                  style={{ border: "none", background: "transparent", cursor: "pointer", paddingRight: "8px", display: "flex", alignItems: "center" }}
+                >
+                  <X size={15} className="text-slate-400" />
+                </button>
+              )}
 
-          {dropdownOpen && searchQuery && (
-            <div className="nav-search-dropdown">
-              {searching ? (
-                <div className="nav-search-status">
-                  <RefreshCw className="animate-spin text-[#00b074]" size={15} />
-                  <span>Searching...</span>
-                </div>
-              ) : searchResults.length > 0 ? (
-                searchResults.map((stock) => (
-                  <div
-                    key={stock.instrument_key}
-                    onClick={() => {
-                      navigate(`/stocks/${stock.trading_symbol.toUpperCase()}`);
-                      setSearchQuery("");
-                      setSearchResults([]);
-                      setDropdownOpen(false);
-                    }}
-                    className="nav-search-result-item"
-                  >
-                    <div className="result-left-block">
-                      <span className="result-sym">{stock.trading_symbol}</span>
-                      <span className="result-name">{stock.name || "Equity Stock"}</span>
+              {dropdownOpen && searchQuery && (
+                <div className="nav-search-dropdown">
+                  {searching ? (
+                    <div className="nav-search-status">
+                      <RefreshCw className="animate-spin text-[#00b074]" size={15} />
+                      <span>Searching...</span>
                     </div>
-                    <span className="result-ex">{stock.exchange}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="nav-search-status">
-                  <span>No stocks found</span>
+                  ) : searchResults.length > 0 ? (
+                    searchResults.map((stock) => (
+                      <div
+                        key={stock.instrument_key}
+                        onClick={() => {
+                          navigate(`/stocks/${stock.trading_symbol.toUpperCase()}`);
+                          setSearchQuery("");
+                          setSearchResults([]);
+                          setDropdownOpen(false);
+                        }}
+                        className="nav-search-result-item"
+                      >
+                        <div className="result-left-block">
+                          <span className="result-sym">{stock.trading_symbol}</span>
+                          <span className="result-name">{stock.name || "Equity Stock"}</span>
+                        </div>
+                        <span className="result-ex">{stock.exchange}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="nav-search-status">
+                      <span>No stocks found</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
-        </div>
 
-        {/* PROFILE OR AUTH BUTTONS */}
-        {user ? (
-          <div className="profile-wrapper">
+            {/* PROFILE OR AUTH BUTTONS */}
+            {user ? (
+              <div className="profile-wrapper">
 
-            <div
-              className="profile-box"
-              onClick={() => setOpen(!open)}
-              style={{ position: "relative" }}
-            >
-              {userInitial}
-              {unreadCount > 0 && <span className="profile-notification-badge-dot" />}
-            </div>
+                <div
+                  className="profile-box"
+                  onClick={() => setOpen(!open)}
+                  style={{ position: "relative" }}
+                >
+                  {userInitial}
+                  {unreadCount > 0 && <span className="profile-notification-badge-dot" />}
+                </div>
 
-            {open && (
-              <div className="profile-dropdown">
-                {showNotifications ? (
-                  /* NOTIFICATIONS SUB-DRAWER */
-                  <div className="notifications-subdrawer">
-                    <div className="subdrawer-header">
-                      <button className="subdrawer-back-btn" onClick={handleBackToMenu}>
-                        ← Back
-                      </button>
-                      <h4>Notifications</h4>
-                      {notifications.length > 0 && (
-                        <button className="subdrawer-clear-btn" onClick={handleClearNotifications}>
-                          Clear
-                        </button>
-                      )}
-                    </div>
-                    
-                    <div className="dropdown-divider"></div>
-                    
-                    <div className="notifications-list-viewport">
-                      {notifications.length === 0 ? (
-                        <div className="notifications-empty-state">
-                          <Bell size={20} className="text-slate-500 mb-1" />
-                          <p>No new notifications</p>
+                {open && (
+                  <div className="profile-dropdown">
+                    {showNotifications ? (
+                      /* NOTIFICATIONS SUB-DRAWER */
+                      <div className="notifications-subdrawer">
+                        <div className="subdrawer-header">
+                          <button className="subdrawer-back-btn" onClick={handleBackToMenu}>
+                            ← Back
+                          </button>
+                          <h4>Notifications</h4>
+                          {notifications.length > 0 && (
+                            <button className="subdrawer-clear-btn" onClick={handleClearNotifications}>
+                              Clear
+                            </button>
+                          )}
                         </div>
-                      ) : (
-                        notifications.map((n) => (
-                          <div key={n.id} className="notification-item">
-                            <p className="notification-message">{n.message}</p>
-                            <span className="notification-time">{n.time}</span>
+                        
+                        <div className="dropdown-divider"></div>
+                        
+                        <div className="notifications-list-viewport">
+                          {notifications.length === 0 ? (
+                            <div className="notifications-empty-state">
+                              <Bell size={20} className="text-slate-500 mb-1" />
+                              <p>No new notifications</p>
+                            </div>
+                          ) : (
+                            notifications.map((n) => (
+                              <div key={n.id} className="notification-item">
+                                <p className="notification-message">{n.message}</p>
+                                <span className="notification-time">{n.time}</span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      /* ORIGINAL USER PROFILE MENU */
+                      <>
+                        {/* USER */}
+                        <div className="dropdown-user">
+                          <div className="dropdown-avatar">
+                            {userInitial}
                           </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  /* ORIGINAL USER PROFILE MENU */
-                  <>
-                    {/* USER */}
-                    <div className="dropdown-user">
-                      <div className="dropdown-avatar">
-                        {userInitial}
-                      </div>
-                      <div>
-                        <h4>{userFullName}</h4>
-                        <p>Trader</p>
-                      </div>
-                    </div>
-
-                    <div className="dropdown-divider"></div>
-
-                    {/* PROFILE */}
-                    <NavLink
-                      to="/profile"
-                      className="dropdown-link"
-                      onClick={() => setOpen(false)}
-                    >
-                      <button className="dropdown-item">
-                        <User size={16} />
-                        Profile
-                      </button>
-                    </NavLink>
-
-                    {/* NOTIFICATION */}
-                    <button className="dropdown-item" onClick={handleOpenNotifications}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <Bell size={16} />
-                          <span>Notifications</span>
+                          <div>
+                            <h4>{userFullName}</h4>
+                            <p>Trader</p>
+                          </div>
                         </div>
-                        {unreadCount > 0 && (
-                          <span className="notification-badge-count">{unreadCount}</span>
-                        )}
-                      </div>
-                    </button>
 
-                    {/* LOGOUT */}
-                    <button className="dropdown-item logout" onClick={handleLogoutClick}>
-                      <LogOut size={16} />
-                      Logout
-                    </button>
-                  </>
+                        <div className="dropdown-divider"></div>
+
+                        {/* PROFILE */}
+                        <NavLink
+                          to="/profile"
+                          className="dropdown-link"
+                          onClick={() => setOpen(false)}
+                        >
+                          <button className="dropdown-item">
+                            <User size={16} />
+                            Profile
+                          </button>
+                        </NavLink>
+
+                        {/* NOTIFICATION */}
+                        <button className="dropdown-item" onClick={handleOpenNotifications}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <Bell size={16} />
+                              <span>Notifications</span>
+                            </div>
+                            {unreadCount > 0 && (
+                              <span className="notification-badge-count">{unreadCount}</span>
+                            )}
+                          </div>
+                        </button>
+
+                        {/* LOGOUT */}
+                        <button className="dropdown-item logout" onClick={handleLogoutClick}>
+                          <LogOut size={16} />
+                          Logout
+                        </button>
+                      </>
+                    )}
+                  </div>
                 )}
+
+              </div>
+            ) : (
+              <div className="navbar-auth-buttons" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <button
+                  onClick={() => navigate("/login")}
+                  className="nav-btn-text"
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    fontSize: "14.5px",
+                    fontWeight: "500",
+                    color: "var(--brand-dark)",
+                    cursor: "pointer",
+                    padding: "10px 20px",
+                    borderRadius: "8px",
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = "var(--brand-accent)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = "var(--brand-dark)"; }}
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => navigate("/register")}
+                  className="nav-btn-primary"
+                  style={{
+                    background: "var(--brand-accent)",
+                    border: "none",
+                    color: "#ffffff",
+                    fontSize: "14.5px",
+                    fontWeight: "600",
+                    padding: "10px 24px",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(35, 83, 71, 0.15)",
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "var(--brand-primary)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "var(--brand-accent)"; e.currentTarget.style.transform = "translateY(0)"; }}
+                >
+                  Get Started
+                </button>
               </div>
             )}
-
-          </div>
-        ) : (
-          <div className="navbar-auth-buttons" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <button
-              onClick={() => navigate("/login")}
-              className="nav-btn-text"
-              style={{
-                border: "none",
-                background: "transparent",
-                fontSize: "14.5px",
-                fontWeight: "500",
-                color: "var(--brand-dark)",
-                cursor: "pointer",
-                padding: "10px 20px",
-                borderRadius: "8px",
-                transition: "all 0.2s ease"
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--brand-accent)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--brand-dark)"; }}
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => navigate("/register")}
-              className="nav-btn-primary"
-              style={{
-                background: "var(--brand-accent)",
-                border: "none",
-                color: "#ffffff",
-                fontSize: "14.5px",
-                fontWeight: "600",
-                padding: "10px 24px",
-                borderRadius: "8px",
-                cursor: "pointer",
-                boxShadow: "0 4px 12px rgba(35, 83, 71, 0.15)",
-                transition: "all 0.2s ease"
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--brand-primary)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "var(--brand-accent)"; e.currentTarget.style.transform = "translateY(0)"; }}
-            >
-              Get Started
-            </button>
-          </div>
+          </>
         )}
-
       </div>
+
+      {/* MOBILE DRAWER */}
+      {mobileMenuOpen && (
+        <div className="mobile-nav-drawer">
+          {/* Profile options inside drawer first (when logged in) */}
+          {user && (
+            <div className="mobile-profile-section" style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px", marginBottom: "16px" }}>
+              <div className="dropdown-user" style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+                <div className="dropdown-avatar" style={{
+                  width: "42px", height: "42px", borderRadius: "50%", background: "linear-gradient(135deg, var(--brand-accent), var(--brand-primary))",
+                  display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "600"
+                }}>{userInitial}</div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: "15px", fontWeight: "600", color: "var(--brand-dark)" }}>{userFullName}</h4>
+                  <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>Trader</p>
+                </div>
+              </div>
+              <div className="mobile-profile-actions" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <NavLink to="/profile" className="dropdown-item" onClick={() => setMobileMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 12px" }}>
+                  <User size={16} /> Profile
+                </NavLink>
+                <button className="dropdown-item logout" onClick={handleLogoutClick} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 12px", border: "none", background: "transparent", width: "100%", textAlign: "left", cursor: "pointer" }}>
+                  <LogOut size={16} /> Logout
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Auth links inside drawer first (when NOT logged in) */}
+          {!user && (
+            <div className="mobile-auth-links" style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px", marginBottom: "16px" }}>
+              <button
+                onClick={() => { navigate("/login"); setMobileMenuOpen(false); }}
+                className="mobile-btn-text"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => { navigate("/register"); setMobileMenuOpen(false); }}
+                className="mobile-btn-primary"
+              >
+                Get Started
+              </button>
+            </div>
+          )}
+
+          {/* Navigation links */}
+          <nav className="mobile-nav-links">
+            <NavLink
+              to="/markets"
+              className={({ isActive }) => isActive ? "active" : ""}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Markets
+            </NavLink>
+
+            {user && (
+              <>
+                <NavLink
+                  to="/portfolio"
+                  className={({ isActive }) => isActive ? "active" : ""}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Portfolio
+                </NavLink>
+
+                <NavLink
+                  to="/watchlist"
+                  className={({ isActive }) => isActive ? "active" : ""}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Watchlist
+                </NavLink>
+
+                <NavLink
+                  to="/orders"
+                  className={({ isActive }) => isActive ? "active" : ""}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Orders
+                </NavLink>
+              </>
+            )}
+
+            <NavLink
+              to="/news"
+              className={({ isActive }) => isActive ? "active" : ""}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              News
+            </NavLink>
+          </nav>
+        </div>
+      )}
 
     </header>
   );
