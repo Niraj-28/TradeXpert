@@ -6,10 +6,10 @@ import { fileURLToPath } from "url";
 import { getInstrumentDetails } from "./instrumentService.mjs";
 
 const POPULAR_SYMBOLS = [
-  "RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "SBIN", "BHARTIARTL", 
-  "ITC", "LT", "TATASTEEL", "TATAMOTORS", "WIPRO", "AXISBANK", "KOTAKBANK", 
-  "HINDUNILVR", "ADANIENT", "BAJFINANCE", "MARUTI", "SUNPHARMA", "M&M", 
-  "ONGC", "POWERGRID", "NTPC", "COALINDIA", "ADANIPORTS", "ULTRACEMCO", 
+  "RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "SBIN", "BHARTIARTL",
+  "ITC", "LT", "TATASTEEL", "TATAMOTORS", "WIPRO", "AXISBANK", "KOTAKBANK",
+  "HINDUNILVR", "ADANIENT", "BAJFINANCE", "MARUTI", "SUNPHARMA", "M&M",
+  "ONGC", "POWERGRID", "NTPC", "COALINDIA", "ADANIPORTS", "ULTRACEMCO",
   "GRASIM", "JSWSTEEL", "LTIM", "HINDALCO"
 ];
 
@@ -24,7 +24,7 @@ let popularInstrumentsMap = null;
 
 const getPopularInstrumentsMap = () => {
   if (popularInstrumentsMap) return popularInstrumentsMap;
-  
+
   const mapping = {};
   for (const sym of POPULAR_SYMBOLS) {
     const details = getInstrumentDetails(sym);
@@ -90,8 +90,11 @@ const startUpstoxMarketFeed = async (io) => {
       },
     });
 
-    const wsUrl = response.data.data.authorized_redirect_uri;
-    console.log("Upstox Feed Authorized");
+    const wsUrl =
+      response.data.data.authorized_redirect_uri;
+
+    console.log("✅ Upstox Feed Authorized");
+    console.log("WS URL:", wsUrl);
 
     // LOAD PROTO
     const __filename = fileURLToPath(import.meta.url);
@@ -105,10 +108,10 @@ const startUpstoxMarketFeed = async (io) => {
     const ws = new WebSocket(wsUrl);
 
     ws.on("open", () => {
-      console.log("Upstox WebSocket Connected");
+      console.log("✅ Upstox WebSocket Connected");
 
-      // SUBSCRIBE
       const popularMap = getPopularInstrumentsMap();
+
       const keysToSubscribe = [
         ...Object.keys(indicesMap),
         ...Object.keys(popularMap),
@@ -124,6 +127,26 @@ const startUpstoxMarketFeed = async (io) => {
           },
         })
       );
+    });
+
+    ws.on("error", (err) => {
+      console.error(
+        "❌ Upstox WebSocket Error:",
+        err?.message || err
+      );
+    });
+
+    ws.on("close", (code, reason) => {
+      console.log(
+        "⚠️ Upstox WebSocket Closed:",
+        code,
+        reason?.toString() || ""
+      );
+
+      setTimeout(() => {
+        console.log("🔄 Reconnecting Upstox Feed...");
+        startUpstoxMarketFeed(io);
+      }, 10000);
     });
 
     ws.on("message", (buffer) => {
@@ -236,7 +259,7 @@ const startUpstoxMarketFeed = async (io) => {
             const priceB = Number(b.price) || 0;
             const volA = Number(a.volume) || 0;
             const volB = Number(b.volume) || 0;
-            
+
             const percentA = Number(a.percent) || 0;
             const percentB = Number(b.percent) || 0;
 

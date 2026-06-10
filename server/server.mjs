@@ -27,7 +27,7 @@ const io = new Server(server, {
 
     origin: [
       "http://localhost:5173",
-      "https://tradexpert.vercel.app"
+      "https://trade-xpert-bay.vercel.app"
     ],
 
     methods: [
