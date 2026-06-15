@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import axios from "axios";
+import { BASE_API_URL } from "../../services/api";
 
 const getMarketTimeLabels = (pointsCount, now) => {
   const marketStart = new Date(now);
@@ -143,7 +144,7 @@ const TradingChart = ({ symbol = "RELIANCE", timeframe = "1D", currentPrice = 13
     const fetchHistory = async () => {
       try {
         setLoading(true);
-        const res = await axios.get(`http://localhost:5000/api/market/history`, {
+        const res = await axios.get(`${BASE_API_URL}/market/history`, {
           params: { symbol, timeframe }
         });
         if (active) {

@@ -1,6 +1,7 @@
 import axios from "axios";
+import { BASE_API_URL } from "./api";
 
-const API = "http://localhost:5000/api/trade";
+const API = `${BASE_API_URL}/trade`;
 
 export const placeTrade = async (
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { useMarket } from "../../context/MarketContext";
+import { BASE_API_URL } from "../../services/api";
 import { socket } from "../../services/socket";
 import { getHoldings } from "../../services/holdingService";
 import { placeOrder } from "../../services/orderService";
@@ -668,7 +669,7 @@ const StockDetails = () => {
     const fetchHistoryData = async () => {
       try {
         setChartLoading(true);
-        const res = await axios.get("http://localhost:5000/api/market/history", {
+        const res = await axios.get(`${BASE_API_URL}/market/history`, {
           params: { symbol, timeframe }
         });
         if (active) {

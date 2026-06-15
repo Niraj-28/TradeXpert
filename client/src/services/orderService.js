@@ -1,7 +1,7 @@
 import axios from "axios";
+import { BASE_API_URL } from "./api";
 
-const API =
-  "http://localhost:5000/api/orders";
+const API = `${BASE_API_URL}/orders`;
 
 const getToken = () =>
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMarket } from "../../context/MarketContext";
+import { BASE_API_URL } from "../../services/api";
 import { getHoldings } from "../../services/holdingService";
 import PortfolioAnalytics from "../../components/portfolio/PortfolioAnalytics";
 import StockLogo from "../../components/ui/StockLogo";
@@ -241,7 +242,7 @@ const Portfolio = () => {
     try {
       setSquaringOff(true);
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/orders/auto-square-off", {
+      const response = await fetch(`${BASE_API_URL}/orders/auto-square-off`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

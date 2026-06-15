@@ -15,6 +15,8 @@ import {
 import startUpstoxMarketFeed from "./services/upstoxMarketService.js";
 
 import { fetchAllInstruments } from "./services/instrumentService.mjs";
+import cron from "node-cron";
+import { autoRefreshUpstoxToken } from "./services/upstoxAutoTokenService.js";
 
 const app = express();
 
@@ -52,11 +54,28 @@ fetchAllInstruments().catch((err) => {
   console.error("❌ [INSTRUMENTS ERROR] Error loading instruments on boot:", err.message);
 });
 
+// Auto-refresh Upstox token on boot if missing or set to placeholder
+if (!process.env.UPSTOX_ACCESS_TOKEN || process.env.UPSTOX_ACCESS_TOKEN.includes("YOUR_")) {
+  console.log("⚠️ [UPSTOX] Access token missing or invalid on boot. Attempting auto-login...");
+  autoRefreshUpstoxToken();
+}
+
 // Initialize real-time market feed via WebSocket
 startUpstoxMarketFeed(io);
 
 // Start the polling fallback for Upstox quote updates
 initializeMarketPolling(io);
+
+// Schedule daily automated token refresh at 08:30 AM IST (Indian Standard Time)
+cron.schedule("30 8 * * *", async () => {
+  console.log("⏰ [SCHEDULER] Running scheduled daily Upstox token refresh...");
+  const success = await autoRefreshUpstoxToken();
+  if (success) {
+    console.log("⏰ [SCHEDULER] Upstox token refreshed successfully. Feeds will restart.");
+    startUpstoxMarketFeed(io);
+    initializeMarketPolling(io);
+  }
+});
 
 io.on("connection", (socket) => {
   console.log("✅ Client Connected:", socket.id);

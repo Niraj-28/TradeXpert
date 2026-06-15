@@ -1,7 +1,7 @@
 import axios from "axios";
+import { BASE_API_URL } from "./api";
 
-const API =
-  "http://localhost:5000/api/market";
+const API = `${BASE_API_URL}/market`;
 
 export const searchStocks = async (
   query

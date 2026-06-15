@@ -9547,7 +9547,12 @@ section .grid.grid-cols-4>div p {
     width: 100% !important;
   }
 
-  /* Trending Stocks Today 2x2 Grid Layout */
+  /* Trending Stocks Today 2x2 Grid Layout & Section Padding */
+  .landing-trending-section {
+    padding: 28px 12px !important;
+    box-sizing: border-box !important;
+  }
+
   .landing-trending-grid {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
@@ -9555,40 +9560,62 @@ section .grid.grid-cols-4>div p {
     overflow-x: visible !important;
     padding-bottom: 0 !important;
     margin-bottom: 20px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   
   .landing-trending-card {
     flex: unset !important;
     min-width: unset !important;
     width: 100% !important;
-    padding: 12px !important;
+    padding: 10px !important;
     border-radius: 12px !important;
+    box-sizing: border-box !important;
   }
 
   .landing-trending-card .card-header {
     margin-bottom: 12px !important;
+    gap: 4px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+  }
+
+  /* Override inner header layout gap & image sizes on mobile to prevent overflow */
+  .landing-trending-card .card-header > div {
     gap: 6px !important;
   }
 
+  .landing-trending-card .card-header img,
+  .landing-trending-card .card-header .stock-logo-fallback {
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 10px !important;
+  }
+
   .landing-trending-card .card-header .stock-info .company {
-    display: none !important; /* Hide company name on mobile to prevent overlapping change badge */
+    display: none !important; /* Hide company name on mobile */
   }
 
   .landing-trending-card .card-header .stock-info .symbol {
-    font-size: 14px !important;
+    font-size: 12.5px !important;
+    white-space: nowrap !important;
   }
 
   .landing-trending-card .card-header .change-badge {
-    padding: 2px 6px !important;
-    font-size: 10px !important;
+    padding: 2px 5px !important;
+    font-size: 9.5px !important;
+    white-space: nowrap !important;
   }
 
   .landing-trending-card .card-body {
     margin-bottom: 12px !important;
+    width: 100% !important;
   }
 
   .landing-trending-card .card-body .price-info .price-value {
-    font-size: 15px !important;
+    font-size: 13.5px !important;
   }
   
   .landing-feature-card {
