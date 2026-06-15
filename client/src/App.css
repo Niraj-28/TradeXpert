@@ -9014,7 +9014,7 @@ section .grid.grid-cols-4>div p {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: 12px 10px;
   border-bottom: 1px solid #f1f5f9;
   cursor: pointer;
   transition: background 0.15s ease;
@@ -9059,7 +9059,7 @@ section .grid.grid-cols-4>div p {
 .market-list-row-mobile .company-text {
   font-size: 11.5px;
   color: #64748b;
-  max-width: 140px;
+  max-width: 85px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -9071,7 +9071,7 @@ section .grid.grid-cols-4>div p {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 90px;
+  width: 65px;
   flex-shrink: 0;
 }
 
@@ -9853,9 +9853,10 @@ section .grid.grid-cols-4>div p {
 .portfolio-list-row-mobile .company-text {
   font-size: 11px;
   color: #64748b;
+  max-width: 85px;
   white-space: nowrap;
-  overflow: visible;
-  text-overflow: clip;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Center block: sparkline */
@@ -10412,5 +10413,30 @@ section .grid.grid-cols-4>div p {
 
   .landing-trending-card .card-body .price-info .action-link .mobile-action-text {
     display: inline !important;
+  }
+}
+
+/* Mobile Search Dropdown Adjustments */
+@media (max-width: 600px) {
+  .discover-search-dropdown {
+    max-height: 250px !important;
+    padding: 4px !important;
+    border-radius: 12px !important;
+  }
+  .discover-result-item {
+    padding: 8px 10px !important;
+  }
+  .discover-result-name {
+    max-width: 110px !important;
+  }
+  .discover-btn-trade {
+    padding: 5px 8px !important;
+    font-size: 10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .discover-result-name {
+    max-width: 90px !important;
   }
 }

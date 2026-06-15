@@ -111,7 +111,7 @@ const DiscoverStocks = ({ onTrade }) => {
                           <span className="discover-result-symbol">{stock.trading_symbol}</span>
                           <span className="discover-result-exchange" style={{ fontSize: "10px", padding: "1px 4px", background: "#f1f5f9", borderRadius: "4px", color: "#64748b", fontWeight: "600" }}>{stock.exchange}</span>
                         </div>
-                        <span className="discover-result-name" style={{ fontSize: "11px", color: "#64748b", marginTop: "1px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "180px" }}>
+                        <span className="discover-result-name" style={{ fontSize: "11px", color: "#64748b", marginTop: "1px" }}>
                           {stock.name || "Equity Stock"}
                         </span>
                       </div>
