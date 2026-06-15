@@ -111,7 +111,7 @@ const TrendingStocks = () => {
               onClick={() => navigate(`/stocks/${stock.symbol.toUpperCase()}`)}
             >
               <div className="trend-card-logo-wrap">
-                <StockLogo symbol={stock.symbol} size={48} />
+                <StockLogo symbol={stock.symbol} size={isMobile ? 32 : 48} />
               </div>
 
               <span className="trend-company-name" title={companyName}>

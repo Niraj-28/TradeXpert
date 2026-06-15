@@ -2532,8 +2532,14 @@ dropdown-user h4 {
   }
 
   .markets-inner-wrapper {
-    padding-inline: 16px;
-    gap: 20px;
+    padding-inline: 0px !important;
+    gap: 16px !important;
+  }
+
+  .markets-page-container .live-ticker-container {
+    margin-left: -12px !important;
+    margin-right: -12px !important;
+    width: calc(100% + 24px) !important;
   }
 
   /* Show indices in a single horizontal scrollable row on mobile */
@@ -2592,7 +2598,14 @@ dropdown-user h4 {
 
 @media (max-width: 480px) {
   .trending-cards-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+  
+  .trending-stock-card {
+    padding: 12px !important;
+    gap: 8px !important;
+    border-radius: 12px !important;
   }
   
   .sectors-performance-grid {
@@ -7898,7 +7911,8 @@ section .grid.grid-cols-4>div p {
 
 @media (max-width: 480px) {
   .trending-cards-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
   }
 }
 
@@ -8713,7 +8727,7 @@ section .grid.grid-cols-4>div p {
   /* General Layout */
   .main-content {
     padding-top: 92px !important;
-    padding-inline: 16px !important;
+    padding-inline: 12px !important;
   }
   
   /* Portfolio Stats */
