@@ -15,7 +15,7 @@ import {
 
 const Home = () => {
   const navigate = useNavigate();
-  const { marketStocks, indices } = useMarket();
+  const { marketStocks, indices, trendingStocks: liveTrendingStocks } = useMarket();
   const { user } = useAuth();
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
 
@@ -95,37 +95,29 @@ const Home = () => {
     });
   }, [marketStocks]);
 
-  // Trending stocks list with sparkline generator
+  // Trending stocks list using live active stocks from Upstox
   const trendingStocks = useMemo(() => {
-    const symbols = ["RELIANCE", "TCS", "INFY", "SBIN"];
-    return symbols.map(sym => {
-      const live = marketStocks?.find(s => s.symbol.toUpperCase() === sym);
-      const price = live ? parseFloat(live.price) : (sym === "RELIANCE" ? 2540.00 : sym === "TCS" ? 3420.00 : sym === "INFY" ? 1490.00 : 820.00);
-      const change = live ? parseFloat(live.change) : 1.25;
+    const list = (liveTrendingStocks && liveTrendingStocks.length > 0)
+      ? liveTrendingStocks.slice(0, 4)
+      : [
+          { symbol: "RELIANCE", company: "Reliance Industries Ltd", price: 2540.00, change: 0.55 },
+          { symbol: "TCS", company: "Tata Consultancy Services Ltd", price: 2161.00, change: 1.19 },
+          { symbol: "INFY", company: "Infosys Limited", price: 1118.30, change: 0.31 },
+          { symbol: "SBIN", company: "State Bank of India", price: 1011.20, change: 1.06 }
+        ];
 
-      // Seed sparkline values
-      let hash = 0;
-      for (let i = 0; i < sym.length; i++) {
-        hash = sym.charCodeAt(i) + ((hash << 5) - hash);
-      }
-      const sparkData = [];
-      let tempPrice = price - (change * (price / 100));
-      for (let i = 0; i < 8; i++) {
-        const seed = Math.sin(hash + i) * 0.4;
-        tempPrice = tempPrice * (1 + seed / 100);
-        sparkData.push({ price: tempPrice });
-      }
-      sparkData.push({ price }); // last point exact
-
+    return list.map(stock => {
+      const live = marketStocks?.find(s => s.symbol.toUpperCase() === stock.symbol.toUpperCase());
+      const price = live ? parseFloat(live.price) : parseFloat(stock.price || 100);
+      const change = live ? parseFloat(live.change) : parseFloat(stock.change || 0);
       return {
-        symbol: sym,
-        name: live?.company || `${sym} Industries Ltd`,
+        symbol: stock.symbol,
+        name: stock.company || stock.name || live?.company || `${stock.symbol} Corp`,
         price,
-        change,
-        sparkData
+        change
       };
     });
-  }, [marketStocks]);
+  }, [liveTrendingStocks, marketStocks]);
 
   // Main Indices matching logic
   const orderedNames = ["NIFTY 50", "SENSEX", "BANK NIFTY", "FIN NIFTY"];
@@ -290,15 +282,17 @@ const Home = () => {
                   </div>
                 </div>
 
-                <div className="card-body">
-                  <div className="price-info">
-                    <span className="price-label">Last Traded Price</span>
-                    <span className="price-value">₹{stock.price.toFixed(2)}</span>
+                <div className="card-body" style={{ marginTop: "12px", marginBottom: "4px" }}>
+                  <div className="price-info" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", gap: "8px" }}>
+                    <span className="price-value" style={{ fontSize: "16px", fontWeight: "750", color: "var(--brand-dark)" }}>
+                      ₹{stock.price.toFixed(2)}
+                    </span>
+                    <span className="action-link" style={{ fontSize: "11.5px", fontWeight: "600", display: "inline-flex", alignItems: "center", color: "var(--brand-accent)" }}>
+                      <span className="desktop-action-text">Open Trading View</span>
+                      <span className="mobile-action-text">Trade View</span>
+                      <ArrowUpRight size={13} style={{ marginLeft: "3px" }} />
+                    </span>
                   </div>
-                </div>
-
-                <div className="card-footer">
-                  <span className="action-link">Open Trading View <ArrowUpRight size={14} className="inline ml-1" /></span>
                 </div>
               </div>
             );
@@ -316,10 +310,12 @@ const Home = () => {
         <div className="landing-features-grid">
           {features.map((feature, index) => (
             <div key={index} className="landing-feature-card">
-              <div className="landing-feature-icon-wrapper">
-                {feature.icon}
+              <div className="landing-feature-card-header" style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px" }}>
+                <div className="landing-feature-icon-wrapper" style={{ margin: 0, flexShrink: 0 }}>
+                  {feature.icon}
+                </div>
+                <h3 style={{ margin: 0, fontSize: "17px", fontWeight: "700" }}>{feature.title}</h3>
               </div>
-              <h3>{feature.title}</h3>
               <p>{feature.description}</p>
             </div>
           ))}

@@ -16,7 +16,7 @@ import {
   ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, 
   Check, Plus, RefreshCw, AlertCircle, Settings, ChevronDown, Bell, Star, Bookmark,
   TrendingUp as BuyIcon, ShieldAlert, Award, Globe, Calendar, FileText,
-  Clock, ChevronRight, Activity, ArrowLeft
+  Clock, ChevronRight, Activity, ArrowLeft, Search
 } from "lucide-react";
 import toast from "react-hot-toast";
 import StockLogo from "../../components/ui/StockLogo";
@@ -383,6 +383,10 @@ const StockDetails = () => {
   const [eventsList, setEventsList] = useState([]);
   const [newsLoading, setNewsLoading] = useState(true);
   const [eventsLoading, setEventsLoading] = useState(true);
+
+  // Collapsible accordion states for mobile
+  const [marketDepthExpanded, setMarketDepthExpanded] = useState(true);
+  const [performanceExpanded, setPerformanceExpanded] = useState(true);
 
   useEffect(() => {
     if (!symbol) return;
@@ -874,68 +878,107 @@ const StockDetails = () => {
         <div className="stock-info-main-column">
           
           {/* Header block */}
-          <div className="stock-profile-header-card">
-            <StockLogo symbol={symbol} size={64} />
-            
-            <div className="profile-text-block">
-              <div className="profile-exchange-row">
-                <span className="stock-tag">{symbol.toUpperCase()}</span>
-                <span className="exchange-dot">•</span>
-                <span className="exchange-label">NSE</span>
+          {isMobile ? (
+            <div className="mobile-stock-profile-section-card">
+              {/* Custom Mobile Header */}
+              <div className="mobile-stock-details-header">
+                <button type="button" onClick={() => navigate(-1)} className="header-back-btn">
+                  <ArrowLeft size={22} />
+                </button>
+                <div className="header-right-actions">
+                  <button type="button" onClick={() => toast("Alerts feature coming soon!", { icon: "⏰" })} className="header-action-btn">
+                    <Clock size={20} />
+                  </button>
+                  <button type="button" onClick={toggleWatchlist} className={`header-action-btn ${isInWatchlist ? "active" : ""}`} style={{ color: isInWatchlist ? "#00b074" : "#64748b", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}>
+                    <Bookmark size={20} fill={isInWatchlist ? "#00b074" : "none"} />
+                  </button>
+                  <button type="button" onClick={() => navigate("/markets")} className="header-action-btn">
+                    <Search size={20} />
+                  </button>
+                </div>
               </div>
-              <h1 className="company-fullname">{stockDetails.companyName}</h1>
-              
-              <div className="price-quote-block">
-                <span className="price-val">{formatINR(stockDetails.price)}</span>
-                <span className={`change-badge ${stockDetails.change >= 0 ? "up" : "down"}`}>
-                  {stockDetails.change >= 0 ? "+" : ""}
-                  {stockDetails.changeAmt.toFixed(2)} ({stockDetails.change >= 0 ? "+" : ""}
-                  {stockDetails.change.toFixed(2)}%)
-                </span>
-                <span className="timeframe-indicator">1D</span>
+
+              {/* Stock info */}
+              <div className="mobile-profile-details">
+                <div className="logo-symbol-row">
+                  <StockLogo symbol={symbol} size={44} />
+                  <div className="symbol-exchange-dropdown">
+                    <span>{symbol.toUpperCase()} • NSE ▾</span>
+                  </div>
+                </div>
+                <h1 className="mobile-company-title">{stockDetails.companyName}</h1>
+                <div className="mobile-price-row">
+                  <span className="mobile-price-value">{formatINR(stockDetails.price)}</span>
+                  <span className={`mobile-change-value ${stockDetails.change >= 0 ? "up" : "down"}`}>
+                    {stockDetails.change >= 0 ? "+" : ""}{stockDetails.changeAmt.toFixed(2)} ({stockDetails.change >= 0 ? "+" : ""}{stockDetails.change.toFixed(2)}%) <span className="timeframe">1D</span>
+                  </span>
+                </div>
               </div>
             </div>
+          ) : (
+            <div className="stock-profile-header-card">
+              <StockLogo symbol={symbol} size={64} />
+              
+              <div className="profile-text-block">
+                <div className="profile-exchange-row">
+                  <span className="stock-tag">{symbol.toUpperCase()}</span>
+                  <span className="exchange-dot">•</span>
+                  <span className="exchange-label">NSE</span>
+                </div>
+                <h1 className="company-fullname">{stockDetails.companyName}</h1>
+                
+                <div className="price-quote-block">
+                  <span className="price-val">{formatINR(stockDetails.price)}</span>
+                  <span className={`change-badge ${stockDetails.change >= 0 ? "up" : "down"}`}>
+                    {stockDetails.change >= 0 ? "+" : ""}
+                    {stockDetails.changeAmt.toFixed(2)} ({stockDetails.change >= 0 ? "+" : ""}
+                    {stockDetails.change.toFixed(2)}%)
+                  </span>
+                  <span className="timeframe-indicator">1D</span>
+                </div>
+              </div>
 
-            {user && (
-              <button
-                type="button"
-                onClick={toggleWatchlist}
-                className={`stock-watchlist-toggle-btn ${isInWatchlist ? "active" : ""}`}
-                title={isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
-                style={{
-                  background: "transparent",
-                  border: "1px solid #cbd5e1",
-                  borderRadius: "50%",
-                  width: "40px",
-                  height: "40px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  color: isInWatchlist ? "#00b074" : "#64748b",
-                  borderColor: isInWatchlist ? "#00b074" : "#cbd5e1",
-                  transition: "all 0.2s ease",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)"
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "rgba(0, 176, 116, 0.05)";
-                  if (!isInWatchlist) {
-                    e.currentTarget.style.color = "#00b074";
-                    e.currentTarget.style.borderColor = "#00b074";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  if (!isInWatchlist) {
-                    e.currentTarget.style.color = "#64748b";
-                    e.currentTarget.style.borderColor = "#cbd5e1";
-                  }
-                }}
-              >
-                <Bookmark size={20} fill={isInWatchlist ? "#00b074" : "none"} />
-              </button>
-            )}
-          </div>
+              {user && (
+                <button
+                  type="button"
+                  onClick={toggleWatchlist}
+                  className={`stock-watchlist-toggle-btn ${isInWatchlist ? "active" : ""}`}
+                  title={isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+                  style={{
+                    background: "transparent",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: "50%",
+                    width: "40px",
+                    height: "40px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    color: isInWatchlist ? "#00b074" : "#64748b",
+                    borderColor: isInWatchlist ? "#00b074" : "#cbd5e1",
+                    transition: "all 0.2s ease",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(0, 176, 116, 0.05)";
+                    if (!isInWatchlist) {
+                      e.currentTarget.style.color = "#00b074";
+                      e.currentTarget.style.borderColor = "#00b074";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                    if (!isInWatchlist) {
+                      e.currentTarget.style.color = "#64748b";
+                      e.currentTarget.style.borderColor = "#cbd5e1";
+                    }
+                  }}
+                >
+                  <Bookmark size={20} fill={isInWatchlist ? "#00b074" : "none"} />
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Interactive Chart Visualizer */}
           <div className="stock-chart-panel-card">
@@ -1090,116 +1133,157 @@ const StockDetails = () => {
                   
                   {/* MARKET DEPTH WIDGET */}
                   <div className="overview-depth-panel">
-                    <h3 className="overview-section-title">Market Depth</h3>
+                    <div 
+                      className="section-header-clickable"
+                      onClick={() => setMarketDepthExpanded(!marketDepthExpanded)}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", userSelect: "none", paddingBottom: "10px" }}
+                    >
+                      <h3 className="overview-section-title" style={{ margin: 0 }}>Market Depth</h3>
+                      <ChevronDown 
+                        size={18} 
+                        style={{ 
+                          transform: marketDepthExpanded ? "rotate(180deg)" : "rotate(0deg)", 
+                          transition: "transform 0.2s ease",
+                          color: "#64748b" 
+                        }} 
+                      />
+                    </div>
                     
-                    {/* Ratio Indicator Bar */}
-                    <div className="depth-ratio-wrapper">
-                      <div className="ratio-labels">
-                        <span className="buy-pct text-[#00b074]">Buy Orders ({marketDepthData.buyPct}%)</span>
-                        <span className="sell-pct text-[#ff4d4d]">Sell Orders ({marketDepthData.sellPct}%)</span>
-                      </div>
-                      
-                      <div className="ratio-bar-progress">
-                        <div 
-                          className="bar-fill-buy" 
-                          style={{ width: `${marketDepthData.buyPct}%` }}
-                        />
-                        <div 
-                          className="bar-fill-sell" 
-                          style={{ width: `${marketDepthData.sellPct}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Depth grid list comparison */}
-                    <div className="depth-offers-comparison-grid">
-                      {/* Bids Column */}
-                      <div className="depth-col-bids">
-                        <div className="depth-header-row">
-                          <span>Bid Price (₹)</span>
-                          <span className="qty">Qty</span>
-                        </div>
-                        {marketDepthData.bids.map((b, idx) => (
-                          <div key={`bid-${idx}`} className="depth-value-row">
-                            <span className="price text-[#00b074]">{b.price.toFixed(2)}</span>
-                            <span className="qty">{b.qty}</span>
+                    {marketDepthExpanded && (
+                      <div className="depth-collapsible-content animate-slide-down" style={{ marginTop: "8px" }}>
+                        {/* Ratio Indicator Bar */}
+                        <div className="depth-ratio-wrapper">
+                          <div className="ratio-labels">
+                            <span className="buy-pct text-[#00b074]">Buy Orders ({marketDepthData.buyPct}%)</span>
+                            <span className="sell-pct text-[#ff4d4d]">Sell Orders ({marketDepthData.sellPct}%)</span>
                           </div>
-                        ))}
-                        <div className="depth-footer-row border-t pt-2 mt-1">
-                          <span className="total-label">Total Bid Volume</span>
-                          <span className="total-val">{marketDepthData.bidTotal.toLocaleString()}</span>
-                        </div>
-                      </div>
-
-                      {/* Asks Column */}
-                      <div className="depth-col-asks">
-                        <div className="depth-header-row">
-                          <span>Ask Price (₹)</span>
-                          <span className="qty">Qty</span>
-                        </div>
-                        {marketDepthData.asks.map((a, idx) => (
-                          <div key={`ask-${idx}`} className="depth-value-row">
-                            <span className="price text-[#ff4d4d]">{a.price.toFixed(2)}</span>
-                            <span className="qty">{a.qty}</span>
+                          
+                          <div className="ratio-bar-progress">
+                            <div 
+                              className="bar-fill-buy" 
+                              style={{ width: `${marketDepthData.buyPct}%` }}
+                            />
+                            <div 
+                              className="bar-fill-sell" 
+                              style={{ width: `${marketDepthData.sellPct}%` }}
+                            />
                           </div>
-                        ))}
-                        <div className="depth-footer-row border-t pt-2 mt-1">
-                          <span className="total-label">Total Ask Volume</span>
-                          <span className="total-val">{marketDepthData.askTotal.toLocaleString()}</span>
+                        </div>
+
+                        {/* Depth grid list comparison */}
+                        <div className="depth-offers-comparison-grid">
+                          {/* Bids Column */}
+                          <div className="depth-col-bids">
+                            <div className="depth-header-row">
+                              <span>Bid Price (₹)</span>
+                              <span className="qty">Qty</span>
+                            </div>
+                            {marketDepthData.bids.map((b, idx) => (
+                              <div key={`bid-${idx}`} className="depth-value-row">
+                                <span className="price text-[#00b074]">{b.price.toFixed(2)}</span>
+                                <span className="qty text-[#00b074] font-medium">{b.qty}</span>
+                              </div>
+                            ))}
+                            <div className="depth-footer-row border-t pt-2 mt-1">
+                              <span className="total-label">Bid total</span>
+                              <span className="total-val">{marketDepthData.bidTotal.toLocaleString()}</span>
+                            </div>
+                          </div>
+
+                          {/* Asks Column */}
+                          <div className="depth-col-asks">
+                            <div className="depth-header-row">
+                              <span>Ask Price (₹)</span>
+                              <span className="qty">Qty</span>
+                            </div>
+                            {marketDepthData.asks.map((a, idx) => (
+                              <div key={`ask-${idx}`} className="depth-value-row">
+                                <span className="price text-[#ff4d4d]">{a.price.toFixed(2)}</span>
+                                <span className="qty text-[#ff4d4d] font-medium">{a.qty}</span>
+                              </div>
+                            ))}
+                            <div className="depth-footer-row border-t pt-2 mt-1">
+                              <span className="total-label">Ask total</span>
+                              <span className="total-val">{marketDepthData.askTotal.toLocaleString()}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* PERFORMANCE OVERVIEWS */}
                   <div className="overview-performance-panel">
-                    <h3 className="overview-section-title">Performance</h3>
-
-                    {/* Today's low/high range */}
-                    <div className="performance-range-slider-row">
-                      <div className="extreme-labels">
-                        <div className="label-block text-left">
-                          <span>Today's Low</span>
-                          <strong>{formatINR(stockDetails.low)}</strong>
-                        </div>
-                        <div className="label-block text-right">
-                          <span>Today's High</span>
-                          <strong>{formatINR(stockDetails.high)}</strong>
-                        </div>
+                    <div 
+                      className="section-header-clickable"
+                      onClick={() => setPerformanceExpanded(!performanceExpanded)}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", userSelect: "none", paddingBottom: "10px" }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <h3 className="overview-section-title" style={{ margin: 0 }}>Performance</h3>
+                        <span style={{ display: "inline-flex", alignItems: "center", color: "#64748b", cursor: "help" }} title="Historical Price Extremes">
+                          <AlertCircle size={14} />
+                        </span>
                       </div>
-
-                      <div className="range-track-bar">
-                        <div 
-                          className="range-tick-indicator" 
-                          style={{
-                            left: `${Math.max(0, Math.min(100, ((stockDetails.price - stockDetails.low) / (stockDetails.high - stockDetails.low || 1)) * 100))}%`
-                          }}
-                        />
-                      </div>
+                      <ChevronDown 
+                        size={18} 
+                        style={{ 
+                          transform: performanceExpanded ? "rotate(180deg)" : "rotate(0deg)", 
+                          transition: "transform 0.2s ease",
+                          color: "#64748b" 
+                        }} 
+                      />
                     </div>
 
-                    {/* 52w low/high range */}
-                    <div className="performance-range-slider-row mt-6">
-                      <div className="extreme-labels">
-                        <div className="label-block text-left">
-                          <span>52-Week Low</span>
-                          <strong>{formatINR(stockDetails.w52Low)}</strong>
-                        </div>
-                        <div className="label-block text-right">
-                          <span>52-Week High</span>
-                          <strong>{formatINR(stockDetails.w52High)}</strong>
-                        </div>
-                      </div>
+                    {performanceExpanded && (
+                      <div className="performance-collapsible-content animate-slide-down" style={{ marginTop: "12px" }}>
+                        {/* Today's low/high range */}
+                        <div className="performance-range-slider-row">
+                          <div className="extreme-labels">
+                            <div className="label-block text-left">
+                              <span>Today's Low</span>
+                              <strong>{formatINR(stockDetails.low)}</strong>
+                            </div>
+                            <div className="label-block text-right">
+                              <span>Today's High</span>
+                              <strong>{formatINR(stockDetails.high)}</strong>
+                            </div>
+                          </div>
 
-                      <div className="range-track-bar">
-                        <div 
-                          className="range-tick-indicator" 
-                          style={{
-                            left: `${Math.max(0, Math.min(100, ((stockDetails.price - stockDetails.w52Low) / (stockDetails.w52High - stockDetails.w52Low || 1)) * 100))}%`
-                          }}
-                        />
+                          <div className="range-track-bar">
+                            <div 
+                              className="range-tick-indicator" 
+                              style={{
+                                left: `${Math.max(0, Math.min(100, ((stockDetails.price - stockDetails.low) / (stockDetails.high - stockDetails.low || 1)) * 100))}%`
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* 52w low/high range */}
+                        <div className="performance-range-slider-row mt-6">
+                          <div className="extreme-labels">
+                            <div className="label-block text-left">
+                              <span>52-Week Low</span>
+                              <strong>{formatINR(stockDetails.w52Low)}</strong>
+                            </div>
+                            <div className="label-block text-right">
+                              <span>52-Week High</span>
+                              <strong>{formatINR(stockDetails.w52High)}</strong>
+                            </div>
+                          </div>
+
+                          <div className="range-track-bar">
+                            <div 
+                              className="range-tick-indicator" 
+                              style={{
+                                left: `${Math.max(0, Math.min(100, ((stockDetails.price - stockDetails.w52Low) / (stockDetails.w52High - stockDetails.w52Low || 1)) * 100))}%`
+                              }}
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                 </div>
@@ -1598,7 +1682,7 @@ const StockDetails = () => {
               type="button"
               className="mobile-trade-btn btn-buy" 
               onClick={() => navigate("/login")}
-              style={{ width: "100%" }}
+              style={{ flex: 2 }}
             >
               Sign In to Trade
             </button>
@@ -1611,139 +1695,151 @@ const StockDetails = () => {
         <>
           <div className="mobile-order-overlay-backdrop" onClick={closeMobileOrder} />
           <div className="mobile-order-overlay-wrapper">
-          <div className="mobile-order-overlay-header">
-            <button type="button" className="overlay-back-btn" onClick={closeMobileOrder}>
-              <ArrowLeft size={24} />
-            </button>
-            <div className="overlay-header-details">
-              <span className="overlay-company-name">{stockDetails.companyName}</span>
-              <div className="overlay-price-row">
-                <span className="overlay-price-val">₹{stockDetails.price.toFixed(2)}</span>
-                <span className={`overlay-change-badge ${stockDetails.change >= 0 ? "up" : "down"}`}>
-                  {stockDetails.change >= 0 ? "+" : ""}
-                  {stockDetails.changeAmt.toFixed(2)} ({stockDetails.change >= 0 ? "+" : ""}
-                  {stockDetails.change.toFixed(2)}%)
-                </span>
+            {/* Header */}
+            <div className="mobile-order-overlay-header">
+              <button type="button" className="overlay-back-btn" onClick={closeMobileOrder}>
+                <ArrowLeft size={22} />
+              </button>
+              <div className="overlay-header-details">
+                <span className="overlay-company-name">{symbol.toUpperCase()}</span>
+                <div className="overlay-price-row">
+                  <span className="exchange-price-text">
+                    NSE ₹{stockDetails.price.toFixed(2)} ({stockDetails.change >= 0 ? "+" : ""}{stockDetails.change.toFixed(2)}%)
+                    <span className="dot-sep"> • </span>
+                    BSE ₹{(stockDetails.price + 0.05).toFixed(2)}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="mobile-order-overlay-body">
-            {/* Product Tabs: Delivery / Intraday */}
-            <div className="product-selector-row">
-              {["Delivery", "Intraday"].map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setProductType(p)}
-                  className={`product-pill ${productType === p ? "active" : ""}`}
+            {/* Body */}
+            <div className="mobile-order-overlay-body">
+              {/* Product Pills Row */}
+              <div className="product-pills-row-wrapper" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div className="product-selector-row">
+                  {["Delivery", "Intraday"].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setProductType(p)}
+                      className={`product-pill ${productType === p ? "active" : ""}`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Form Inputs Grid layout */}
+              <div className="overlay-form-fields">
+                {/* Qty Field Row */}
+                <div 
+                  className={`overlay-field-group-row ${focusedInput === "qty" ? "focused" : ""}`}
+                  onClick={() => setFocusedInput("qty")}
                 >
-                  {p}
+                  <div className="field-left">
+                    <span className="field-label-main">Qty</span>
+                    <button 
+                      type="button" 
+                      className="exchange-toggle-badge"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExchange(exchange === "NSE" ? "BSE" : "NSE");
+                      }}
+                    >
+                      {exchange} ▾
+                    </button>
+                  </div>
+                  <div className="field-right">
+                    <span className="field-input-value-text">{qtyInput || "0"}</span>
+                  </div>
+                </div>
+
+                {/* Price Field Row */}
+                <div 
+                  className={`overlay-field-group-row ${focusedInput === "price" ? "focused" : ""}`}
+                  onClick={() => {
+                    if (priceMode !== "Market") {
+                      setFocusedInput("price");
+                    }
+                  }}
+                >
+                  <div className="field-left">
+                    <span className="field-label-main">Price</span>
+                    <button 
+                      type="button"
+                      className="price-mode-toggle-badge"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const nextMode = priceMode === "Market" ? "Limit" : "Market";
+                        setPriceMode(nextMode);
+                        if (nextMode === "Limit" && priceInput === "") {
+                          setPriceInput(stockDetails.price.toFixed(2));
+                        }
+                      }}
+                    >
+                      {priceMode} ▾
+                    </button>
+                  </div>
+                  <div className="field-right">
+                    {priceMode === "Market" ? (
+                      <span className="field-input-value-text text-disabled">Market</span>
+                    ) : (
+                      <span className="field-input-value-text">₹{priceInput || "0.00"}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Balance & Required Info */}
+              <div className="overlay-financial-bar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12.5px", color: "#64748b", borderTop: "1px solid #f1f5f9", paddingTop: "12px", marginTop: "12px" }}>
+                <span>Balance: <strong>₹{cashBalance.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong></span>
+                <span>Required: <strong>₹{(productType === "Intraday" ? totalCost / 5 : totalCost).toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong></span>
+              </div>
+
+              {/* Execute Action Button */}
+              <button
+                type="button"
+                className={`overlay-execute-btn ${tradeType === "BUY" ? "btn-buy" : "btn-sell"}`}
+                onClick={handleExecuteTrade}
+                disabled={placingOrder}
+                style={{
+                  width: "100%",
+                  height: "50px",
+                  border: "none",
+                  borderRadius: "12px",
+                  fontSize: "16px",
+                  fontWeight: "700",
+                  color: "#ffffff",
+                  cursor: "pointer",
+                  marginTop: "auto",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                {placingOrder ? (
+                  <RefreshCw className="animate-spin inline" size={18} />
+                ) : tradeType === "BUY" ? (
+                  "Buy"
+                ) : (
+                  "Sell"
+                )}
+              </button>
+            </div>
+
+            {/* Custom Numeric Keypad */}
+            <div className="mobile-numeric-keypad">
+              {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "BACKSPACE"].map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className="keypad-btn"
+                  onClick={() => handleKeyPress(key)}
+                >
+                  {key === "BACKSPACE" ? "⌫" : key}
                 </button>
               ))}
             </div>
-
-            {/* Input fields */}
-            <div className="overlay-form-fields">
-              {/* Qty field */}
-              <div 
-                className={`overlay-field-group ${focusedInput === "qty" ? "focused" : ""}`}
-                onClick={() => setFocusedInput("qty")}
-              >
-                <span className="field-label">Qty {exchange}</span>
-                <div className="field-input-box">
-                  <span className="input-placeholder-value">{qtyInput || "0"}</span>
-                </div>
-              </div>
-
-              {/* Price field */}
-              <div 
-                className={`overlay-field-group ${focusedInput === "price" ? "focused" : ""}`}
-                onClick={() => {
-                  if (priceMode !== "Market") {
-                    setFocusedInput("price");
-                  }
-                }}
-              >
-                <div className="field-label-dropdown">
-                  <span className="field-label">Price</span>
-                  <button 
-                    type="button"
-                    className="price-mode-toggle-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const nextMode = priceMode === "Market" ? "Limit" : "Market";
-                      setPriceMode(nextMode);
-                      if (nextMode === "Limit" && priceInput === "") {
-                        setPriceInput(stockDetails.price.toString());
-                      }
-                    }}
-                  >
-                    {priceMode} ▾
-                  </button>
-                </div>
-                <div className="field-input-box">
-                  {priceMode === "Market" ? (
-                    <span className="input-placeholder-value text-disabled">
-                      At Market (₹{stockDetails.price.toFixed(2)})
-                    </span>
-                  ) : (
-                    <span className="input-placeholder-value">{priceInput || "0"}</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Capital details */}
-            <div className="overlay-capital-details">
-              <div className="detail-row">
-                <span className="lbl">Virtual Balance</span>
-                <span className="val">{formatINR(cashBalance)}</span>
-              </div>
-              <div className="detail-row">
-                {productType === "Intraday" ? (
-                  <>
-                    <span className="lbl font-semibold">Margin Required (5x)</span>
-                    <span className="val font-bold text-[#00b074]">{formatINR(totalCost / 5)}</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="lbl font-semibold">Approx. Required</span>
-                    <span className="val font-bold text-[#ffffff]">{formatINR(totalCost)}</span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Execute button */}
-            <button
-              type="button"
-              className={`overlay-execute-btn ${tradeType === "BUY" ? "btn-buy" : "btn-sell"}`}
-              onClick={handleExecuteTrade}
-              disabled={placingOrder}
-            >
-              {placingOrder ? (
-                <RefreshCw className="animate-spin inline" size={18} />
-              ) : (
-                `${tradeType === "BUY" ? "BUY" : "SELL"} ${symbol}`
-              )}
-            </button>
           </div>
-
-          {/* Numeric keypad grid */}
-          <div className="mobile-numeric-keypad">
-            {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "BACKSPACE"].map((key) => (
-              <button
-                key={key}
-                type="button"
-                className="keypad-btn"
-                onClick={() => handleKeyPress(key)}
-              >
-                {key === "BACKSPACE" ? "⌫" : key}
-              </button>
-            ))}
-          </div>
-        </div>
         </>
       )}
     </div>

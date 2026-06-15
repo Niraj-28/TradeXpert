@@ -440,6 +440,10 @@ dropdown-user h4 {
   width: 100%;
 }
 
+.main-content.no-navbar-padding {
+  padding-top: 0 !important;
+}
+
 /* ========================================
    RESPONSIVE
 ======================================== */
@@ -486,16 +490,61 @@ dropdown-user h4 {
     top: 84px;
     left: 0;
     width: 100%;
-    background: rgba(255, 255, 255, 0.98);
+    background: #ffffff !important;
     backdrop-filter: blur(14px);
-    border-bottom: 1px solid rgba(35, 83, 71, 0.15);
+    border-bottom: 1px solid rgba(35, 83, 71, 0.15) !important;
     display: flex;
     flex-direction: column;
     padding: 24px 32px;
     gap: 20px;
     z-index: 999;
-    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08) !important;
     animation: slideDown 0.25s ease-out;
+  }
+
+  .mobile-dropdown-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: 100%;
+  }
+
+  .mobile-dropdown-link {
+    font-size: 16.5px;
+    font-weight: 500;
+    color: var(--brand-dark) !important;
+    text-decoration: none;
+    background: transparent;
+    border: none;
+    text-align: left;
+    padding: 6px 0;
+    cursor: pointer;
+    width: 100%;
+    font-family: "Poppins", sans-serif;
+    transition: all 0.2s ease;
+    display: block;
+    box-sizing: border-box;
+  }
+
+  .mobile-dropdown-link:hover,
+  .mobile-dropdown-link.active {
+    color: var(--brand-accent) !important;
+    padding-left: 6px;
+  }
+
+  .mobile-dropdown-link.logout-btn {
+    color: #ef4444 !important; /* Standard red for logout */
+  }
+
+  .mobile-dropdown-link.logout-btn:hover {
+    color: #b91c1c !important;
+  }
+
+  .mobile-auth-links-group {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
   }
 
   @keyframes slideDown {
@@ -5440,12 +5489,14 @@ dropdown-user h4 {
 
 .hero-indices-panel .indices-list {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
   margin-bottom: 22px;
 }
 
 .hero-indices-panel .index-card-item {
+  width: 100%;
+  box-sizing: border-box;
   background: rgba(64, 138, 113, 0.03);
   border: 1px solid rgba(64, 138, 113, 0.08);
   border-radius: 16px;
@@ -5637,10 +5688,6 @@ dropdown-user h4 {
     width: 100%;
     justify-content: center;
   }
-
-  .hero-indices-panel .indices-list {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* SECTION HEADER */
@@ -5688,7 +5735,7 @@ dropdown-user h4 {
 .landing-trending-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
+  gap: 16px;
   max-width: 1280px;
   margin: 0 auto;
 }
@@ -5696,8 +5743,8 @@ dropdown-user h4 {
 .landing-trending-card {
   background: #ffffff;
   border: 1px solid rgba(40, 90, 72, 0.12);
-  border-radius: 16px;
-  padding: 20px;
+  border-radius: 12px;
+  padding: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
@@ -5715,7 +5762,7 @@ dropdown-user h4 {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .landing-trending-card .card-header .stock-info {
@@ -5724,7 +5771,7 @@ dropdown-user h4 {
 }
 
 .landing-trending-card .card-header .stock-info .symbol {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 850;
   color: var(--brand-dark);
 }
@@ -5736,13 +5783,13 @@ dropdown-user h4 {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 140px;
+  max-width: 110px;
 }
 
 .landing-trending-card .card-header .change-badge {
   font-size: 11px;
   font-weight: 700;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 6px;
 }
 
@@ -5760,7 +5807,7 @@ dropdown-user h4 {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .landing-trending-card .card-body .price-info {
@@ -5776,7 +5823,7 @@ dropdown-user h4 {
 }
 
 .landing-trending-card .card-body .price-info .price-value {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
   color: var(--brand-dark);
   margin-top: 4px;
@@ -5785,7 +5832,7 @@ dropdown-user h4 {
 
 .landing-trending-card .card-footer {
   border-top: 1px solid rgba(40, 90, 72, 0.08);
-  padding-top: 14px;
+  padding-top: 10px;
   margin-top: auto;
 }
 
@@ -8671,7 +8718,7 @@ section .grid.grid-cols-4>div p {
   
   /* Portfolio Stats */
   .portfolio-summary-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: repeat(2, 1fr) !important;
   }
   
   .portfolio-badge-row {
@@ -9462,29 +9509,42 @@ section .grid.grid-cols-4>div p {
     grid-column: span 1 !important;
   }
 
-  /* Swipeable rows for home page card grids (excluding trending grid) */
-  .hero-indices-panel .indices-list,
-  .landing-features-grid,
-  .landing-workflow-grid {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    gap: 16px !important;
-    padding-bottom: 12px !important;
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
+  /* Swipeable rows for home page card grids (excluding features and workflow) */
+  .hero-indices-panel .indices-list {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+    overflow-x: visible !important;
+    padding-bottom: 0 !important;
     margin-bottom: 20px !important;
   }
   
-  .hero-indices-panel .indices-list::-webkit-scrollbar,
-  .landing-features-grid::-webkit-scrollbar,
-  .landing-workflow-grid::-webkit-scrollbar {
+  .hero-indices-panel .indices-list::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .landing-features-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .landing-workflow-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .landing-workflow-node .node-connector-line {
     display: none !important;
   }
   
   .hero-indices-panel .index-card-item {
-    flex: 0 0 160px !important;
-    min-width: 160px !important;
+    flex: unset !important;
+    min-width: unset !important;
+    width: 100% !important;
   }
 
   /* Trending Stocks Today 2x2 Grid Layout */
@@ -9507,6 +9567,20 @@ section .grid.grid-cols-4>div p {
 
   .landing-trending-card .card-header {
     margin-bottom: 12px !important;
+    gap: 6px !important;
+  }
+
+  .landing-trending-card .card-header .stock-info .company {
+    display: none !important; /* Hide company name on mobile to prevent overlapping change badge */
+  }
+
+  .landing-trending-card .card-header .stock-info .symbol {
+    font-size: 14px !important;
+  }
+
+  .landing-trending-card .card-header .change-badge {
+    padding: 2px 6px !important;
+    font-size: 10px !important;
   }
 
   .landing-trending-card .card-body {
@@ -9518,19 +9592,27 @@ section .grid.grid-cols-4>div p {
   }
   
   .landing-feature-card {
-    flex: 0 0 260px !important;
-    min-width: 260px !important;
+    flex: unset !important;
+    min-width: unset !important;
+    width: 100% !important;
+    padding: 20px 16px !important;
+    border-radius: 12px !important;
   }
   
   .landing-workflow-node {
-    flex: 0 0 220px !important;
-    min-width: 220px !important;
+    flex: unset !important;
+    min-width: unset !important;
+    width: 100% !important;
+    padding: 20px 16px !important;
+    border-radius: 12px !important;
   }
   
   /* Sizing and spacing tweaks to home page elements for mobile styling compatibility */
   .landing-hero-section {
     padding-top: 24px !important;
+    padding-bottom: 40px !important;
     padding-inline: 16px !important;
+    min-height: auto !important;
     gap: 24px !important;
   }
   
@@ -9539,19 +9621,45 @@ section .grid.grid-cols-4>div p {
     align-items: center !important;
   }
   
+  .landing-hero-left .landing-hero-title {
+    font-size: 32px !important;
+    line-height: 40px !important;
+    width: 100% !important;
+    word-break: break-word !important;
+  }
+
+  .landing-hero-left .landing-hero-subtitle {
+    font-size: 14px !important;
+    line-height: 22px !important;
+    margin-bottom: 24px !important;
+    padding-inline: 8px !important;
+  }
+  
   .landing-hero-features-banner {
     flex-direction: column !important;
     gap: 8px !important;
     margin-top: 16px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 12px 16px !important;
   }
   
   .landing-hero-features-banner .banner-item {
     justify-content: center !important;
+    font-size: 12px !important;
   }
   
   .landing-hero-right {
     margin-top: 0 !important;
     width: 100% !important;
+  }
+
+  .hero-indices-panel {
+    padding: 16px !important;
+    border-radius: 20px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   /* Sleek Bottom-Sheet Drawer Compact Trading Overlay for Mobile */
@@ -9662,7 +9770,7 @@ section .grid.grid-cols-4>div p {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: 10px 12px;
   border-bottom: 1px solid #f1f5f9;
   cursor: pointer;
   transition: background 0.15s ease;
@@ -9682,30 +9790,31 @@ section .grid.grid-cols-4>div p {
 .portfolio-list-row-mobile .left-block {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex: 1;
+  gap: 8px;
+  flex: 1.3;
+  min-width: 0;
 }
 
 .portfolio-list-row-mobile .symbol-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   text-align: left;
+  min-width: 0;
 }
 
 .portfolio-list-row-mobile .sym-text {
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 700;
   color: #0f172a;
 }
 
 .portfolio-list-row-mobile .company-text {
-  font-size: 11.5px;
+  font-size: 11px;
   color: #64748b;
-  max-width: 140px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 /* Center block: sparkline */
@@ -9713,7 +9822,7 @@ section .grid.grid-cols-4>div p {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 90px;
+  width: 65px;
   flex-shrink: 0;
 }
 
@@ -9753,4 +9862,514 @@ section .grid.grid-cols-4>div p {
   flex-direction: column;
   gap: 2px;
   align-items: flex-end;
+}
+
+/* ==========================================================================
+   MOBILE STOCK DETAILS CUSTOM HEADER & OVERLAY TRADING SHEET (GROWW LOOK)
+   ========================================================================= */
+@media (max-width: 900px) {
+  /* Hide main content extra padding when layout has custom mobile stock header */
+  .stock-details-page-container {
+    padding-top: 0 !important;
+  }
+
+  .mobile-stock-profile-section-card {
+    background: #ffffff;
+    padding: 16px;
+    border-bottom: 1px solid #f1f5f9;
+    margin-bottom: 12px;
+  }
+
+  .mobile-stock-details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-top: 4px;
+  }
+
+  .mobile-stock-details-header .header-back-btn {
+    background: none;
+    border: none;
+    color: #1e293b;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+  }
+
+  .mobile-stock-details-header .header-right-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .mobile-stock-details-header .header-action-btn {
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s ease;
+  }
+
+  .mobile-stock-details-header .header-action-btn.active {
+    color: #00b074;
+  }
+
+  .mobile-profile-details {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+  }
+
+  .mobile-profile-details .logo-symbol-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .mobile-profile-details .symbol-exchange-dropdown {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+
+  .mobile-profile-details .mobile-company-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 4px 0 8px 0;
+  }
+
+  .mobile-profile-details .mobile-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .mobile-profile-details .mobile-price-value {
+    font-size: 26px;
+    font-weight: 800;
+    color: #0f172a;
+    font-family: monospace;
+  }
+
+  .mobile-profile-details .mobile-change-value {
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+
+  .mobile-profile-details .mobile-change-value.up {
+    color: #00b074;
+  }
+
+  .mobile-profile-details .mobile-change-value.down {
+    color: #ff4d4d;
+  }
+
+  .mobile-profile-details .mobile-change-value .timeframe {
+    color: #94a3b8;
+    font-weight: 500;
+    margin-left: 2px;
+  }
+
+  /* Bottom sticky trade bar adjustments */
+  .mobile-bottom-trade-bar {
+    height: 72px;
+    padding: 10px 16px;
+    gap: 12px;
+    background: #ffffff;
+    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
+  }
+
+  .mobile-sip-btn {
+    height: 48px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 0 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .mobile-sip-btn:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+  }
+
+  .mobile-trade-btn {
+    height: 48px;
+    border-radius: 10px;
+    font-size: 14.5px;
+  }
+
+  /* Redesigned Trading Sheet Overlay (Groww Style) */
+  .mobile-order-overlay-header {
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 14px 18px;
+  }
+
+  .mobile-order-overlay-header .overlay-company-name {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  .mobile-order-overlay-header .exchange-price-text {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #64748b;
+  }
+
+  .mobile-order-overlay-header .dot-sep {
+    color: #cbd5e1;
+    margin: 0 4px;
+  }
+
+  .mobile-order-overlay-body {
+    background: #ffffff;
+    padding: 16px !important;
+  }
+
+  /* Pills selectors */
+  .product-pills-row-wrapper {
+    margin-bottom: 16px;
+  }
+
+  .product-selector-row {
+    background: #f1f5f9;
+    padding: 3px;
+    border-radius: 20px;
+  }
+
+  .product-pill {
+    padding: 6px 14px !important;
+    font-size: 12px !important;
+    font-weight: 700;
+    color: #64748b;
+    border-radius: 16px;
+    transition: all 0.2s ease;
+  }
+
+  .product-pill.active {
+    background: #0f172a !important;
+    color: #ffffff !important;
+  }
+
+  /* Form row fields */
+  .overlay-form-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .overlay-field-group-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .overlay-field-group-row.focused {
+    border-color: #00b074;
+    box-shadow: 0 0 0 3px rgba(0, 176, 116, 0.08);
+  }
+
+  /* Buy vs Sell specific active focus borders */
+  .mobile-order-overlay-wrapper:has(.overlay-execute-btn-action.btn-sell) .overlay-field-group-row.focused {
+    border-color: #ff4d4d;
+    box-shadow: 0 0 0 3px rgba(255, 77, 77, 0.08);
+  }
+
+  .overlay-field-group-row .field-left {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .overlay-field-group-row .field-label-main {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .overlay-field-group-row .exchange-toggle-badge,
+  .overlay-field-group-row .price-mode-toggle-badge {
+    background: #f1f5f9;
+    border: none;
+    color: #0f172a;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  .overlay-field-group-row .field-input-value-text {
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+    font-family: monospace;
+  }
+
+  .overlay-field-group-row .field-input-value-text.text-disabled {
+    font-size: 14px;
+    font-weight: 700;
+    color: #94a3b8;
+    font-family: inherit;
+    background: #f8fafc;
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+
+  /* Custom Numeric Keypad styles */
+  .mobile-numeric-keypad {
+    background: #f1f5f9 !important;
+    border-top: 1px solid #e2e8f0 !important;
+    padding: 8px !important;
+    gap: 6px !important;
+  }
+
+  .keypad-btn {
+    background: #ffffff !important;
+    border: none !important;
+    color: #0f172a !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    height: 46px !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+  }
+
+  .keypad-btn:active {
+    background: #e2e8f0 !important;
+  }
+}
+
+/* Sidebar/grid alignment for simulation features cards */
+/* Sidebar/grid alignment for simulation features cards */
+.landing-feature-card-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.landing-feature-card-header .landing-feature-icon-wrapper {
+  margin-bottom: 0 !important;
+  flex-shrink: 0;
+}
+
+.landing-feature-card-header h3 {
+  margin: 0 !important;
+}
+
+/* Compact layout for trending stocks today cards - desktop defaults */
+.landing-trending-card .card-body {
+  display: block !important;
+  width: 100% !important;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+}
+
+.landing-trending-card .card-body .price-info {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+}
+
+.landing-trending-card .card-body .price-info .price-value {
+  font-size: 16px !important;
+  font-weight: 750 !important;
+  white-space: nowrap !important;
+  color: var(--brand-dark) !important;
+  margin: 0 !important;
+}
+
+.landing-trending-card .card-body .price-info .action-link {
+  color: var(--brand-accent) !important;
+  text-decoration: none !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 11.5px !important;
+  transition: color 0.2s ease !important;
+}
+
+.landing-trending-card .card-body .price-info .action-link:hover {
+  color: var(--brand-primary) !important;
+}
+
+.landing-trending-card .card-body .price-info .action-link .desktop-action-text {
+  display: inline !important;
+}
+
+.landing-trending-card .card-body .price-info .action-link .mobile-action-text {
+  display: none !important;
+}
+
+/* Mobile Hero layout, alignment, and trending stock list single-line fixes */
+@media (max-width: 900px) {
+  .landing-hero-section {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding-top: 24px !important;
+    padding-bottom: 40px !important;
+    padding-inline: 16px !important;
+    min-height: auto !important;
+    gap: 24px !important;
+  }
+
+  .landing-hero-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: 32px !important;
+    margin: 0 auto !important;
+  }
+
+  .landing-hero-left {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  .landing-hero-left .landing-hero-title {
+    font-size: 32px !important;
+    line-height: 40px !important;
+    width: 100% !important;
+    word-break: break-word !important;
+    margin-bottom: 16px !important;
+  }
+
+  .landing-hero-left .landing-hero-subtitle {
+    font-size: 14px !important;
+    line-height: 22px !important;
+    margin-bottom: 24px !important;
+    padding-inline: 8px !important;
+    width: 100% !important;
+    max-width: 480px !important;
+    margin-inline: auto !important;
+  }
+
+  .landing-hero-left .landing-hero-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    max-width: 320px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    margin-bottom: 28px !important;
+    gap: 12px !important;
+  }
+
+  .landing-hero-left .landing-hero-actions button {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 12px 20px !important;
+    font-size: 14px !important;
+    box-sizing: border-box !important;
+  }
+
+  .landing-hero-features-banner {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    margin-top: 8px !important;
+    margin-inline: auto !important;
+    width: 100% !important;
+    max-width: 320px !important;
+    box-sizing: border-box !important;
+    padding: 12px 16px !important;
+  }
+
+  .landing-hero-features-banner .banner-item {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    text-align: center !important;
+    font-size: 12px !important;
+  }
+
+  .landing-hero-right {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-top: 0 !important;
+  }
+
+  /* Trending Stocks Today Mobile Single Line Row */
+  .landing-trending-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+    width: 100% !important;
+    margin-bottom: 20px !important;
+  }
+
+  .landing-trending-card {
+    padding: 12px !important;
+    border-radius: 12px !important;
+  }
+
+  .landing-trending-card .card-body .price-info {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+  }
+
+  .landing-trending-card .card-body .price-info .price-value {
+    font-size: 13.5px !important;
+  }
+
+  .landing-trending-card .card-body .price-info .action-link {
+    font-size: 10px !important;
+  }
+
+  .landing-trending-card .card-body .price-info .action-link .desktop-action-text {
+    display: none !important;
+  }
+
+  .landing-trending-card .card-body .price-info .action-link .mobile-action-text {
+    display: inline !important;
+  }
 }

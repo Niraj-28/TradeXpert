@@ -340,7 +340,7 @@ const Portfolio = () => {
                   </div>
 
                   <div className="center-block">
-                    <Sparkline data={r.history} width={75} height={24} />
+                    <Sparkline data={r.history} width={60} height={24} />
                   </div>
 
                   <div className="right-block">

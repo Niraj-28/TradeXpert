@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   Search,
   User,
@@ -16,8 +16,10 @@ import toast from "react-hot-toast";
 import TransparentLogo from "../../components/ui/TransparentLogo";
 
 const Navbar = () => {
+  const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const navigate = useNavigate();
   const searchRef = useRef(null);
   const { user, logout } = useAuth();
@@ -153,85 +155,144 @@ const Navbar = () => {
 
   return (
     <header className="navbar">
-
-      {/* LEFT */}
-      <div className="navbar-left">
-
-        {/* LOGO */}
-        <TransparentLogo className="logo" alt="TradeXpert" style={{ height: "44px", width: "150px" }} />
-
-        {/* MENU */}
-        <nav className="navbar-center">
-
-          <NavLink
-            to="/markets"
-            className={({ isActive }) =>
-              isActive ? "active" : ""
-            }
+      {isMobile && mobileSearchOpen ? (
+        <div className="mobile-search-overlay-bar" style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px", height: "100%" }}>
+          <button 
+            type="button"
+            onClick={() => { setMobileSearchOpen(false); setSearchQuery(""); setSearchResults([]); }}
+            style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--brand-dark)", display: "flex", alignItems: "center", padding: "8px" }}
           >
-            Markets
-          </NavLink>
-
-          {user && (
-            <>
-              <NavLink
-                to="/portfolio"
-                className={({ isActive }) =>
-                  isActive ? "active" : ""
-                }
+            <ArrowLeft size={22} />
+          </button>
+          <div className="search-box" style={{ flex: 1, position: "relative", width: "auto", height: "42px" }} ref={searchRef}>
+            <Search size={18} />
+            <input
+              type="text"
+              placeholder="Search stocks (e.g. RELIANCE, TCS)..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              onFocus={() => setDropdownOpen(true)}
+              autoFocus
+            />
+            {searchQuery && (
+              <button 
+                type="button"
+                onClick={() => { setSearchQuery(""); setSearchResults([]); }}
+                style={{ border: "none", background: "transparent", cursor: "pointer", paddingRight: "8px", display: "flex", alignItems: "center" }}
               >
-                Portfolio
+                <X size={15} className="text-slate-400" />
+              </button>
+            )}
+            {dropdownOpen && searchQuery && (
+              <div className="nav-search-dropdown" style={{ left: 0, right: 0, width: "auto", top: "50px" }}>
+                {searching ? (
+                  <div className="nav-search-status">
+                    <RefreshCw className="animate-spin text-[#00b074]" size={15} />
+                    <span>Searching...</span>
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  searchResults.map((stock) => (
+                    <div
+                      key={stock.instrument_key}
+                      onClick={() => {
+                        navigate(`/stocks/${stock.trading_symbol.toUpperCase()}`);
+                        setSearchQuery("");
+                        setSearchResults([]);
+                        setDropdownOpen(false);
+                        setMobileSearchOpen(false);
+                      }}
+                      className="nav-search-result-item"
+                    >
+                      <div className="result-left-block">
+                        <span className="result-sym">{stock.trading_symbol}</span>
+                        <span className="result-name">{stock.name || "Equity Stock"}</span>
+                      </div>
+                      <span className="result-ex">{stock.exchange}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="nav-search-status">
+                    <span>No stocks found</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* LEFT */}
+          <div className="navbar-left">
+            {/* LOGO */}
+            <TransparentLogo className="logo" alt="TradeXpert" style={{ height: "44px", width: "150px" }} />
+
+            {/* MENU */}
+            <nav className="navbar-center">
+              <NavLink
+                to="/markets"
+                className={({ isActive }) => (isActive ? "active" : "")}
+              >
+                Markets
               </NavLink>
 
-              <NavLink
-                to="/watchlist"
-                className={({ isActive }) =>
-                  isActive ? "active" : ""
-                }
-              >
-                Watchlist
-              </NavLink>
+              {user && (
+                <>
+                  <NavLink
+                    to="/portfolio"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Portfolio
+                  </NavLink>
+
+                  <NavLink
+                    to="/watchlist"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Watchlist
+                  </NavLink>
+
+                  <NavLink
+                    to="/orders"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Orders
+                  </NavLink>
+                </>
+              )}
 
               <NavLink
-                to="/orders"
-                className={({ isActive }) =>
-                  isActive ? "active" : ""
-                }
+                to="/news"
+                className={({ isActive }) => (isActive ? "active" : "")}
               >
-                Orders
+                News
               </NavLink>
-            </>
-          )}
+            </nav>
+          </div>
 
-          <NavLink
-            to="/news"
-            className={({ isActive }) =>
-              isActive ? "active" : ""
-            }
-          >
-            News
-          </NavLink>
+          {/* RIGHT */}
+          <div className="navbar-right">
+            {isMobile ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                {/* SEARCH ICON */}
+                <button
+                  type="button"
+                  onClick={() => setMobileSearchOpen(true)}
+                  style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--brand-dark)", display: "flex", alignItems: "center", padding: "4px" }}
+                >
+                  <Search size={22} />
+                </button>
 
-        </nav>
-
-      </div>
-
-      {/* RIGHT */}
-      <div className="navbar-right">
-        {isMobile ? (
-          <>
-
-            {/* AVATAR TOGGLE TRIGGERS MOBILE DRAWER */}
-            <div
-              className="profile-box mobile-trigger"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              style={{ position: "relative", cursor: "pointer" }}
-            >
-              {user ? userInitial : <User size={18} />}
-              {user && unreadCount > 0 && <span className="profile-notification-badge-dot" />}
-            </div>
-          </>
-        ) : (
+                {/* AVATAR TOGGLE TRIGGERS MOBILE DRAWER */}
+                <div
+                  className="profile-box mobile-trigger"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  style={{ position: "relative", cursor: "pointer" }}
+                >
+                  {user ? userInitial : <User size={18} />}
+                  {user && unreadCount > 0 && <span className="profile-notification-badge-dot" />}
+                </div>
+              </div>
+            ) : (
           <>
             {/* SEARCH */}
             <div className="search-box" style={{ position: "relative" }} ref={searchRef}>
@@ -433,37 +494,45 @@ const Navbar = () => {
           </>
         )}
       </div>
+    </>
+  )}
 
       {/* MOBILE DRAWER */}
       {mobileMenuOpen && (
         <div className="mobile-nav-drawer">
-          {/* Profile options inside drawer first (when logged in) */}
-          {user && (
-            <div className="mobile-profile-section" style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px", marginBottom: "16px" }}>
-              <div className="dropdown-user" style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-                <div className="dropdown-avatar" style={{
-                  width: "42px", height: "42px", borderRadius: "50%", background: "linear-gradient(135deg, var(--brand-accent), var(--brand-primary))",
-                  display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "600"
-                }}>{userInitial}</div>
-                <div>
-                  <h4 style={{ margin: 0, fontSize: "15px", fontWeight: "600", color: "var(--brand-dark)" }}>{userFullName}</h4>
-                  <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>Trader</p>
-                </div>
-              </div>
-              <div className="mobile-profile-actions" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                <NavLink to="/profile" className="dropdown-item" onClick={() => setMobileMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 12px" }}>
-                  <User size={16} /> Profile
-                </NavLink>
-                <button className="dropdown-item logout" onClick={handleLogoutClick} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 12px", border: "none", background: "transparent", width: "100%", textAlign: "left", cursor: "pointer" }}>
-                  <LogOut size={16} /> Logout
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Auth links inside drawer first (when NOT logged in) */}
-          {!user && (
-            <div className="mobile-auth-links" style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px", marginBottom: "16px" }}>
+          {user ? (
+            <nav className="mobile-dropdown-menu">
+              <NavLink to="/profile" className="mobile-dropdown-link" onClick={() => setMobileMenuOpen(false)}>
+                Profile
+              </NavLink>
+              <NavLink to="/markets" className="mobile-dropdown-link" onClick={() => setMobileMenuOpen(false)}>
+                Market
+              </NavLink>
+              <NavLink to="/portfolio" className="mobile-dropdown-link" onClick={() => setMobileMenuOpen(false)}>
+                Portfolio
+              </NavLink>
+              <NavLink to="/watchlist" className="mobile-dropdown-link" onClick={() => setMobileMenuOpen(false)}>
+                Watchlist
+              </NavLink>
+              <NavLink to="/orders" className="mobile-dropdown-link" onClick={() => setMobileMenuOpen(false)}>
+                Order
+              </NavLink>
+              <NavLink to="/news" className="mobile-dropdown-link" onClick={() => setMobileMenuOpen(false)}>
+                News
+              </NavLink>
+              <button className="mobile-dropdown-link logout-btn" onClick={handleLogoutClick}>
+                Logout
+              </button>
+            </nav>
+          ) : (
+            <div className="mobile-auth-links-group">
+              <NavLink to="/markets" className="mobile-dropdown-link" onClick={() => setMobileMenuOpen(false)}>
+                Market
+              </NavLink>
+              <NavLink to="/news" className="mobile-dropdown-link" onClick={() => setMobileMenuOpen(false)}>
+                News
+              </NavLink>
+              <div className="dropdown-divider" style={{ backgroundColor: "rgba(0,0,0,0.08)" }}></div>
               <button
                 onClick={() => { navigate("/login"); setMobileMenuOpen(false); }}
                 className="mobile-btn-text"
@@ -478,53 +547,6 @@ const Navbar = () => {
               </button>
             </div>
           )}
-
-          {/* Navigation links */}
-          <nav className="mobile-nav-links">
-            <NavLink
-              to="/markets"
-              className={({ isActive }) => isActive ? "active" : ""}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Markets
-            </NavLink>
-
-            {user && (
-              <>
-                <NavLink
-                  to="/portfolio"
-                  className={({ isActive }) => isActive ? "active" : ""}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Portfolio
-                </NavLink>
-
-                <NavLink
-                  to="/watchlist"
-                  className={({ isActive }) => isActive ? "active" : ""}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Watchlist
-                </NavLink>
-
-                <NavLink
-                  to="/orders"
-                  className={({ isActive }) => isActive ? "active" : ""}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Orders
-                </NavLink>
-              </>
-            )}
-
-            <NavLink
-              to="/news"
-              className={({ isActive }) => isActive ? "active" : ""}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              News
-            </NavLink>
-          </nav>
         </div>
       )}
 
