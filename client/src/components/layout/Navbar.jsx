@@ -6,7 +6,8 @@ import {
   LogOut,
   X,
   RefreshCw,
-  Menu
+  Menu,
+  ArrowLeft
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { searchStocks } from "../../services/marketApi";

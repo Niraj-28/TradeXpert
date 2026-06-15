@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import axios from "axios";
 import TransparentLogo from "../../components/ui/TransparentLogo";
-import { registerUser } from "../../services/authService";
+import { registerUser, loginUser } from "../../services/authService";
 import { useAuth } from "../../context/AuthContext";
 import { useMarket } from "../../context/MarketContext";
 import {
@@ -84,6 +85,85 @@ const Register = () => {
       );
     }
   };
+
+  const googleClientRef = useRef(null);
+
+  const handleGoogleTokenResponse = async (accessToken) => {
+    const toastId = toast.loading("Connecting with Google...");
+    try {
+      const userInfoResponse = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const payload = userInfoResponse.data;
+      if (!payload || !payload.email) {
+        throw new Error("Invalid Google account payload");
+      }
+
+      const googleUserData = {
+        name: payload.name || "Google User",
+        email: payload.email,
+        password: "GooglePasswordSimulated123!" + payload.sub,
+        phone: "0000000000",
+      };
+
+      let data;
+      try {
+        data = await registerUser(googleUserData);
+      } catch (error) {
+        data = await loginUser({
+          email: googleUserData.email,
+          password: googleUserData.password,
+        });
+      }
+
+      login(data);
+      toast.success(`Signed in as ${payload.name}`, { id: toastId });
+      navigate("/markets");
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || error.message || "Google Authentication Failed",
+        { id: toastId }
+      );
+    }
+  };
+
+  const handleGoogleClick = () => {
+    if (googleClientRef.current) {
+      googleClientRef.current.requestAccessToken();
+    } else {
+      toast.error("Google sign up is not loaded yet. Please try again.");
+    }
+  };
+
+  useEffect(() => {
+    const initGoogle = () => {
+      if (window.google) {
+        googleClientRef.current = window.google.accounts.oauth2.initTokenClient({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "1063625752945-8f645853v47k1r827o4oic9qcfuom4cl.apps.googleusercontent.com",
+          scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email",
+          callback: async (tokenResponse) => {
+            if (tokenResponse && tokenResponse.access_token) {
+              await handleGoogleTokenResponse(tokenResponse.access_token);
+            }
+          },
+        });
+      }
+    };
+
+    if (window.google) {
+      initGoogle();
+    } else {
+      const interval = setInterval(() => {
+        if (window.google) {
+          initGoogle();
+          clearInterval(interval);
+        }
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, []);
 
   return (
     <div className="auth-split-container">
@@ -236,6 +316,44 @@ const Register = () => {
               Sign Up
             </button>
           </form>
+
+          <div className="auth-divider">
+            <span>or</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGoogleClick}
+            className="auth-google-btn"
+            style={{ marginTop: "12px" }}
+          >
+            <svg
+              version="1.1"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 48 48"
+              className="google-icon"
+              style={{ width: "18px", height: "18px", display: "block" }}
+            >
+              <path
+                fill="#EA4335"
+                d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+              />
+              <path
+                fill="#4285F4"
+                d="M46.5 24c0-1.61-.15-3.16-.42-4.69H24v8.89h12.62c-.54 2.89-2.18 5.33-4.63 6.98l7.2 5.57C43.4 36.1 46.5 30.67 46.5 24z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M10.54 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.98-6.19z"
+              />
+              <path
+                fill="#34A853"
+                d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.2-5.57c-2 1.34-4.55 2.13-8.69 2.13-6.26 0-11.57-4.22-13.46-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+              />
+              <path fill="none" d="M0 0h48v48H0z" />
+            </svg>
+            Continue with Google
+          </button>
 
           <div className="auth-form-footer">
             <p>

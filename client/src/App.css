@@ -4174,7 +4174,7 @@ dropdown-user h4 {
 
   .orders-page-container {
     padding-top: 0px !important;
-    padding-inline: 16px;
+    padding-inline: 0px !important;
   }
 
   .orders-hero {
@@ -6777,13 +6777,118 @@ dropdown-user h4 {
   transform: translateY(0);
 }
 
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 18px 0;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.auth-divider:not(:empty)::before {
+  margin-right: 12px;
+}
+
+.auth-divider:not(:empty)::after {
+  margin-left: 12px;
+}
+
+.auth-google-btn {
+  width: 100%;
+  height: 52px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #334155;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.auth-form-container.compact-form .auth-google-btn {
+  height: 46px;
+  font-size: 14px;
+}
+
+.auth-google-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+}
+
+.auth-google-btn:active {
+  transform: translateY(0);
+}
+
+.auth-google-btn .google-icon {
+  font-size: 18px;
+}
+
 .auth-form-footer {
   margin-top: 24px;
   text-align: center;
 }
 
 .auth-form-container.compact-form .auth-form-footer {
-  margin-top: 16px;
+  margin-top: 10px;
+}
+
+/* Sizing overrides for compact sign up form to fit without scroll */
+.auth-form-container.compact-form .auth-form-header {
+  margin-bottom: 10px;
+}
+.auth-form-container.compact-form .auth-form-header h2 {
+  font-size: 24px;
+}
+.auth-form-container.compact-form .auth-form-header p {
+  font-size: 12.5px;
+}
+.auth-form-container.compact-form .auth-actual-form {
+  gap: 8px;
+}
+.auth-form-container.compact-form .auth-input-label {
+  margin-bottom: 2px;
+  font-size: 12px;
+}
+.auth-form-container.compact-form .auth-input-field {
+  height: 40px;
+  font-size: 13.5px;
+}
+.auth-form-container.compact-form .password-requirements-checklist {
+  margin: 6px 0 0 0;
+  gap: 4px 8px;
+}
+.auth-form-container.compact-form .requirement-item {
+  font-size: 10px;
+}
+.auth-form-container.compact-form .auth-submit-btn {
+  height: 40px;
+  font-size: 13.5px;
+}
+.auth-form-container.compact-form .auth-divider {
+  margin: 10px 0;
+}
+.auth-form-container.compact-form .auth-google-btn {
+  height: 40px;
+  font-size: 13.5px;
 }
 
 .auth-form-footer p {
@@ -8782,8 +8887,8 @@ section .grid.grid-cols-4>div p {
   
   .orders-grouped-table th,
   .orders-grouped-table td {
-    padding: 12px 10px !important;
-    font-size: 12px !important;
+    padding: 10px 6px !important;
+    font-size: 11.5px !important;
   }
   
   .order-company-name {
@@ -10418,6 +10523,10 @@ section .grid.grid-cols-4>div p {
 
 /* Mobile Search Dropdown Adjustments & Mobile Page Alignment Fixes */
 @media (max-width: 600px) {
+  .mobile-hidden-logo {
+    display: none !important;
+  }
+
   /* Spacing and margins alignment */
   .watchlist-layout-container,
   .portfolio-page {
@@ -10493,5 +10602,74 @@ section .grid.grid-cols-4>div p {
   .discover-result-name,
   .result-name {
     max-width: 90px !important;
+  }
+}
+
+/* ==========================================================================
+   ADDITIONAL MOBILE COMPATIBILITY & OVERLAP FIXES (MAX-WIDTH: 600PX)
+   ========================================================================== */
+@media (max-width: 600px) {
+  /* News Page Mobile Alignment & Overlap Fixes */
+  .news-page-container {
+    padding-inline: 0px !important;
+  }
+  .news-hero-title-card h1 {
+    font-size: 18px !important;
+  }
+  .news-hero-title-card p {
+    font-size: 12px !important;
+  }
+  .article-meta-row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+    margin-bottom: 8px !important;
+  }
+  .featured-footer {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+  .featured-footer .nav-to-stock-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Stock Details Page Mobile Spacing Alignment */
+  .stock-details-page-container {
+    padding-inline: 0px !important;
+  }
+
+  /* Home Page Mobile Spacing & FAQ Overlap Fixes */
+  .landing-hero-section {
+    padding-inline: 12px !important;
+  }
+  .landing-features-section {
+    padding: 28px 12px !important;
+  }
+  .landing-workflow-section {
+    padding: 28px 12px !important;
+  }
+  .landing-faq-section {
+    padding: 28px 12px !important;
+  }
+  .landing-footer-section {
+    padding: 36px 12px 28px 12px !important;
+  }
+  
+  .landing-faq-item .faq-question-row {
+    padding: 16px !important;
+  }
+  .landing-faq-item .faq-question-row h3 {
+    font-size: 13.5px !important;
+    line-height: 1.4 !important;
+  }
+  .landing-faq-item .faq-answer-row {
+    padding: 0 16px 16px 16px !important;
+  }
+  .landing-faq-item .faq-answer-row p {
+    font-size: 12.5px !important;
+    line-height: 1.5 !important;
   }
 }

@@ -799,7 +799,7 @@ const Trading = () => {
                       <th>Symbol</th>
                       <th>Type</th>
                       <th className="num">Quantity</th>
-                      <th className="num">Trigger Price</th>
+                      <th className="num">Avg. Price</th>
                       <th>Status</th>
                     </tr>
                   </thead>

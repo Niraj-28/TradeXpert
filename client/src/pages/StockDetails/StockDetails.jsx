@@ -499,8 +499,25 @@ const StockDetails = () => {
 
   // Simulated cash and holdings
   const [holdings, setHoldings] = useState([]);
+  const [resolvedCompanyName, setResolvedCompanyName] = useState("");
   const [cashBalance, setCashBalance] = useState(1000000);
   const [liveTicks, setLiveTicks] = useState([]);
+
+  useEffect(() => {
+    const fetchStockDetails = async () => {
+      try {
+        const res = await axios.get(`${BASE_API_URL}/market/details/${symbol}`);
+        if (res.data && res.data.name) {
+          setResolvedCompanyName(res.data.name);
+        }
+      } catch (err) {
+        // Fallback silently
+      }
+    };
+    if (symbol) {
+      fetchStockDetails();
+    }
+  }, [symbol]);
   const [simulatedPrice, setSimulatedPrice] = useState(null);
   const [watchlist, setWatchlist] = useState([]);
 
@@ -578,7 +595,7 @@ const StockDetails = () => {
 
       return {
         symbol: symbol.toUpperCase(),
-        companyName: liveStock.company || symbol.toUpperCase() + " Equity",
+        companyName: resolvedCompanyName || liveStock.company || symbol.toUpperCase() + " Equity",
         price,
         change,
         changeAmt,
@@ -602,13 +619,14 @@ const StockDetails = () => {
 
     return {
       ...seedStats,
+      companyName: resolvedCompanyName || seedStats.companyName,
       price: activeSimPrice,
       change: currentChangePct,
       changeAmt: currentChangeAmt,
       high: Math.max(seedStats.high, activeSimPrice),
       low: Math.min(seedStats.low, activeSimPrice),
     };
-  }, [symbol, liveStock, simulatedPrice]);
+  }, [symbol, liveStock, simulatedPrice, resolvedCompanyName]);
 
   // Tab details content (Technicals, News, Events)
   const tabDetails = useMemo(() => {
@@ -1024,7 +1042,7 @@ const StockDetails = () => {
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                 {chartType === "line" ? (
-                  <AreaChart data={chartData} margin={{ top: 10, right: 5, left: 5, bottom: 5 }}>
+                  <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 5 }}>
                     <defs>
                       <linearGradient id="glowColor" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor={isPositive ? "#00b074" : "#ff4d4d"} stopOpacity={0.16} />
@@ -1035,12 +1053,7 @@ const StockDetails = () => {
                     <XAxis dataKey="time" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
                     <YAxis 
                       domain={yDomain} 
-                      stroke="#94a3b8" 
-                      fontSize={10} 
-                      tickLine={false} 
-                      axisLine={false} 
-                      orientation="right" 
-                      formatter={(v) => "₹" + Number(v).toFixed(2)}
+                      hide
                     />
                     <Tooltip 
                       formatter={(v) => ["₹" + Number(v).toFixed(2), "LTP"]}
@@ -1062,17 +1075,12 @@ const StockDetails = () => {
                     />
                   </AreaChart>
                 ) : (
-                  <BarChart data={chartData} margin={{ top: 10, right: 5, left: 5, bottom: 5 }}>
+                  <BarChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis dataKey="time" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
                     <YAxis 
                       domain={yDomain} 
-                      stroke="#94a3b8" 
-                      fontSize={10} 
-                      tickLine={false} 
-                      axisLine={false} 
-                      orientation="right"
-                      formatter={(v) => "₹" + Number(v).toFixed(2)}
+                      hide
                     />
                     <Tooltip 
                       formatter={(v, name, props) => {
@@ -1791,6 +1799,17 @@ const StockDetails = () => {
                   </div>
                 </div>
               </div>
+
+              {/* User Holding Info for Mobile */}
+              {userPosition ? (
+                <div className="ticket-position-info" style={{ marginTop: "12px" }}>
+                  {userPosition.quantity < 0 ? (
+                    <span>Short position of <strong>{Math.abs(userPosition.quantity)}</strong> shares (Avg. ₹{userPosition.avgPrice.toFixed(2)})</span>
+                  ) : (
+                    <span>Currently holding <strong>{userPosition.quantity}</strong> shares (Avg. ₹{userPosition.avgPrice.toFixed(2)})</span>
+                  )}
+                </div>
+              ) : null}
 
               {/* Balance & Required Info */}
               <div className="overlay-financial-bar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12.5px", color: "#64748b", borderTop: "1px solid #f1f5f9", paddingTop: "12px", marginTop: "12px" }}>

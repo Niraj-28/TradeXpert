@@ -156,11 +156,36 @@ const logoDomains = {
 
 const StockLogo = ({ symbol, size = 40, className = "" }) => {
   const [logoErrorCount, setLogoErrorCount] = useState(0);
+  const [resolvedIsin, setResolvedIsin] = useState(null);
+  const [resolvedExchange, setResolvedExchange] = useState(null);
   const upperSym = symbol ? symbol.toUpperCase() : "";
   const domain = logoDomains[upperSym];
 
   useEffect(() => {
     setLogoErrorCount(0);
+    setResolvedIsin(null);
+    setResolvedExchange(null);
+
+    if (!upperSym) return;
+
+    // Fetch ISIN and Exchange details dynamically from the backend
+    const fetchStockDetails = async () => {
+      try {
+        const baseUrl = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
+        const response = await fetch(`${baseUrl}/api/market/details/${upperSym}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data) {
+            if (data.isin) setResolvedIsin(data.isin);
+            if (data.exchange) setResolvedExchange(data.exchange);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch details for stock logo:", err);
+      }
+    };
+
+    fetchStockDetails();
   }, [symbol]);
 
   // Determine avatar background color deterministically from symbol name
@@ -180,27 +205,32 @@ const StockLogo = ({ symbol, size = 40, className = "" }) => {
 
   const colors = getAvatarColors(upperSym);
 
-  // Fallback stages:
-  // 0: FMP Regional: https://financialmodelingprep.com/image-stock/${upperSym}.NS.png
-  // 1: FMP Standard: https://financialmodelingprep.com/image-stock/${upperSym}.png
-  // 2: Clearbit Domain lookup
-  // 3: Fallback initials
-  let currentSrc = "";
-  if (logoErrorCount === 0) {
-    currentSrc = `https://financialmodelingprep.com/image-stock/${upperSym}.NS.png`;
-  } else if (logoErrorCount === 1) {
-    currentSrc = `https://financialmodelingprep.com/image-stock/${upperSym}.png`;
-  } else if (logoErrorCount === 2 && domain) {
-    currentSrc = `https://logo.clearbit.com/${domain}`;
+  // Dynamic fallback list:
+  // 1. Groww Logo CDN (via ISIN)
+  // 2. FMP Regional (via symbol and exchange suffix)
+  // 3. FMP Standard (global symbol)
+  // 4. Clearbit logo lookup (via hardcoded domain map)
+  const urlsToTry = [];
+  if (resolvedIsin) {
+    urlsToTry.push(`https://assets-netstorage.groww.in/stock-assets/logos/${resolvedIsin}.png`);
   }
+  const regionalSuffix = resolvedExchange === "BSE" ? "BO" : "NS";
+  urlsToTry.push(`https://financialmodelingprep.com/image-stock/${upperSym}.${regionalSuffix}.png`);
+  urlsToTry.push(`https://financialmodelingprep.com/image-stock/${upperSym}.png`);
+  if (domain) {
+    urlsToTry.push(`https://logo.clearbit.com/${domain}`);
+  }
+
+  const currentSrc = urlsToTry[logoErrorCount] || "";
+  const maxAttempts = urlsToTry.length;
 
   const handleError = () => {
     setLogoErrorCount((prev) => prev + 1);
   };
 
-  const isFmp = logoErrorCount < 2;
+  const isGrowwOrFmp = currentSrc && (currentSrc.includes("groww.in") || currentSrc.includes("financialmodelingprep.com"));
 
-  if (logoErrorCount < 3 && (logoErrorCount < 2 || domain)) {
+  if (logoErrorCount < maxAttempts && currentSrc) {
     return (
       <img
         src={currentSrc}
@@ -214,9 +244,9 @@ const StockLogo = ({ symbol, size = 40, className = "" }) => {
           minHeight: size,
           borderRadius: "8px",
           objectFit: "contain",
-          background: isFmp ? "transparent" : "#ffffff",
-          border: isFmp ? "none" : "1px solid #e8edf5",
-          padding: isFmp ? "0px" : "2px"
+          background: isGrowwOrFmp ? "transparent" : "#ffffff",
+          border: isGrowwOrFmp ? "none" : "1px solid #e8edf5",
+          padding: isGrowwOrFmp ? "0px" : "2px"
         }}
       />
     );

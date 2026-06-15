@@ -394,7 +394,7 @@ const Orders = () => {
                               >
                                 <td>
                                   <div className="order-company-cell">
-                                    <StockLogo symbol={o.symbol} size={28} />
+                                    <StockLogo symbol={o.symbol} size={28} className="mobile-hidden-logo" />
                                     <div style={{ display: "flex", flexDirection: "column" }}>
                                       <span className="order-company-symbol">{o.symbol}</span>
                                       <span className="order-company-name">{o.symbol} Equity</span>

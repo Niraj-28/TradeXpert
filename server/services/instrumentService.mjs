@@ -290,6 +290,8 @@ export const getInstrumentDetails = (symbol) => {
       return {
         instrument_key: match.instrument_key || match.instrumentKey,
         name: match.name || match.company_name || match.trading_symbol || match.tradingSymbol,
+        isin: match.isin,
+        exchange: match.exchange,
       };
     }
     return null;

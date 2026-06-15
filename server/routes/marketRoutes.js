@@ -608,6 +608,23 @@ function getYahooSymbol(symbol) {
   return `${clean}.NS`;
 }
 
+router.get(
+  "/details/:symbol",
+  (req, res) => {
+    try {
+      const { symbol } = req.params;
+      const details = getInstrumentDetails(symbol);
+      if (details) {
+        res.json(details);
+      } else {
+        res.status(404).json({ success: false, message: "Instrument not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+);
+
 router.get("/history", async (req, res) => {
   try {
     const { symbol, timeframe } = req.query;
