@@ -10416,17 +10416,71 @@ section .grid.grid-cols-4>div p {
   }
 }
 
-/* Mobile Search Dropdown Adjustments */
+/* Mobile Search Dropdown Adjustments & Mobile Page Alignment Fixes */
 @media (max-width: 600px) {
-  .discover-search-dropdown {
+  /* Spacing and margins alignment */
+  .watchlist-layout-container,
+  .portfolio-page {
+    padding-inline: 0px !important;
+  }
+
+  /* Portfolio Hero alignments to prevent overlap */
+  .portfolio-hero {
+    padding: 14px 16px !important;
+    border-radius: 16px !important;
+    margin-bottom: 16px !important;
+  }
+  .portfolio-hero-title-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+  .portfolio-hero-title-row button {
+    margin-left: 0px !important;
+  }
+  .portfolio-badge {
+    padding: 8px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Portfolio Holdings Card and section header */
+  .portfolio-holdings-card {
+    padding: 14px 16px !important;
+    border-radius: 16px !important;
+  }
+  .portfolio-section-header button {
+    font-size: 15px !important;
+  }
+
+  /* Portfolio summary cards adjustments */
+  .portfolio-summary-card {
+    padding: 10px 12px !important;
+  }
+  .summary-card-value {
+    font-size: 16px !important;
+    margin-top: 6px !important;
+  }
+  .summary-card-label {
+    font-size: 11px !important;
+  }
+  .summary-card-sub {
+    font-size: 10px !important;
+    margin-top: 4px !important;
+  }
+
+  /* Search autocomplete adjustments */
+  .discover-search-dropdown,
+  .watchlist-search-dropdown {
     max-height: 250px !important;
     padding: 4px !important;
     border-radius: 12px !important;
   }
-  .discover-result-item {
+  .discover-result-item,
+  .search-result-item {
     padding: 8px 10px !important;
   }
-  .discover-result-name {
+  .discover-result-name,
+  .result-name {
     max-width: 110px !important;
   }
   .discover-btn-trade {
@@ -10436,7 +10490,8 @@ section .grid.grid-cols-4>div p {
 }
 
 @media (max-width: 480px) {
-  .discover-result-name {
+  .discover-result-name,
+  .result-name {
     max-width: 90px !important;
   }
 }
