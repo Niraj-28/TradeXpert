@@ -533,7 +533,8 @@ dropdown-user h4 {
   }
 
   .mobile-dropdown-link.logout-btn {
-    color: #ef4444 !important; /* Standard red for logout */
+    color: #ef4444 !important;
+    /* Standard red for logout */
   }
 
   .mobile-dropdown-link.logout-btn:hover {
@@ -552,6 +553,7 @@ dropdown-user h4 {
       opacity: 0;
       transform: translateY(-10px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -668,7 +670,8 @@ dropdown-user h4 {
   }
 
   .navbar-right .search-box {
-    display: none; /* Hide header search box, show only in drawer on mobile */
+    display: none;
+    /* Hide header search box, show only in drawer on mobile */
   }
 
   .profile-box {
@@ -882,8 +885,16 @@ dropdown-user h4 {
 
 .holdings-stock {
   display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.holdings-stock>div {
+  display: flex;
   flex-direction: column;
-  gap: 3px;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .holdings-symbol {
@@ -2519,8 +2530,8 @@ dropdown-user h4 {
   .market-table-widget td:nth-child(5) {
     display: none;
   }
-  
-  .market-table-widget th, 
+
+  .market-table-widget th,
   .market-table-widget td {
     padding: 10px 8px;
   }
@@ -2553,9 +2564,11 @@ dropdown-user h4 {
     -ms-overflow-style: none;
     width: 100% !important;
   }
+
   .market-indices-grid::-webkit-scrollbar {
     display: none;
   }
+
   .market-index-card {
     flex: 0 0 calc(50% - 6px) !important;
     min-width: 160px !important;
@@ -2601,13 +2614,13 @@ dropdown-user h4 {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 10px !important;
   }
-  
+
   .trending-stock-card {
     padding: 12px !important;
     gap: 8px !important;
     border-radius: 12px !important;
   }
-  
+
   .sectors-performance-grid {
     grid-template-columns: 1fr;
   }
@@ -6855,37 +6868,47 @@ dropdown-user h4 {
 .auth-form-container.compact-form .auth-form-header {
   margin-bottom: 10px;
 }
+
 .auth-form-container.compact-form .auth-form-header h2 {
   font-size: 24px;
 }
+
 .auth-form-container.compact-form .auth-form-header p {
   font-size: 12.5px;
 }
+
 .auth-form-container.compact-form .auth-actual-form {
   gap: 8px;
 }
+
 .auth-form-container.compact-form .auth-input-label {
   margin-bottom: 2px;
   font-size: 12px;
 }
+
 .auth-form-container.compact-form .auth-input-field {
   height: 40px;
   font-size: 13.5px;
 }
+
 .auth-form-container.compact-form .password-requirements-checklist {
   margin: 6px 0 0 0;
   gap: 4px 8px;
 }
+
 .auth-form-container.compact-form .requirement-item {
   font-size: 10px;
 }
+
 .auth-form-container.compact-form .auth-submit-btn {
   height: 40px;
   font-size: 13.5px;
 }
+
 .auth-form-container.compact-form .auth-divider {
   margin: 10px 0;
 }
+
 .auth-form-container.compact-form .auth-google-btn {
   height: 40px;
   font-size: 13.5px;
@@ -8783,12 +8806,13 @@ section .grid.grid-cols-4>div p {
 
 /* Max-width: 1024px */
 @media (max-width: 1024px) {
+
   /* Portfolio Grid Stacking */
   .portfolio-main-grid {
     grid-template-columns: 1fr !important;
     gap: 20px !important;
   }
-  
+
   .portfolio-summary-grid {
     grid-template-columns: repeat(2, 1fr) !important;
   }
@@ -8799,13 +8823,16 @@ section .grid.grid-cols-4>div p {
   .news-grid-wrapper {
     grid-template-columns: 1fr !important;
   }
+
   .news-sidebar-column {
     width: 100% !important;
     position: static !important;
   }
+
   .stock-details-grid-wrapper {
     grid-template-columns: 1fr !important;
   }
+
   .stock-trade-sidebar-column {
     display: none !important;
   }
@@ -8813,6 +8840,7 @@ section .grid.grid-cols-4>div p {
 
 /* Max-width: 768px */
 @media (max-width: 768px) {
+
   /* Hide Company & Trend (Sparkline) from live market dashboard table */
   .market-table-widget th:nth-child(2),
   .market-table-widget td:nth-child(2),
@@ -8820,63 +8848,170 @@ section .grid.grid-cols-4>div p {
   .market-table-widget td:nth-child(5) {
     display: none !important;
   }
-  
-  .market-table-widget th, 
+
+  .market-table-widget th,
   .market-table-widget td {
     padding: 10px 8px !important;
   }
 }
 
+/* Global helper classes for responsive layouts */
+.mobile-only {
+  display: none !important;
+}
+
+.holdings-pnl-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.pnl-pct {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
 /* Max-width: 600px */
 @media (max-width: 600px) {
+
+  /* Mobile show/hide overrides */
+  .desktop-only {
+    display: none !important;
+  }
+
+  .portfolio-holdings-table th.mobile-only,
+  .portfolio-holdings-table td.mobile-only {
+    display: table-cell !important;
+  }
+
   /* General Layout */
   .main-content {
     padding-top: 92px !important;
     padding-inline: 12px !important;
   }
-  
+
   /* Portfolio Stats */
   .portfolio-summary-grid {
     grid-template-columns: repeat(2, 1fr) !important;
   }
-  
+
   .portfolio-badge-row {
     justify-content: center !important;
   }
-  
-  /* Portfolio Holdings Table - Hide Avg Price & Cur Value columns on mobile */
-  .portfolio-holdings-table th:nth-child(3),
-  .portfolio-holdings-table td:nth-child(3),
+
+  /* Portfolio Holdings Table - Compact Grid Table Layout for Mobile */
+  .portfolio-holdings-table-wrap {
+    overflow-x: auto !important;
+    background: #ffffff !important;
+    border: 1px solid rgba(40, 90, 72, 0.1) !important;
+    border-radius: 12px !important;
+    padding: 6px !important;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.02) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .portfolio-holdings-table {
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .portfolio-holdings-table thead {
+    display: table-header-group !important;
+  }
+
+  .portfolio-holdings-table tbody {
+    display: table-row-group !important;
+  }
+
+  .portfolio-holdings-table tr {
+    display: table-row !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  /* Compact spacing & size on mobile cells */
+  .portfolio-holdings-table th,
+  .portfolio-holdings-table td {
+    display: table-cell !important;
+    padding: 6px 2px !important;
+    font-size: 10px !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+    width: auto !important;
+  }
+
+  .portfolio-holdings-table th {
+    font-weight: 600 !important;
+    color: #64748b !important;
+  }
+
+  /* Hide Current Value column to fit all other details without scroll on mobile */
   .portfolio-holdings-table th:nth-child(5),
   .portfolio-holdings-table td:nth-child(5) {
     display: none !important;
   }
-  
-  .portfolio-holdings-table th,
-  .portfolio-holdings-table td {
-    padding: 8px 6px !important;
-    font-size: 12px !important;
+
+  /* Specific typography fixes for mobile table items */
+  .holdings-symbol {
+    font-size: 11px !important;
+    font-weight: 600 !important;
   }
-  
+
+  .holdings-name {
+    font-size: 8.5px !important;
+    opacity: 0.75 !important;
+  }
+
+  .portfolio-holdings-table td:first-child {
+    text-align: left !important;
+  }
+
+  .portfolio-holdings-table td:first-child .holdings-stock {
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+  }
+
+  .portfolio-holdings-table th:nth-child(6),
+  .portfolio-holdings-table td:nth-child(6) {
+    width: 78px !important;
+    min-width: 78px !important;
+  }
+
+  .pnl-amt {
+    font-size: 10px !important;
+  }
+
+  .pnl-pct {
+    font-size: 9px !important;
+  }
+
+  .portfolio-holdings-table td.num {
+    text-align: right !important;
+  }
+
   /* Watchlist Page Card Grid Layout */
   .watchlist-cards-grid {
     grid-template-columns: 1fr !important;
   }
-  
+
   /* News Cards & List */
   .news-feed-card {
     padding: 14px !important;
     border-radius: 12px !important;
   }
-  
+
   .news-card-title {
     font-size: 13px !important;
   }
-  
+
   .news-card-summary {
     font-size: 11.5px !important;
   }
-  
+
   /* Orders Page Table - Hide Type and Time columns to fit mobile screen */
   .orders-grouped-table th:nth-child(2),
   .orders-grouped-table td:nth-child(2),
@@ -8884,50 +9019,51 @@ section .grid.grid-cols-4>div p {
   .orders-grouped-table td:nth-child(6) {
     display: none !important;
   }
-  
+
   .orders-grouped-table th,
   .orders-grouped-table td {
     padding: 10px 6px !important;
     font-size: 11.5px !important;
   }
-  
+
   .order-company-name {
     display: none !important;
   }
-  
+
   /* Filter drawer sizing on small mobile screens */
   .filter-drawer-container {
     width: 100% !important;
     max-width: 380px !important;
   }
-  
+
   /* Stock Details */
   .stock-profile-header-card {
     flex-wrap: wrap !important;
     gap: 12px !important;
     padding: 14px !important;
   }
-  
+
   .stock-chart-panel-card {
     padding: 16px !important;
     border-radius: 12px !important;
   }
-  
+
   .chart-header-row {
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 10px !important;
   }
-  
+
   /* Authentication pages (Login, Register, Reset) */
   .auth-card {
     width: 100% !important;
     max-width: 100% !important;
     padding: 24px 16px !important;
   }
-  
+
   .auth-hero-portfolio-card {
-    display: none !important; /* Hide decorative background mock card on mobile */
+    display: none !important;
+    /* Hide decorative background mock card on mobile */
   }
 }
 
@@ -9300,7 +9436,8 @@ section .grid.grid-cols-4>div p {
 .mobile-order-overlay-wrapper {
   position: fixed;
   inset: 0;
-  background: #ffffff; /* Light background */
+  background: #ffffff;
+  /* Light background */
   color: var(--brand-dark);
   z-index: 10000;
   display: flex;
@@ -9552,6 +9689,7 @@ section .grid.grid-cols-4>div p {
 
 /* Mobile Views Enhancements (max-width: 900px) */
 @media (max-width: 900px) {
+
   /* Profile Page Mobile Realignment */
   .profile-page {
     padding-inline: 12px !important;
@@ -9637,7 +9775,7 @@ section .grid.grid-cols-4>div p {
     padding-bottom: 0 !important;
     margin-bottom: 20px !important;
   }
-  
+
   .hero-indices-panel .indices-list::-webkit-scrollbar {
     display: none !important;
   }
@@ -9659,7 +9797,7 @@ section .grid.grid-cols-4>div p {
   .landing-workflow-node .node-connector-line {
     display: none !important;
   }
-  
+
   .hero-indices-panel .index-card-item {
     flex: unset !important;
     min-width: unset !important;
@@ -9682,7 +9820,7 @@ section .grid.grid-cols-4>div p {
     width: 100% !important;
     box-sizing: border-box !important;
   }
-  
+
   .landing-trending-card {
     flex: unset !important;
     min-width: unset !important;
@@ -9702,7 +9840,7 @@ section .grid.grid-cols-4>div p {
   }
 
   /* Override inner header layout gap & image sizes on mobile to prevent overflow */
-  .landing-trending-card .card-header > div {
+  .landing-trending-card .card-header>div {
     gap: 6px !important;
   }
 
@@ -9714,7 +9852,8 @@ section .grid.grid-cols-4>div p {
   }
 
   .landing-trending-card .card-header .stock-info .company {
-    display: none !important; /* Hide company name on mobile */
+    display: none !important;
+    /* Hide company name on mobile */
   }
 
   .landing-trending-card .card-header .stock-info .symbol {
@@ -9736,7 +9875,7 @@ section .grid.grid-cols-4>div p {
   .landing-trending-card .card-body .price-info .price-value {
     font-size: 13.5px !important;
   }
-  
+
   .landing-feature-card {
     flex: unset !important;
     min-width: unset !important;
@@ -9744,7 +9883,7 @@ section .grid.grid-cols-4>div p {
     padding: 20px 16px !important;
     border-radius: 12px !important;
   }
-  
+
   .landing-workflow-node {
     flex: unset !important;
     min-width: unset !important;
@@ -9752,7 +9891,7 @@ section .grid.grid-cols-4>div p {
     padding: 20px 16px !important;
     border-radius: 12px !important;
   }
-  
+
   /* Sizing and spacing tweaks to home page elements for mobile styling compatibility */
   .landing-hero-section {
     padding-top: 24px !important;
@@ -9761,12 +9900,12 @@ section .grid.grid-cols-4>div p {
     min-height: auto !important;
     gap: 24px !important;
   }
-  
+
   .landing-hero-left {
     text-align: center !important;
     align-items: center !important;
   }
-  
+
   .landing-hero-left .landing-hero-title {
     font-size: 32px !important;
     line-height: 40px !important;
@@ -9780,7 +9919,7 @@ section .grid.grid-cols-4>div p {
     margin-bottom: 24px !important;
     padding-inline: 8px !important;
   }
-  
+
   .landing-hero-features-banner {
     flex-direction: column !important;
     gap: 8px !important;
@@ -9789,12 +9928,12 @@ section .grid.grid-cols-4>div p {
     box-sizing: border-box !important;
     padding: 12px 16px !important;
   }
-  
+
   .landing-hero-features-banner .banner-item {
     justify-content: center !important;
     font-size: 12px !important;
   }
-  
+
   .landing-hero-right {
     margin-top: 0 !important;
     width: 100% !important;
@@ -9836,6 +9975,7 @@ section .grid.grid-cols-4>div p {
     from {
       transform: translateY(100%);
     }
+
     to {
       transform: translateY(0);
     }
@@ -10015,6 +10155,7 @@ section .grid.grid-cols-4>div p {
    MOBILE STOCK DETAILS CUSTOM HEADER & OVERLAY TRADING SHEET (GROWW LOOK)
    ========================================================================= */
 @media (max-width: 900px) {
+
   /* Hide main content extra padding when layout has custom mobile stock header */
   .stock-details-page-container {
     padding-top: 0 !important;
@@ -10539,14 +10680,17 @@ section .grid.grid-cols-4>div p {
     border-radius: 16px !important;
     margin-bottom: 16px !important;
   }
+
   .portfolio-hero-title-row {
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 8px !important;
   }
+
   .portfolio-hero-title-row button {
     margin-left: 0px !important;
   }
+
   .portfolio-badge {
     padding: 8px 12px !important;
     border-radius: 12px !important;
@@ -10554,9 +10698,10 @@ section .grid.grid-cols-4>div p {
 
   /* Portfolio Holdings Card and section header */
   .portfolio-holdings-card {
-    padding: 14px 16px !important;
+    padding: 12px 6px !important;
     border-radius: 16px !important;
   }
+
   .portfolio-section-header button {
     font-size: 15px !important;
   }
@@ -10565,13 +10710,16 @@ section .grid.grid-cols-4>div p {
   .portfolio-summary-card {
     padding: 10px 12px !important;
   }
+
   .summary-card-value {
     font-size: 16px !important;
     margin-top: 6px !important;
   }
+
   .summary-card-label {
     font-size: 11px !important;
   }
+
   .summary-card-sub {
     font-size: 10px !important;
     margin-top: 4px !important;
@@ -10584,14 +10732,17 @@ section .grid.grid-cols-4>div p {
     padding: 4px !important;
     border-radius: 12px !important;
   }
+
   .discover-result-item,
   .search-result-item {
     padding: 8px 10px !important;
   }
+
   .discover-result-name,
   .result-name {
     max-width: 110px !important;
   }
+
   .discover-btn-trade {
     padding: 5px 8px !important;
     font-size: 10px !important;
@@ -10599,6 +10750,7 @@ section .grid.grid-cols-4>div p {
 }
 
 @media (max-width: 480px) {
+
   .discover-result-name,
   .result-name {
     max-width: 90px !important;
@@ -10609,16 +10761,20 @@ section .grid.grid-cols-4>div p {
    ADDITIONAL MOBILE COMPATIBILITY & OVERLAP FIXES (MAX-WIDTH: 600PX)
    ========================================================================== */
 @media (max-width: 600px) {
+
   /* News Page Mobile Alignment & Overlap Fixes */
   .news-page-container {
     padding-inline: 0px !important;
   }
+
   .news-hero-title-card h1 {
     font-size: 18px !important;
   }
+
   .news-hero-title-card p {
     font-size: 12px !important;
   }
+
   .article-meta-row {
     display: flex !important;
     flex-wrap: wrap !important;
@@ -10626,11 +10782,13 @@ section .grid.grid-cols-4>div p {
     gap: 6px !important;
     margin-bottom: 8px !important;
   }
+
   .featured-footer {
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 12px !important;
   }
+
   .featured-footer .nav-to-stock-btn {
     width: 100% !important;
     justify-content: center !important;
@@ -10645,29 +10803,36 @@ section .grid.grid-cols-4>div p {
   .landing-hero-section {
     padding-inline: 12px !important;
   }
+
   .landing-features-section {
     padding: 28px 12px !important;
   }
+
   .landing-workflow-section {
     padding: 28px 12px !important;
   }
+
   .landing-faq-section {
     padding: 28px 12px !important;
   }
+
   .landing-footer-section {
     padding: 36px 12px 28px 12px !important;
   }
-  
+
   .landing-faq-item .faq-question-row {
     padding: 16px !important;
   }
+
   .landing-faq-item .faq-question-row h3 {
     font-size: 13.5px !important;
     line-height: 1.4 !important;
   }
+
   .landing-faq-item .faq-answer-row {
     padding: 0 16px 16px 16px !important;
   }
+
   .landing-faq-item .faq-answer-row p {
     font-size: 12.5px !important;
     line-height: 1.5 !important;

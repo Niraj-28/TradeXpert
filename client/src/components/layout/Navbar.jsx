@@ -21,6 +21,7 @@ const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [mobileNotificationsOpen, setMobileNotificationsOpen] = useState(false);
   const navigate = useNavigate();
   const searchRef = useRef(null);
   const { user, logout } = useAuth();
@@ -32,6 +33,19 @@ const Navbar = () => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Reset mobile notifications when mobile drawer closes
+  useEffect(() => {
+    if (!mobileMenuOpen) {
+      setMobileNotificationsOpen(false);
+    }
+  }, [mobileMenuOpen]);
+
+  // Close menus on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setMobileNotificationsOpen(false);
+  }, [pathname]);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -283,10 +297,49 @@ const Navbar = () => {
                   <Search size={22} />
                 </button>
 
+                {/* BELL ICON FOR NOTIFICATIONS (MOBILE ONLY) */}
+                {user && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const willBeOpen = !mobileNotificationsOpen;
+                      setMobileNotificationsOpen(willBeOpen);
+                      setMobileMenuOpen(willBeOpen);
+                      // Mark all as read when opening
+                      if (willBeOpen) {
+                        setNotifications((prev) => {
+                          const next = prev.map((n) => ({ ...n, read: true }));
+                          localStorage.setItem("trade_notifications", JSON.stringify(next));
+                          return next;
+                        });
+                      }
+                    }}
+                    style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--brand-dark)", display: "flex", alignItems: "center", padding: "4px", position: "relative" }}
+                  >
+                    <Bell size={22} />
+                    {unreadCount > 0 && (
+                      <span className="profile-notification-badge-dot" style={{
+                        position: "absolute",
+                        top: "2px",
+                        right: "2px",
+                        width: "8px",
+                        height: "8px",
+                        backgroundColor: "#ef4444",
+                        borderRadius: "50%",
+                        border: "1.5px solid white"
+                      }} />
+                    )}
+                  </button>
+                )}
+
                 {/* AVATAR TOGGLE TRIGGERS MOBILE DRAWER */}
                 <div
                   className="profile-box mobile-trigger"
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  onClick={() => {
+                    setMobileMenuOpen(!mobileMenuOpen);
+                    setMobileNotificationsOpen(false); // Reset to main menu if avatar clicked
+                  }}
                   style={{ position: "relative", cursor: "pointer" }}
                 >
                   {user ? userInitial : <User size={18} />}
@@ -428,8 +481,7 @@ const Navbar = () => {
                         {/* NOTIFICATION */}
                         <button className="dropdown-item" onClick={handleOpenNotifications}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <Bell size={16} />
+                            <div style={{ display: 'flex', alignItems: 'center' }}>
                               <span>Notifications</span>
                             </div>
                             {unreadCount > 0 && (
@@ -501,11 +553,77 @@ const Navbar = () => {
       {/* MOBILE DRAWER */}
       {mobileMenuOpen && (
         <div className="mobile-nav-drawer">
-          {user ? (
+          {mobileNotificationsOpen ? (
+            /* MOBILE NOTIFICATIONS VIEW */
+            <div className="notifications-subdrawer" style={{ width: "100%" }}>
+              <div className="subdrawer-header">
+                <button className="subdrawer-back-btn" onClick={() => setMobileNotificationsOpen(false)}>
+                  ← Back
+                </button>
+                <h4>Notifications</h4>
+                {notifications.length > 0 && (
+                  <button className="subdrawer-clear-btn" onClick={handleClearNotifications}>
+                    Clear
+                  </button>
+                )}
+              </div>
+              
+              <div className="dropdown-divider" style={{ margin: "12px 0 16px 0" }}></div>
+              
+              <div className="notifications-list-viewport" style={{ maxHeight: "300px" }}>
+                {notifications.length === 0 ? (
+                  <div className="notifications-empty-state">
+                    <Bell size={24} className="text-slate-500 mb-2" />
+                    <p>No new notifications</p>
+                  </div>
+                ) : (
+                  notifications.map((n) => (
+                    <div key={n.id} className="notification-item" style={{ marginBottom: "12px" }}>
+                      <p className="notification-message" style={{ fontSize: "14px", color: "var(--brand-dark)", marginBottom: "6px" }}>{n.message}</p>
+                      <span className="notification-time" style={{ fontSize: "11px", color: "#64748b" }}>{n.time}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ) : user ? (
             <nav className="mobile-dropdown-menu">
               <NavLink to="/profile" className="mobile-dropdown-link" onClick={() => setMobileMenuOpen(false)}>
                 Profile
               </NavLink>
+
+              {/* NOTIFICATION TRIGGER LINK */}
+              <button 
+                type="button"
+                className="mobile-dropdown-link" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMobileNotificationsOpen(true);
+                  // Mark all as read
+                  setNotifications((prev) => {
+                    const next = prev.map((n) => ({ ...n, read: true }));
+                    localStorage.setItem("trade_notifications", JSON.stringify(next));
+                    return next;
+                  });
+                }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}
+              >
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <span>Notifications</span>
+                </div>
+                {unreadCount > 0 && (
+                  <span className="notification-badge-count" style={{
+                    background: "#00b074",
+                    color: "white",
+                    fontSize: "11px",
+                    fontWeight: "600",
+                    padding: "2px 6px",
+                    borderRadius: "10px",
+                    lineHeight: "1"
+                  }}>{unreadCount}</span>
+                )}
+              </button>
+
               <NavLink to="/markets" className="mobile-dropdown-link" onClick={() => setMobileMenuOpen(false)}>
                 Market
               </NavLink>

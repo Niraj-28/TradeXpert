@@ -440,7 +440,7 @@ const Portfolio = () => {
                                   <StockLogo symbol={r.symbol} size={32} className="mobile-hidden-logo" />
                                   <div style={{ display: "flex", flexDirection: "column" }}>
                                     <span className="holdings-symbol">{r.symbol}</span>
-                                    <span className="holdings-name">{r.productType === "INTRADAY" ? "Intraday (MIS)" : "Delivery (CNC)"}</span>
+                                    <span className="holdings-name">{r.productType === "INTRADAY" ? "MIS" : "CNC"}</span>
                                   </div>
                                 </div>
                               </td>
@@ -465,7 +465,10 @@ const Portfolio = () => {
                               <td className="num">{formatINR(r.ltp)}</td>
                               <td className="num">{formatINR(r.currentVal)}</td>
                               <td className={`num ${isCardPos ? "positive" : "negative"}`}>
-                                {isCardPos ? "+" : ""}{formatINR(r.totalPnL)} ({r.totalPnLPct.toFixed(2)}%)
+                                <div className="holdings-pnl-cell">
+                                  <span className="pnl-amt">{isCardPos ? "+" : ""}{formatINR(r.totalPnL)}</span>
+                                  <span className="pnl-pct">({r.totalPnLPct.toFixed(2)}%)</span>
+                                </div>
                               </td>
                             </motion.tr>
                           );

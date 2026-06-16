@@ -3,6 +3,8 @@ import { generateSync } from "otplib";
 import axios from "axios";
 import fs from "fs";
 import path from "path";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
 
 // Function to automatically refresh Upstox token
 export const autoRefreshUpstoxToken = async () => {
@@ -115,6 +117,19 @@ export const autoRefreshUpstoxToken = async () => {
 
     // 8. Update running process env
     process.env.UPSTOX_ACCESS_TOKEN = accessToken;
+
+    // 8.5 Save token to MongoDB
+    try {
+      const Token = require("../models/tokenModel.cjs");
+      await Token.findOneAndUpdate(
+        { key: "upstox_access_token" },
+        { value: accessToken },
+        { upsert: true, new: true }
+      );
+      console.log("💾 Saved new token to MongoDB.");
+    } catch (dbErr) {
+      console.error("❌ Failed to save new token to MongoDB:", dbErr.message);
+    }
 
     // 9. Update the local .env file
     const envPath = path.resolve(process.cwd(), ".env");

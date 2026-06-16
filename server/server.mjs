@@ -47,24 +47,40 @@ app.use(cors());
 
 app.use(express.json());
 
-connectDB();
+connectDB().then(async () => {
+  // Load token from DB
+  try {
+    const Token = require("./models/tokenModel.cjs");
+    const dbToken = await Token.findOne({ key: "upstox_access_token" });
+    if (dbToken && dbToken.value) {
+      console.log("🪙 [UPSTOX] Loaded access token from MongoDB");
+      process.env.UPSTOX_ACCESS_TOKEN = dbToken.value;
+    } else {
+      console.log("⚠️ [UPSTOX] No token found in MongoDB on boot.");
+    }
+  } catch (err) {
+    console.error("❌ [UPSTOX] Error loading token from MongoDB:", err.message);
+  }
 
-// Fetch and cache NSE & BSE equity instruments on boot in the background
-fetchAllInstruments().catch((err) => {
-  console.error("❌ [INSTRUMENTS ERROR] Error loading instruments on boot:", err.message);
+  // Fetch and cache NSE & BSE equity instruments on boot in the background
+  fetchAllInstruments().catch((err) => {
+    console.error("❌ [INSTRUMENTS ERROR] Error loading instruments on boot:", err.message);
+  });
+
+  // Auto-refresh Upstox token on boot if missing or set to placeholder
+  if (!process.env.UPSTOX_ACCESS_TOKEN || process.env.UPSTOX_ACCESS_TOKEN.includes("YOUR_")) {
+    console.log("⚠️ [UPSTOX] Access token missing or invalid on boot. Attempting auto-login...");
+    await autoRefreshUpstoxToken();
+  }
+
+  // Initialize real-time market feed via WebSocket
+  startUpstoxMarketFeed(io);
+
+  // Start the polling fallback for Upstox quote updates
+  initializeMarketPolling(io);
+}).catch((err) => {
+  console.error("❌ Database connection error on boot:", err.message);
 });
-
-// Auto-refresh Upstox token on boot if missing or set to placeholder
-if (!process.env.UPSTOX_ACCESS_TOKEN || process.env.UPSTOX_ACCESS_TOKEN.includes("YOUR_")) {
-  console.log("⚠️ [UPSTOX] Access token missing or invalid on boot. Attempting auto-login...");
-  autoRefreshUpstoxToken();
-}
-
-// Initialize real-time market feed via WebSocket
-startUpstoxMarketFeed(io);
-
-// Start the polling fallback for Upstox quote updates
-initializeMarketPolling(io);
 
 // Schedule daily automated token refresh at 08:30 AM IST (Indian Standard Time)
 cron.schedule("30 8 * * *", async () => {
