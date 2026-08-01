@@ -3,7 +3,11 @@ import WebSocket from "ws";
 import protobuf from "protobufjs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { createRequire } from "module";
 import { getInstrumentDetails } from "./instrumentService.mjs";
+import { setFeedStatus, updateMarketCache, setUpstoxFeedActive } from "../utils/feedStatus.js";
+
+const require = createRequire(import.meta.url);
 
 const POPULAR_SYMBOLS = [
   "RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "SBIN", "BHARTIARTL",
@@ -109,6 +113,8 @@ const startUpstoxMarketFeed = async (io) => {
 
     ws.on("open", () => {
       console.log("✅ Upstox WebSocket Connected");
+      setUpstoxFeedActive(true);
+      setFeedStatus(io, "websocket");
 
       const popularMap = getPopularInstrumentsMap();
 
@@ -328,6 +334,13 @@ const startUpstoxMarketFeed = async (io) => {
         });
 
         const dynamicSectors = calculateSectorPerformance(stockData);
+
+        updateMarketCache("indices", indicesData);
+        updateMarketCache("trending", trendingData);
+        updateMarketCache("table", marketTableData);
+        updateMarketCache("gainers", gainersData);
+        updateMarketCache("losers", losersData);
+        updateMarketCache("sectors", dynamicSectors);
 
         io.emit("market-indices", indicesData);
         io.emit("trending-stocks", trendingData);
