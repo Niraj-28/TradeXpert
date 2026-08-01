@@ -202,7 +202,7 @@ const Login = () => {
               <input
                 type="email"
                 name="email"
-                placeholder="email@example.com"
+                placeholder="trader@tradexpert.in"
                 value={formData.email}
                 onChange={handleChange}
                 className="auth-input-field"

@@ -49,7 +49,7 @@ const fallbackArticles = [
     source: "Reuters",
     time: "5 hours ago",
     summary: "Tech heavy Nasdaq futures fell in pre-market trade following Fed minutes showing policymakers remain concerned about inflation. Analysts suggest rate cuts might be delayed until late 2026.",
-    author: "Sarah Jenkins",
+    author: "Ananya Sharma",
     symbol: null,
     isFeatured: false,
   },

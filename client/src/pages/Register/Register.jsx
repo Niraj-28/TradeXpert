@@ -228,7 +228,7 @@ const Register = () => {
               <input
                 type="text"
                 name="name"
-                placeholder="John Doe"
+                placeholder="Aarav Sharma"
                 value={formData.name}
                 onChange={handleChange}
                 className="auth-input-field"
@@ -241,7 +241,7 @@ const Register = () => {
               <input
                 type="email"
                 name="email"
-                placeholder="email@example.com"
+                placeholder="aarav.sharma@tradexpert.in"
                 value={formData.email}
                 onChange={handleChange}
                 className="auth-input-field"
